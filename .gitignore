@@ -1,0 +1,67 @@
+# PlatformIO
+.pio/
+.vscode/
+lib_deps_external/
+
+# Compiled Object files
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Arduino/ESP32
+*.bin
+*.elf
+*.hex
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# Backup files
+*.bak
+*.tmp
+*.temp
+
+# Log files
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Build directories
+build/
+dist/
