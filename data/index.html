@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bobcat Control Panel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="logo.png" alt="Bobcat Logo" class="logo">
+            <h1>Bobcat Ignition Control</h1>
+        </header>
+        <main>
+            <div class="controls">
+                <button id="start-btn" class="btn btn-start">Start Engine</button>
+                <button id="stop-btn" class="btn btn-stop">Stop Engine</button>
+            </div>
+            <div class="status">
+                <h2>System Status</h2>
+                <div id="status-message" class="status-message">IDLE</div>
+            </div>
+            <div class="readouts">
+                <div class="readout">
+                    <h3>Engine Temp</h3>
+                    <div id="temp-value" class="value">-- &deg;C</div>
+                </div>
+                <div class="readout">
+                    <h3>Oil Pressure</h3>
+                    <div id="pressure-value" class="value">-- PSI</div>
+                </div>
+                <div class="readout">
+                    <h3>Battery</h3>
+                    <div id="battery-value" class="value">-- V</div>
+                </div>
+            </div>
+        </main>
+        <footer>
+            <p>&copy; 2025 Bobcat Ignition Controller</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

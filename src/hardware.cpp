@@ -41,3 +41,20 @@ void virtualStopButton() {
     Serial.println("Web Interface: STOP button pressed");
   }
 }
+
+// Sensor reading functions - returning raw ADC values for now
+float readEngineTemp() {
+  // TODO: Add conversion from ADC value to actual temperature
+  return analogRead(ENGINE_TEMP_PIN);
+}
+
+float readOilPressure() {
+  // TODO: Add conversion from ADC value to actual pressure
+  return analogRead(OIL_PRESSURE_PIN);
+}
+
+float readBatteryVoltage() {
+  // TODO: Add conversion from ADC value to actual voltage
+  // A voltage divider is likely used, so a calculation is needed.
+  return analogRead(BATTERY_VOLTAGE_PIN);
+}

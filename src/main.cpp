@@ -17,6 +17,7 @@
 #include "hardware.h"
 #include "safety.h"
 #include "system_state.h"
+#include "web_interface.h"
 
 void setup() {
   Serial.begin(115200);
@@ -25,6 +26,8 @@ void setup() {
   initializePins();
   currentState = IDLE;
   
+  setupWebServer(); // Initialize the web server
+
   Serial.println("System initialized - Ready for operation");
   Serial.println("Press START button to begin ignition sequence");
 }

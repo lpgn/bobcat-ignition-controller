@@ -19,4 +19,9 @@ void virtualStopButton();      // Virtual stop button for web interface
 void controlGlowPlugs(bool enable);
 void controlIgnition(bool enable);
 
+// Sensor reading functions
+float readEngineTemp();
+float readOilPressure();
+float readBatteryVoltage();
+
 #endif // HARDWARE_H

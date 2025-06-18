@@ -6,11 +6,9 @@
 #ifndef WEB_INTERFACE_H
 #define WEB_INTERFACE_H
 
-#include <Arduino.h>
+#include <ESPAsyncWebServer.h>
 
-// Web interface functions
-void initWebInterface();
-void handleWebRequests();
-String getBobcatStatus();
+// Function to initialize and configure the web server
+void setupWebServer();
 
 #endif // WEB_INTERFACE_H
