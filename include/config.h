@@ -7,8 +7,10 @@
 #define CONFIG_H
 
 // Pin definitions
-extern const int GLOW_PLUG_RELAY_PIN;
-extern const int IGNITION_RELAY_PIN;
+// Use "safe" GPIOs that are not pulled high on boot
+const int IGNITION_PIN = 23;
+const int STARTER_PIN = 22;
+const int GLOW_PLUGS_PIN = 21;
 
 // Safety and monitoring pins
 extern const int ENGINE_TEMP_PIN;

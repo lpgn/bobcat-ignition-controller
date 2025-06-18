@@ -1,0 +1,80 @@
+```mermaid
+graph TD
+    subgraph "Power Source"
+        direction LR
+        BAT["+12V Battery"]
+        GND["Ground"]
+    end
+
+    subgraph "ESP32 DevKit v1"
+        direction LR
+        GPIO2["GPIO 2"]
+        GPIO4["GPIO 4"]
+        GPIO5["GPIO 5"]
+        GPIO18["GPIO 18"]
+        GPIO19["GPIO 19"]
+        GPIO21["GPIO 21"]
+        GPIO32["GPIO 32 (ADC)"]
+        GPIO34["GPIO 34 (ADC)"]
+        GPIO35["GPIO 35 (ADC)"]
+        GND_ESP["GND"]
+    end
+
+    subgraph "User Interface"
+        direction LR
+        StartBtn["Start Button"]
+        StopBtn["Stop Button"]
+        StatusLED["Status LED"]
+        Buzzer["Buzzer"]
+    end
+
+    subgraph "Sensors"
+        direction LR
+        TempSensor["Engine Temp Sensor"]
+        PressureSensor["Oil Pressure Sensor"]
+        VoltageSensor["Battery Voltage Sensor"]
+    end
+
+    subgraph "Driver Circuits (Relays)"
+        direction LR
+        GlowRelay["Glow Plug Relay"]
+        StarterRelay["Starter Relay"]
+    end
+
+    subgraph "Bobcat Electrical System"
+        direction LR
+        GlowPlugs["Glow Plugs"]
+        StarterSolenoid["Starter Solenoid"]
+    end
+
+    %% Connections
+    GPIO2 -- controls --> GlowRelay
+    GPIO4 -- controls --> StarterRelay
+
+    StartBtn -- to --> GPIO18
+    StopBtn -- to --> GPIO19
+    GPIO5 -- to --> StatusLED
+    GPIO21 -- to --> Buzzer
+
+    TempSensor -- to --> GPIO34
+    PressureSensor -- to --> GPIO35
+    VoltageSensor -- to --> GPIO32
+
+    BAT -- "+12V" --> GlowRelay
+    BAT -- "+12V" --> StarterRelay
+
+    GlowRelay -- powers --> GlowPlugs
+    StarterRelay -- powers --> StarterSolenoid
+
+    GlowPlugs -- to --> GND
+    StarterSolenoid -- to --> GND
+    GND_ESP -- to --> GND
+
+    %% Styling
+    style "ESP32 DevKit v1" fill:#f9f,stroke:#333,stroke-width:2px
+    style "User Interface" fill:#ccf,stroke:#333,stroke-width:2px
+    style "Sensors" fill:#cfc,stroke:#333,stroke-width:2px
+    style "Driver Circuits (Relays)" fill:#bbf,stroke:#333,stroke-width:2px
+    style "Bobcat Electrical System" fill:#dfd,stroke:#333,stroke-width:2px
+    style "Power Source" fill:#ff9,stroke:#333,stroke-width:2px
+```
