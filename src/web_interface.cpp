@@ -35,7 +35,7 @@ void handleWebRequests() {
   });
   
   server.on("/status", HTTP_GET, []() {
-    String status = getSystemStatus();
+    String status = getBobcatStatus();
     server.send(200, "application/json", status);
   });
   
@@ -43,10 +43,10 @@ void handleWebRequests() {
   */
 }
 
-String getSystemStatus() {
-  // Return system status as JSON for web interface
+String getBobcatStatus() {
+  // Return Bobcat engine status as JSON for web interface
   String status = "{";
-  status += "\"state\":\"";
+  status += "\"engineState\":\"";
   
   switch (currentState) {
     case IDLE:

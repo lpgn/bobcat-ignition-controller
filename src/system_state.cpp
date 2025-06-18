@@ -8,7 +8,7 @@
 #include "hardware.h"
 #include "safety.h"
 
-void updateSystem() {
+void runIgnitionSequence() {
   switch (currentState) {
     case IDLE:
       if (startButtonPressed) {

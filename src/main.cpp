@@ -31,7 +31,7 @@ void setup() {
 
 void loop() {
   // Fly-by-wire control - no physical buttons, only web interface
-  updateSystem();
+  runIgnitionSequence();
   checkSafetyInputs();
   
   // No delay needed - ESP32 handles timing efficiently with millis()

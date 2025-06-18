@@ -11,6 +11,6 @@
 // Web interface functions
 void initWebInterface();
 void handleWebRequests();
-String getSystemStatus();
+String getBobcatStatus();
 
 #endif // WEB_INTERFACE_H

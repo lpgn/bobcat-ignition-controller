@@ -9,6 +9,6 @@
 #include <Arduino.h>
 
 // State machine functions
-void updateSystem();
+void runIgnitionSequence();
 
 #endif // SYSTEM_STATE_H
