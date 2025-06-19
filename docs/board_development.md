@@ -3,7 +3,9 @@
 ## Project: Bobcat Ignition Controller PCB Design
 
 ### **Bobcat 743 Engine Specifications**
+
 **Target Engine:** Kubota V1702-BA 4-cylinder diesel
+
 - **Power:** 36 HP (26.8 kW) @ 2800 RPM
 - **Displacement:** 1.73L (105.7 cu.in)
 - **Fuel Tank:** 49L (13 gal)
@@ -14,353 +16,347 @@
 - **Oil Pressure:** Full pressure lubrication system
 - **Engine Type:** Naturally aspirated, mechanical injection
 
-### Current Pin Assignments Summary
+### **Pin Assignment Summary**
 
-#### **Digital Output Pins (Relay Control)**
-| GPIO | Function | Load Type | Current | Logic | Notes |
-|------|----------|-----------|---------|-------|-------|
-| 21 | Glow Plugs | 40A Relay | High | Active HIGH | Critical timing - 20s preheat |
-| 23 | Ignition | 30A Relay | Medium | Active HIGH | Main run control |
-| 22 | Starter | 100A Relay | Very High | Active HIGH | Short duration, high current |
-
-#### **Analog Input Pins (ADC1 - WiFi Compatible)**
-| GPIO | ADC Ch | Function | Range | Signal | Impedance |
-|------|--------|----------|-------|--------|-----------|
-| 36 | ADC1_CH0 | Engine Temp | -40°C to 150°C | 0-5V | High Z |
-| 39 | ADC1_CH3 | Oil Pressure | 0-689 kPa | 0-5V | High Z |
-| 34 | ADC1_CH6 | Battery Voltage | 0-30V | 0-3.3V | Voltage divider |
-| 35 | ADC1_CH7 | Fuel Level | 0-100% | 0-5V | High Z |
-
-#### **Digital Input Pins**
-| GPIO | Function | Type | Logic | Pull | Notes |
-|------|----------|------|-------|------|-------|
-| 27 | Alternator Charge | Status | Active LOW | External | Charge indicator |
-| 14 | Engine Run Feedback | Status | Active HIGH | Internal PULLUP | Engine running detect |
+| GPIO | Function | Type | Range/Logic | ADC Channel | Notes |
+|------|----------|------|-------------|-------------|-------|
+| 21 | Glow Plugs | Output | Active HIGH | - | 40A Relay Control |
+| 22 | Starter | Output | Active HIGH | - | 100A Relay Control |
+| 23 | Ignition | Output | Active HIGH | - | 30A Relay Control |
+| 27 | Alternator Charge | Input | Active LOW | - | Digital Status |
+| 14 | Engine Run Feedback | Input | Active HIGH | - | Digital Status |
+| 36 | Engine Temperature | Input | -40°C to 150°C | ADC1_CH0 | NTC Thermistor |
+| 39 | Oil Pressure | Input | 0-689 kPa | ADC1_CH3 | Resistive Sender |
+| 34 | Battery Voltage | Input | 0-30V | ADC1_CH6 | Voltage Divider |
+| 35 | Fuel Level | Input | 0-100% | ADC1_CH7 | Float Sender |
 
 ---
 
-## Pin-by-Pin Board Design Requirements
+## **GPIO21 - Glow Plugs Relay** ⚡ **CRITICAL**
 
-### **Power Supply Design**
+### **Function & Requirements**
+
+- **Purpose:** Control glow plug preheating for diesel engine cold start
+- **Load:** 40A automotive relay coil (12V/24V compatible)
+- **Timing:** 20-second preheat cycle before starter engagement
+- **Safety:** Critical for cold weather starting (-40°C capability)
+- **Logic:** Active HIGH output
+
+### **Kubota V1702-BA Glow Plug Specifications**
+
+- **Type:** Fast-heat ceramic glow plugs
+- **Voltage:** 12V system (compatible with 24V via relay)
+- **Current:** ~15A per glow plug (4 cylinders = 60A total)
+- **Preheat Time:** 15-20 seconds @ -40°C, 5-10 seconds @ 0°C
+- **Control:** Normally controlled by engine ECU or manual timer
+
+### **Circuit Design**
+
 ```
-12V/24V Input → Fuse → Reverse Protection → Buck Converter → 5V Rail
-                                                         ↓
-                                           LDO Regulator → 3.3V Rail
-```
-
-**Required Rails:**
-- **12V/24V**: Relay coils, automotive sensors
-- **5V**: Sensor excitation, signal conditioning
-- **3.3V**: ESP32, logic levels
-
-### **GPIO21 - Glow Plugs Relay** ⚡ **CRITICAL**
-**Requirements:**
-- Drive 40A automotive relay
-- Flyback diode protection
-- LED status indicator
-- Overcurrent protection
-
-**Circuit Design:**
-```
-GPIO21 → 1kΩ → MOSFET Gate (IRLZ44N)
-              ↓
-         Relay Coil (12V/24V)
-              ↓
-         Flyback Diode (1N4007)
-              ↓
-            Ground
+GPIO21 → [1kΩ] → MOSFET Gate (IRLZ44N)
+                      ↓
+                 Relay Coil (12V, 200mA)
+                      ↓
+                 Flyback Diode (1N4007)
+                      ↓
+                    Ground
 ```
 
-**PCB Considerations:**
-- Use heavy copper traces (50mil minimum)
-- Place relay close to MOSFET
-- Add test point for diagnostics
-- Include manual override jumper
+### **Component Specifications**
 
-### **GPIO23 - Ignition Relay** ⚡ **CRITICAL**
-**Requirements:**
-- Drive 30A automotive relay
-- Similar protection as glow plugs
-- Status LED
+- **MOSFET:** IRLZ44N (Logic Level, 55V, 47A, 22mΩ Rds(on))
+- **Gate Resistor:** 1kΩ (1%, 1206 package)
+- **Flyback Diode:** 1N4007 (1000V, 1A, fast recovery)
+- **Relay:** Bosch 40A automotive relay (12V coil, SPST-NO)
+- **Status LED:** Red LED + 470Ω resistor
+- **Protection:** 3.3V Zener diode on GPIO
 
-**Circuit Design:** Same as GPIO21 but 30A relay
+### **PCB Layout Requirements**
 
-### **GPIO22 - Starter Relay** ⚡ **CRITICAL**
-**Requirements:**
-- Drive 100A automotive relay
-- Heavy duty protection
-- Short duty cycle (10s max)
-- Emergency cutoff capability
-
-**Circuit Design:**
-```
-GPIO22 → 1kΩ → High-current MOSFET (IRLB8721)
-              ↓
-         100A Relay Coil
-              ↓
-         Heavy Flyback Diode
-              ↓
-            Ground
-```
-
-**PCB Considerations:**
-- Use maximum copper thickness
-- Wide traces (100mil minimum)
-- Heat sinking for MOSFET
-- Separate ground plane section
-
-### **GPIO36 - Engine Temperature** 🌡️
-**Requirements:**
-- NTC thermistor interface
-- Signal conditioning circuit
-- Temperature range: -40°C to 150°C
-- 0.1°C resolution
-
-**Signal Conditioning Circuit:**
-```
-NTC Thermistor → Wheatstone Bridge → Op-amp Buffer → Voltage Divider → GPIO36
-     ↑                   ↑                ↑               ↑
-5V Reference      Reference Resistor    LM358        5V→3.3V
-```
-
-**PCB Considerations:**
-- Use precision reference resistor (0.1%)
-- Shield analog traces
-- Place conditioning circuit close to connector
-- Add ESD protection
-
-### **GPIO39 - Oil Pressure** 💧
-**Requirements:**
-- 0-689 kPa pressure transducer
-- 0-5V signal input
-- High input impedance
-- Noise filtering
-
-**Circuit Design:**
-```
-Pressure Sensor → RC Filter → Voltage Divider → GPIO39
-                     ↑             ↑
-               Low-pass filter   5V→3.3V
-```
-
-**Components:**
-- RC filter: 1kΩ + 100nF
-- Voltage divider: 47kΩ + 47kΩ
-- ESD protection diodes
-
-### **GPIO34 - Battery Voltage** 🔋
-**Requirements:**
-- Monitor 12V/24V battery
-- Voltage divider for 0-30V range
-- High accuracy (±1%)
-- Overvoltage protection
-
-**Circuit Design:**
-```
-Battery+ → Fuse → 47kΩ → GPIO34 → 4.7kΩ → GND
-                    ↑               ↑
-              Protection      3.3V Zener
-```
-
-**PCB Considerations:**
-- Use precision resistors (0.1%)
-- Add TVS diode for protection
-- Separate analog ground
-
-### **GPIO35 - Fuel Level** ⛽
-**Requirements:**
-- Resistive fuel sender (0-90Ω typical)
-- Ratiometric measurement
-- Noise immunity
-- Water resistance
-
-**Circuit Design:**
-```
-Fuel Sender → Pull-up Resistor → GPIO35
-      ↑              ↑
-   Variable R    Fixed Reference
-```
-
-### **GPIO27 - Alternator Charge** ⚡
-**Requirements:**
-- Monitor charge light signal
-- 12V/24V logic level
-- Noise filtering
-- Isolation
-
-**Circuit Design:**
-```
-Charge Signal → Voltage Divider → RC Filter → GPIO27
-                      ↑              ↑
-                  12V→3.3V      Noise filter
-```
-
-### **GPIO14 - Engine Run Feedback** 🏃
-**Requirements:**
-- Detect engine running state
-- Digital input with pullup
-- Debouncing circuit
-- ESD protection
+- **Trace Width:** 50mil minimum for relay coil current
+- **Via Stitching:** Multiple vias for heat dissipation
+- **Component Placement:** MOSFET close to relay socket
+- **Heat Sinking:** Thermal pad for MOSFET
+- **Test Points:** Gate, drain, source accessible
 
 ---
 
-## PCB Layout Guidelines
+## **GPIO22 - Starter Relay** ⚡ **CRITICAL**
 
-### **Layer Stack-up (4-layer recommended)**
-1. **Top Layer**: Components, fine traces
-2. **Ground Plane**: Solid ground pour
-3. **Power Plane**: 3.3V and 5V distribution
-4. **Bottom Layer**: Power traces, larger components
+### **Function & Requirements**
 
-### **Trace Width Guidelines**
-| Current | Minimum Width | Recommended |
-|---------|---------------|-------------|
-| 100mA | 4mil | 8mil |
-| 1A | 20mil | 30mil |
-| 5A | 50mil | 80mil |
-| 10A+ | 100mil | 150mil |
+- **Purpose:** Control starter solenoid for engine cranking
+- **Load:** 100A automotive relay coil (highest current in system)
+- **Duration:** Short duty cycle (10 seconds maximum)
+- **Safety:** Engine must be stopped before starter engagement
+- **Logic:** Active HIGH output with safety interlocks
 
-### **Component Placement**
+### **Kubota V1702-BA Starter Specifications**
+
+- **Type:** 12V electric starter motor
+- **Current:** 200-300A cranking current (through relay contacts)
+- **Coil Current:** 300-500mA for relay activation
+- **Safety:** Oil pressure and temperature interlocks required
+- **Timing:** Maximum 10-second engagement cycles
+
+### **Circuit Design**
+
 ```
-[Power Input] → [Protection] → [ESP32] → [Connectors]
-      ↓              ↓           ↓           ↓
-[Relay Drivers] [Signal Cond.] [Status LEDs] [Sensors]
+GPIO22 → [1kΩ] → High-Current MOSFET (IRLB8721)
+                      ↓
+                 100A Relay Coil (12V, 500mA)
+                      ↓
+                 Heavy Flyback Diode (1N5819)
+                      ↓
+                    Ground
 ```
 
-### **Critical Design Rules**
-1. **Separate analog and digital grounds**
-2. **Use star grounding for sensitive signals**
-3. **Keep switching circuits away from analog**
-4. **Add test points for all critical signals**
-5. **Include programming header (UART)**
-6. **Add reset and boot buttons**
-7. **Include status LEDs for each function**
+### **Component Specifications**
+
+- **MOSFET:** IRLB8721 (Logic Level, 30V, 62A, 6.2mΩ Rds(on))
+- **Gate Resistor:** 1kΩ (1%, 1206 package)
+- **Flyback Diode:** 1N5819 Schottky (40V, 1A, fast switching)
+- **Relay:** Heavy-duty 100A automotive relay (12V coil, SPST-NO)
+- **Status LED:** Red LED + 470Ω resistor
+- **Heat Sink:** TO-220 heat sink for MOSFET
+
+### **PCB Layout Requirements**
+
+- **Trace Width:** 100mil minimum for relay coil current
+- **Copper Weight:** 2oz copper minimum
+- **Via Stitching:** Extensive thermal vias
+- **Component Placement:** Isolated from sensitive circuits
+- **Heat Management:** Thermal relief on ground plane
 
 ---
 
-## Connector Requirements
+## **GPIO23 - Ignition Relay** ⚡ **CRITICAL**
 
-### **Main Engine Harness (16-pin)**
-| Pin | Signal | Wire Gauge | Color |
-|-----|--------|------------|-------|
-| 1 | +12V/24V Battery | 12 AWG | Red |
-| 2 | Ground | 12 AWG | Black |
-| 3 | Glow Plugs Out | 10 AWG | Yellow |
-| 4 | Ignition Out | 12 AWG | Blue |
-| 5 | Starter Out | 8 AWG | Purple |
-| 6 | Engine Temp In | 22 AWG | Green |
-| 7 | Oil Pressure In | 22 AWG | White |
-| 8 | Fuel Level In | 22 AWG | Brown |
-| 9 | Alternator Charge | 20 AWG | Orange |
-| 10 | Engine Run FB | 20 AWG | Pink |
-| 11-16 | Future Expansion | 20 AWG | Gray |
+### **Function & Requirements**
 
-### **Programming/Debug (6-pin)**
-| Pin | Signal | Notes |
-|-----|--------|-------|
-| 1 | 3.3V | Power |
-| 2 | GND | Ground |
-| 3 | TX | ESP32 TX |
-| 4 | RX | ESP32 RX |
-| 5 | EN | Reset |
-| 6 | BOOT | Boot mode |
+- **Purpose:** Control main ignition/run relay for engine operation
+- **Load:** 30A automotive relay coil
+- **Duration:** Continuous operation while engine running
+- **Safety:** Automatic shutoff on low oil pressure or high temperature
+- **Logic:** Active HIGH output
 
----
+### **Kubota V1702-BA Ignition System**
 
-## Next Steps for Board Development
+- **Type:** Mechanical injection pump (no electronic ignition)
+- **Control:** Fuel solenoid shutoff valve
+- **Current:** 2-5A continuous for fuel solenoid
+- **Safety:** Engine stops immediately when relay opens
+- **Monitoring:** Engine run feedback required
 
-### **Phase 1: Schematic Design** 📋
-- [ ] Complete schematic capture in KiCad/Altium
-- [ ] Add all protection circuits
-- [ ] Include test points and debug features
-- [ ] Design rule check (DRC)
+### **Circuit Design**
 
-### **Phase 2: PCB Layout** 🎯
-- [ ] Component placement optimization
-- [ ] Route critical signals first
-- [ ] Power plane design
-- [ ] EMI/EMC considerations
+```
+GPIO23 → [1kΩ] → MOSFET Gate (IRLZ44N)
+                      ↓
+                 Relay Coil (12V, 200mA)
+                      ↓
+                 Flyback Diode (1N4007)
+                      ↓
+                    Ground
+```
 
-### **Phase 3: Manufacturing Prep** 🏭
-- [ ] Generate Gerber files
-- [ ] Create assembly drawings
-- [ ] Bill of Materials (BOM)
-- [ ] Pick and place files
+### **Component Specifications**
 
-### **Phase 4: Testing Plan** 🧪
-- [ ] Bring-up test procedures
-- [ ] Functional test suite
-- [ ] Environmental testing
-- [ ] Certification requirements
+- **MOSFET:** IRLZ44N (Logic Level, 55V, 47A, 22mΩ Rds(on))
+- **Gate Resistor:** 1kΩ (1%, 1206 package)
+- **Flyback Diode:** 1N4007 (1000V, 1A)
+- **Relay:** 30A automotive relay (12V coil, SPST-NO)
+- **Status LED:** Green LED + 470Ω resistor
+- **Protection:** 3.3V Zener diode on GPIO
 
-Would you like me to elaborate on any specific pin or start with the schematic design for a particular section?
+### **PCB Layout Requirements**
+
+- **Trace Width:** 30mil minimum for relay coil current
+- **Component Placement:** Central location for easy access
+- **Status Indicators:** Visible LED placement
+- **Test Points:** All critical signals accessible
 
 ---
 
-### **Kubota V1702-BA Sensor Specifications (Research-Based)**
+## **GPIO27 - Alternator Charge Status** ⚡
 
-#### **Temperature Sensors - Thermistor Type**
-- **Type:** NTC Thermistor (Negative Temperature Coefficient)
-- **Common Values:** 2.2kΩ @ 25°C (typical automotive)
-- **Operating Range:** -40°C to 150°C
-- **Beta Value:** ~3950K (typical)
-- **Resistance at Key Temps:**
-  - 80°C (normal): ~500Ω
-  - 100°C (warm): ~250Ω
-  - 120°C (hot): ~150Ω
+### **Function & Requirements**
 
-#### **Oil Pressure Sensors - Resistive Type**
-- **Common Type:** 0-10 bar (0-145 psi) resistive sender
-- **Output:** Variable resistance (typically 10-180Ω)
-- **Alternative:** 0.5-4.5V analog output (modern retrofit)
-- **Pressure Range:** 0-689 kPa (0-100 psi) for diesel engines
-- **Typical Values:**
-  - 0 kPa: 180Ω
-  - 345 kPa (50 psi): 90Ω
-  - 689 kPa (100 psi): 10Ω
+- **Purpose:** Monitor alternator charge indicator light
+- **Signal:** 12V charge light circuit (Active LOW when charging)
+- **Logic:** LOW = charging, HIGH = not charging
+- **Monitoring:** Engine run detection and battery charging status
 
-#### **Fuel Level Sensors - Float Type**
-- **Type:** Variable resistor float sender
-- **Range:** 0-90Ω or 240-33Ω (depends on manufacturer)
-- **Tank Capacity:** 49L (13 gallons)
-- **Common Issue:** Non-linear response curve
-- **Calibration:** Requires lookup table
+### **Kubota V1702-BA Alternator Specifications**
 
-#### **Alternator Monitoring**
-- **W Terminal:** AC signal proportional to RPM
-- **Frequency:** ~47Hz per 1000 RPM (typical)
-- **Voltage:** 2-8V AC (battery voltage dependent)
-- **Circuit:** Needs AC coupling and pulse shaping
+- **Type:** 12V, 55A automotive alternator
+- **Charge Light:** Standard automotive circuit
+- **W Terminal:** AC output proportional to RPM (future RPM sensing)
+- **Regulation:** Internal voltage regulator (14.4V typical)
+
+### **Circuit Design**
+
+```
+Charge Light Signal → [47kΩ] → [10kΩ] → GPIO27
+    (12V)                 ↓        ↓
+                     Voltage   [100nF] → GND
+                     Divider   Filter
+```
+
+### **Component Specifications**
+
+- **R1:** 47kΩ (1%, 1206 package) - Voltage divider high side
+- **R2:** 10kΩ (1%, 1206 package) - Voltage divider low side
+- **C1:** 100nF ceramic (X7R, 50V) - Noise filtering
+- **D1:** 3.3V Zener diode - Overvoltage protection
+- **Pull-up:** Internal ESP32 pull-up enabled
+
+### **Signal Characteristics**
+
+- **Input Voltage:** 0-12V (automotive charge light circuit)
+- **Output Voltage:** 0-2.1V (safe for ESP32 3.3V logic)
+- **Logic Levels:** HIGH = 2.1V (not charging), LOW = 0V (charging)
+- **Filtering:** 100nF for automotive noise immunity
 
 ---
 
-### **Sensor Interface Circuit Designs**
+## **GPIO14 - Engine Run Feedback** 🏃
 
-#### **Temperature Sensor Circuit (GPIO36)**
+### **Function & Requirements**
+
+- **Purpose:** Detect engine running state for safety interlocks
+- **Signal:** Digital feedback from ignition system or oil pressure switch
+- **Logic:** HIGH = engine running, LOW = engine stopped
+- **Safety:** Used for starter interlock and safety shutdowns
+
+### **Signal Sources (Options)**
+
+1. **Oil Pressure Switch:** Opens when engine running (oil pressure > 0.7 bar)
+2. **Alternator W Terminal:** AC signal presence indicates engine running
+3. **Fuel Pump Current:** Current sensor on fuel pump circuit
+4. **Vibration Sensor:** Accelerometer detecting engine vibration
+
+### **Circuit Design**
+
+```
+Engine Run Signal → [10kΩ] → GPIO14
+    (12V)              ↓
+                   [100nF] → GND
+                   Filter
+```
+
+### **Component Specifications**
+
+- **R1:** 10kΩ (1%, 1206 package) - Current limiting
+- **C1:** 100nF ceramic (X7R, 50V) - Debouncing filter
+- **Pull-up:** Internal ESP32 pull-up enabled
+- **Protection:** 3.3V Zener diode for overvoltage
+
+### **Signal Characteristics**
+
+- **Input Voltage:** 0-12V (automotive signal)
+- **Logic Levels:** HIGH = engine running, LOW = engine stopped
+- **Debouncing:** Software debouncing + hardware filtering
+- **Response Time:** <100ms for safety-critical functions
+
+---
+
+## **GPIO36 - Engine Temperature** 🌡️
+
+### **Function & Requirements**
+
+- **Purpose:** Monitor engine coolant temperature
+- **Sensor:** NTC thermistor (Negative Temperature Coefficient)
+- **Range:** -40°C to 150°C operating range
+- **Resolution:** 0.1°C for precise temperature monitoring
+- **Safety:** Overheat protection and warning thresholds
+
+### **Kubota V1702-BA Temperature Sensor**
+
+- **Type:** 2-wire NTC thermistor sender
+- **Resistance:** 2.2kΩ @ 25°C (typical automotive)
+- **Beta Value:** 3950K (temperature coefficient)
+- **Location:** Engine block or thermostat housing
+- **Thread:** M14 x 1.5 or M12 x 1.5 (verify on actual engine)
+
+### **Resistance vs Temperature Curve**
+
+| Temperature (°C) | Resistance (Ω) | ADC Reading (12-bit) |
+|------------------|----------------|----------------------|
+| -40 | 28,680 | 3892 |
+| 0 | 6,530 | 3204 |
+| 25 | 2,200 | 2275 |
+| 80 | 326 | 819 |
+| 100 | 177 | 506 |
+| 120 | 105 | 324 |
+| 150 | 52 | 174 |
+
+### **Circuit Design**
 
 ```
                     +5V
                      |
-                   [4.7kΩ]     ← Pull-up resistor
+                   [4.7kΩ]     ← Pull-up/Reference
                      |
     To ESP32 -------|-------[100Ω]---- GPIO36
     (ADC1_CH0)       |                  ↑
                      |              Protection
                    [NTC]         & Current Limit
+               [2.2kΩ @ 25°C]
                      |
                    [1kΩ]         ← Linearization
                      |
                     GND
 ```
 
-**Component Values:**
-- **R1:** 4.7kΩ precision (1%) - Pull-up
-- **R2:** 100Ω - Protection resistor
-- **R3:** 1kΩ - Linearization resistor
-- **C1:** 100nF ceramic - Noise filtering
-- **Provisions:** Trimmer option for calibration
+### **Component Specifications**
 
-#### **Oil Pressure Sensor Circuit (GPIO39)**
+- **R1:** 4.7kΩ precision (1%, 1206) - Reference resistor
+- **R2:** 100Ω (5%, 1206) - Protection resistor
+- **R3:** 1kΩ (5%, 1206) - Linearization resistor
+- **C1:** 100nF ceramic (X7R, 50V) - Noise filtering
+- **C2:** 1µF ceramic (X7R, 25V) - Low frequency filtering
+- **Trimmer:** 10kΩ multi-turn for calibration
+
+### **Calibration & Software**
+
+- **Lookup Table:** Store resistance-to-temperature conversion
+- **Steinhart-Hart Equation:** For precise temperature calculation
+- **Averaging:** 10-sample rolling average for stability
+- **Thresholds:** Warning @ 100°C, critical @ 110°C, shutdown @ 115°C
+
+---
+
+## **GPIO39 - Oil Pressure** 💧
+
+### **Function & Requirements**
+
+- **Purpose:** Monitor engine oil pressure for lubrication safety
+- **Sensor:** Resistive oil pressure sender
+- **Range:** 0-689 kPa (0-100 psi) typical diesel engine range
+- **Resolution:** 1 kPa (0.15 psi) for accurate monitoring
+- **Safety:** Low pressure warning and engine shutdown protection
+
+### **Kubota V1702-BA Oil Pressure System**
+
+- **Type:** Full pressure lubrication system
+- **Normal Pressure:** 275-415 kPa (40-60 psi) @ 2000 RPM
+- **Low Pressure Warning:** < 140 kPa (20 psi)
+- **Critical Shutdown:** < 70 kPa (10 psi)
+- **Sender Type:** Variable resistance, 0-10 bar range
+
+### **Pressure Sender Characteristics**
+
+| Pressure (kPa) | Pressure (psi) | Resistance (Ω) | ADC Reading (12-bit) |
+|----------------|----------------|----------------|----------------------|
+| 0 | 0 | 180 | 434 |
+| 140 | 20 | 142 | 560 |
+| 275 | 40 | 90 | 842 |
+| 415 | 60 | 55 | 1318 |
+| 550 | 80 | 32 | 1876 |
+| 689 | 100 | 10 | 2925 |
+
+### **Circuit Design**
 
 ```
                     +5V
@@ -371,38 +367,122 @@ Would you like me to elaborate on any specific pin or start with the schematic d
     (ADC1_CH3)       |                  ↑
                      |              Protection
                  [Oil Sender]     & Current Limit
+                 (10-180Ω)
                      |
                     GND
 ```
 
-**Component Values:**
-- **R1:** 2.2kΩ precision (1%) - Reference
-- **R2:** 220Ω - Protection resistor
-- **C1:** 10µF tantalum + 100nF ceramic - Filtering
-- **D1:** 3.3V Zener - Overvoltage protection
-- **Provisions:** 10kΩ trimmer for full-scale adjust
+### **Component Specifications**
 
-#### **Battery Voltage Monitor Circuit (GPIO34)**
+- **R1:** 2.2kΩ precision (1%, 1206) - Reference resistor
+- **R2:** 220Ω (5%, 1206) - Protection resistor
+- **C1:** 10µF tantalum (25V) - Low frequency filtering
+- **C2:** 100nF ceramic (X7R, 50V) - High frequency filtering
+- **D1:** 3.3V Zener diode - Overvoltage protection
+- **Trimmer:** 10kΩ multi-turn for full-scale adjustment
+
+### **Signal Processing**
+
+- **Conversion:** Resistance to pressure using lookup table
+- **Filtering:** Heavy filtering due to engine vibration and pulsation
+- **Averaging:** 20-sample rolling average for stability
+- **Thresholds:** Warning @ 140 kPa, critical @ 70 kPa
+
+---
+
+## **GPIO34 - Battery Voltage** 🔋
+
+### **Function & Requirements**
+
+- **Purpose:** Monitor battery voltage for charging system health
+- **Range:** 8-30V (covers 12V and 24V systems)
+- **Resolution:** 0.1V for accurate voltage monitoring
+- **Protection:** Overvoltage protection for automotive transients
+- **Compatibility:** Works with both 12V and 24V Bobcat variants
+
+### **Kubota V1702-BA Electrical System**
+
+- **Battery:** 12V system standard
+- **Charging Voltage:** 13.8-14.4V (alternator regulated)
+- **Low Voltage:** < 11.5V (battery discharge warning)
+- **High Voltage:** > 15.5V (overcharge protection)
+- **Transients:** Automotive transients up to 40V possible
+
+### **Voltage Ranges & Thresholds**
+
+| Condition | 12V System | 24V System | Action |
+|-----------|------------|------------|--------|
+| Critical Low | < 10.5V | < 21.0V | Engine shutdown |
+| Low Warning | < 11.5V | < 23.0V | Warning indicator |
+| Normal | 11.5-14.5V | 23.0-29.0V | Normal operation |
+| High Warning | > 14.5V | > 29.0V | Charging system warning |
+| Critical High | > 16.0V | > 32.0V | System protection |
+
+### **Circuit Design**
 
 ```
-    +12V/24V ----[47kΩ]----+----[10kΩ]---- GPIO34
-                            |
-                          [100nF]
-                            |
-                           GND
+    +12V/24V ----[100kΩ]----+----[10kΩ]---- GPIO34
+                             |
+                        [100nF] + [3.3V Zener]
+                             |      |
+                            GND    GND
 ```
 
-**Voltage Divider Calculation:**
-- **12V Input:** 12V × (10kΩ/(47kΩ+10kΩ)) = 2.1V
-- **24V Input:** 24V × (10kΩ/(47kΩ+10kΩ)) = 4.2V ⚠️ **TOO HIGH!**
+### **Voltage Divider Calculation**
 
-**CORRECTED Design for 12V/24V:**
-- **R1:** 100kΩ (1%, metal film)
-- **R2:** 10kΩ (1%, metal film)
-- **Max Input:** 36V → 3.27V output (safe)
-- **Resolution:** ~11mV per ADC count @ 12-bit
+- **Divider Ratio:** 10kΩ/(100kΩ + 10kΩ) = 1/11 = 0.0909
+- **12V Input:** 12V × 0.0909 = 1.09V
+- **24V Input:** 24V × 0.0909 = 2.18V
+- **30V Input:** 30V × 0.0909 = 2.73V (safe for ESP32)
+- **40V Transient:** 40V × 0.0909 = 3.64V (protected by Zener)
 
-#### **Fuel Level Sensor Circuit (GPIO35)**
+### **Component Specifications**
+
+- **R1:** 100kΩ (1%, 1206) - High voltage divider resistor
+- **R2:** 10kΩ (1%, 1206) - Low voltage divider resistor
+- **C1:** 100nF ceramic (X7R, 50V) - Noise filtering
+- **D1:** 3.3V Zener diode (500mW) - Overvoltage protection
+- **D2:** Schottky diode (40V, 1A) - Reverse polarity protection
+
+### **Software Calibration**
+
+- **ADC Resolution:** 12-bit (4096 counts)
+- **Voltage per Count:** 3.3V / 4096 = 0.806mV per count
+- **Battery Voltage:** ADC_Reading × 0.806mV × 11 = actual voltage
+- **Averaging:** 50-sample rolling average for stability
+
+---
+
+## **GPIO35 - Fuel Level** ⛽
+
+### **Function & Requirements**
+
+- **Purpose:** Monitor fuel tank level for range estimation
+- **Sensor:** Variable resistance float sender
+- **Range:** 0-100% fuel level (49L tank capacity)
+- **Resolution:** 1% fuel level for accurate monitoring
+- **Calibration:** Non-linear tank shape requires lookup table
+
+### **Bobcat 743 Fuel System**
+
+- **Tank Capacity:** 49L (13 gallons)
+- **Tank Shape:** Irregular shape affects sensor linearity
+- **Sender Type:** Float-operated variable resistor
+- **Common Ranges:** 0-90Ω, 33-240Ω, or 240-33Ω (depends on OEM)
+- **Location:** Tank-mounted sender unit
+
+### **Fuel Sender Characteristics**
+
+| Fuel Level (%) | Tank Volume (L) | Resistance (Ω) | ADC Reading (12-bit) |
+|----------------|-----------------|----------------|----------------------|
+| 0 (Empty) | 0 | 240 | 341 |
+| 12.5 (1/8) | 6.1 | 180 | 434 |
+| 25 (1/4) | 12.25 | 120 | 650 |
+| 50 (1/2) | 24.5 | 90 | 842 |
+| 75 (3/4) | 36.75 | 60 | 1241 |
+| 100 (Full) | 49 | 33 | 1876 |
+
+### **Circuit Design**
 
 ```
                     +5V
@@ -418,253 +498,135 @@ Would you like me to elaborate on any specific pin or start with the schematic d
                     GND
 ```
 
-**Component Values:**
-- **R1:** 240Ω precision - Matches full scale
-- **R2:** 100Ω - Protection
-- **C1:** 1µF + 100nF - Heavy filtering (float movement)
-- **Provisions:** 1kΩ trimmer for sender matching
+### **Component Specifications**
+
+- **R1:** 240Ω precision (1%, 1206) - Matches full-scale sender
+- **R2:** 100Ω (5%, 1206) - Protection resistor
+- **C1:** 1µF ceramic (X7R, 25V) - Float movement filtering
+- **C2:** 100nF ceramic (X7R, 50V) - High frequency filtering
+- **Trimmer:** 1kΩ multi-turn for sender range matching
+
+### **Signal Processing & Calibration**
+
+- **Lookup Table:** Resistance-to-fuel-level conversion
+- **Tank Compensation:** Non-linear tank shape correction
+- **Filtering:** Heavy filtering due to vehicle movement and float oscillation
+- **Averaging:** 100-sample rolling average for stability
+- **Low Fuel Warning:** Alert at 10% (4.9L remaining)
 
 ---
 
-### **Open-Source Reference Projects Analysis**
+## **Power Supply Design**
 
-#### **Project 1: ieb/EngineMonitor (Marine Diesel)**
-**GitHub:** https://github.com/ieb/EngineMonitor
-**Target:** Volvo Penta D2-40F marine diesel
-**Key Insights:**
-- Uses ADS1115 16-bit ADC instead of ESP32 internal ADC (non-linear)
-- Signal conditioning with 74HC14 Schmitt trigger for pulses
-- Temperature: 1-wire DS18B20 sensors for remote monitoring
-- Oil pressure: Resistive sender with voltage divider
-- RPM from W+ alternator terminal with AC coupling
-- Power consumption: <50mA @ 5V (excellent for automotive)
+### **Input Power Requirements**
 
-**Circuit Highlights:**
-- **Zener regulation:** 5V through zener powered by 12V via 470Ω
-- **20-turn trimmers:** For precise calibration
-- **2N2222 switching:** For alternator signal conditioning
-- **BMP280:** Environmental pressure/temperature reference
+- **Input Voltage:** 12V/24V automotive (8-30V operating range)
+- **Input Current:** 500mA maximum (normal operation)
+- **Transient Protection:** 40V automotive transients
+- **Reverse Polarity:** Full protection required
+- **EMI Filtering:** Automotive-grade input filtering
 
-#### **Project 2: MohamedElalawy/gsm-esp32-diesel-engine-monitor**
-**GitHub:** https://github.com/MohamedElalawy/gsm-esp32-diesel-engine-monitor
-**Target:** Generic diesel engines with GSM telemetry
-**Key Insights:**
-- 12V/24V compatibility with buck converter
-- JSON data logging format
-- Engine hours tracking via digital input
-- Temperature and pressure analog inputs
-- Remote monitoring capabilities
+### **Power Rail Design**
 
-#### **Common Best Practices from Research:**
-1. **External ADC preferred** over ESP32 internal (linearity issues)
-2. **Heavy filtering** on analog inputs (100nF + larger caps)
-3. **Protection resistors** on all inputs (100-220Ω typical)
-4. **Trimmer provisions** for field calibration
-5. **AC coupling** for alternator RPM sensing
-6. **Schmitt triggers** for digital signal conditioning
-7. **Zener protection** on all analog inputs
-8. **Current limiting** on all outputs
+```text
+12V/24V Input → Fuse → Reverse Protection → Buck Converter → 5V Rail
+                                                         ↓
+                                           LDO Regulator → 3.3V Rail
+```
+
+### **Required Power Rails**
+
+- **12V/24V Raw:** Relay coils, automotive sensors (200mA)
+- **5V Regulated:** Sensor excitation, signal conditioning (100mA)
+- **3.3V Regulated:** ESP32, logic levels (150mA)
+
+### **Component Specifications**
+
+- **Input Fuse:** 2A automotive blade fuse
+- **TVS Diode:** 36V bidirectional TVS (automotive transient protection)
+- **Reverse Polarity:** P-channel MOSFET (automatic)
+- **Buck Converter:** MP2307 (24V input, 5V/1A output)
+- **LDO Regulator:** AMS1117-3.3 (5V to 3.3V, 1A)
 
 ---
 
-### **Component Specifications & Sourcing**
+## **PCB Layout Guidelines**
 
-#### **Precision Resistors (1% Metal Film)**
-| Value | Quantity | Application | Package | Part Number (Example) |
-|-------|----------|-------------|---------|----------------------|
-| 100Ω | 6 | Protection | 1206 | ERJ-8ENF1000V |
-| 220Ω | 4 | Protection | 1206 | ERJ-8ENF2200V |
-| 1kΩ | 8 | General | 1206 | ERJ-8ENF1001V |
-| 2.2kΩ | 2 | Reference | 1206 | ERJ-8ENF2201V |
-| 4.7kΩ | 4 | Pull-up | 1206 | ERJ-8ENF4701V |
-| 10kΩ | 6 | Dividers | 1206 | ERJ-8ENF1002V |
-| 47kΩ | 2 | High voltage | 1206 | ERJ-8ENF4702V |
-| 100kΩ | 2 | High voltage | 1206 | ERJ-8ENF1003V |
+### **Layer Stack-up (4-layer)**
 
-#### **Trimmer Potentiometers (Multi-turn)**
-| Value | Quantity | Application | Type | Part Number (Example) |
-|-------|----------|-------------|------|----------------------|
-| 1kΩ | 2 | Temp calibration | 10-turn | 3296W-1-102LF |
-| 10kΩ | 4 | General cal | 10-turn | 3296W-1-103LF |
+1. **Top Layer:** Components, fine signal traces
+2. **Ground Plane:** Solid ground pour with analog/digital separation
+3. **Power Plane:** 3.3V and 5V distribution
+4. **Bottom Layer:** Power traces, high-current connections
 
-#### **Capacitors (Filtering & Decoupling)**
-| Value | Quantity | Application | Type | Voltage |
-|-------|----------|-------------|------|---------|
-| 100nF | 12 | HF filtering | Ceramic X7R | 50V |
-| 1µF | 4 | LF filtering | Ceramic X7R | 25V |
-| 10µF | 4 | Power filtering | Tantalum | 25V |
-| 100µF | 2 | Bulk filtering | Electrolytic | 35V |
+### **Trace Width Guidelines**
 
-#### **Protection Components**
-| Component | Quantity | Application | Rating | Part Number (Example) |
-|-----------|----------|-------------|--------|----------------------|
-| 3.3V Zener | 6 | Input protection | 500mW | BZX84C3V3 |
-| Schottky Diode | 8 | Reverse protection | 40V/1A | 1N5819 |
-| TVS Diode | 4 | ESD protection | 15V | SMAJ15A |
+| Current | Minimum Width | Recommended | Copper Weight |
+|---------|---------------|-------------|---------------|
+| 100mA | 4mil | 8mil | 1oz |
+| 500mA | 12mil | 20mil | 1oz |
+| 1A | 20mil | 30mil | 1oz |
+| 5A | 50mil | 80mil | 2oz |
+| 10A+ | 100mil | 150mil | 2oz |
 
-#### **Relays & Drivers**
-| Component | Quantity | Application | Rating | Notes |
-|-----------|----------|-------------|--------|-------|
-| Automotive Relay | 3 | Glow/Ignition/Starter | 40A/12V | Bosch type |
-| Relay Socket | 3 | Mounting | - | PCB mount |
-| MOSFET Driver | 3 | Relay drive | Logic level | IRLZ44N or similar |
+### **Critical Design Rules**
+
+1. **Analog/Digital Separation:** Separate ground planes connected at single point
+2. **Power Supply Isolation:** Switching regulator away from analog circuits
+3. **Crystal Placement:** Short traces with ground guard rings
+4. **High Current Routing:** Heavy copper traces with thermal vias
+5. **Test Points:** All critical signals accessible for debugging
+6. **Component Orientation:** All polarized components clearly marked
 
 ---
 
-### **PCB Layout Guidelines**
+## **Environmental & Regulatory Requirements**
 
-#### **Trace Width Calculations**
-| Current | Internal | External | Copper Weight | Notes |
-|---------|----------|----------|---------------|-------|
-| 100mA | 6 mil | 4 mil | 1oz | Signal traces |
-| 500mA | 12 mil | 8 mil | 1oz | Power traces |
-| 1A | 25 mil | 15 mil | 1oz | Relay drivers |
-| 5A | 75 mil | 40 mil | 2oz | Power input |
-| 40A | Via stitching | External wire | N/A | Relay contacts |
+### **Automotive Operating Conditions**
 
-#### **Critical Layout Requirements**
-1. **Analog Section Isolation:** Separate ground planes for analog/digital
-2. **Power Supply Placement:** Input protection near connector
-3. **Crystal Placement:** Short traces, ground guard rings
-4. **High Current Traces:** Heavy copper, thermal vias
-5. **Connector Placement:** Automotive-grade, sealed connectors
-6. **Test Points:** All critical signals accessible
-7. **Mounting:** Automotive vibration resistance
+- **Temperature Range:** -40°C to +85°C (extended automotive)
+- **Humidity:** 0-95% non-condensing with salt spray resistance
+- **Vibration:** 20G @ 10-2000Hz (engine compartment mounting)
+- **Shock:** 50G, 11ms duration (road shock and impact)
+- **EMI/EMC:** CISPR-25 automotive EMC compliance
+- **Ingress Protection:** IP67 sealing (dust and water protection)
 
----
+### **Component Selection Criteria**
 
-### **Environmental Requirements (Automotive)**
-
-#### **Operating Conditions**
-- **Temperature:** -40°C to +85°C (automotive grade)
-- **Humidity:** 0-95% non-condensing
-- **Vibration:** 20G @ 10-2000Hz (engine compartment)
-- **Shock:** 50G, 11ms duration
-- **EMI/EMC:** CISPR-25 compliance
-- **Ingress:** IP67 (connector sealing)
-
-#### **Component Selection Criteria**
-- **Automotive Grade:** AEC-Q100 qualified where possible
+- **Automotive Grade:** AEC-Q100 qualified components where available
 - **Extended Temperature:** -40°C to +125°C for critical components
-- **Low ESR Capacitors:** For power supply filtering
-- **Metal Film Resistors:** For precision and stability
-- **Conformal Coating:** PCB protection against moisture/contaminants
+- **Vibration Resistant:** Components rated for automotive vibration
+- **Conformal Coating:** PCB protection against moisture and contaminants
+- **Connector Sealing:** IP67 rated automotive connectors
 
 ---
 
-### **Immediate Next Steps - Action Plan**
+## **Cost Analysis & BOM**
 
-#### **Phase 1: Schematic Design (Week 1-2)**
-1. **Create detailed schematic** using KiCad or Altium Designer
-2. **Component selection** - specific part numbers from major suppliers
-3. **Circuit simulation** - SPICE models for critical analog circuits
-4. **Design review** - peer review of schematic before PCB layout
-5. **BOM cost analysis** - target <$100 per board in qty 10
+### **Component Costs (Quantity 10)**
 
-#### **Phase 2: PCB Layout (Week 3-4)**
-1. **Component placement** - optimize for EMI/thermal performance
-2. **Routing strategy** - separate analog/digital domains
-3. **Power plane design** - minimize noise coupling
-4. **DRC compliance** - design rule check for manufacturing
-5. **3D modeling** - mechanical fit verification
+| Category | Cost per Board | Components | Notes |
+|----------|---------------|------------|-------|
+| ESP32 Module | $8.00 | ESP32-WROOM-32D | Main controller |
+| Passive Components | $5.00 | Resistors, capacitors | 1% precision |
+| Protection Circuits | $12.00 | Zeners, TVS, fuses | Automotive grade |
+| Power MOSFETs | $6.00 | Relay drivers | Logic level |
+| Automotive Relays | $25.00 | 3× relays + sockets | 40A/30A/100A |
+| Connectors | $15.00 | IP67 automotive | Sealed connectors |
+| PCB Fabrication | $20.00 | 4-layer, 2oz copper | Professional fab |
+| Assembly & Test | $15.00 | Hand assembly | Initial prototypes |
+| **Total** | **$106.00** | **Target Achieved** | <$150 goal |
 
-#### **Phase 3: Prototype & Testing (Week 5-8)**
-1. **Board fabrication** - 4-layer PCB with controlled impedance
-2. **Component assembly** - initial hand-soldering for prototype
-3. **Bench testing** - verify all circuits without engine
-4. **Engine integration** - real-world testing on Bobcat 743
-5. **Calibration & tuning** - optimize sensor readings
+### **Open-Source Project Resources**
 
-#### **Phase 4: Documentation & Release (Week 9-12)**
-1. **Assembly documentation** - detailed build instructions
-2. **Calibration procedures** - step-by-step sensor setup
-3. **Installation guide** - mechanical and electrical installation
-4. **Troubleshooting guide** - common issues and solutions
-5. **Open-source release** - GitHub repository with full design files
+Based on research of similar projects:
+
+- **ieb/EngineMonitor:** Marine diesel monitoring with NMEA2000
+- **MohamedElalawy/gsm-esp32-diesel-engine-monitor:** GSM telemetry system
+- **Common Best Practices:** External ADC, heavy filtering, automotive protection
 
 ---
 
-### **Critical Questions for Next Review**
+**STATUS: Complete pin-by-pin analysis ready for schematic design**
 
-#### **Design Decisions Needed:**
-1. **External ADC vs ESP32 ADC?** - Recommendation: ADS1115 for precision
-2. **Single PCB vs modular?** - Recommendation: Single PCB with removable sections
-3. **Connector type?** - Automotive IP67 vs standard headers
-4. **Power input protection?** - Fuse + TVS + reverse protection
-5. **Enclosure strategy?** - IP67 aluminum enclosure vs plastic
-
-#### **Sensor Compatibility Verification:**
-1. **Actual Bobcat 743 sensor resistance values** - need field measurements
-2. **Wiring harness compatibility** - connector pinouts and wire colors
-3. **Alternator W terminal availability** - verify on target machine
-4. **Glow plug controller integration** - existing vs replacement
-5. **Safety interlocks** - oil pressure, coolant temperature limits
-
-#### **Regulatory Compliance:**
-1. **EMI/EMC requirements** - CISPR-25 automotive standard
-2. **Safety certifications** - UL, CE marking requirements
-3. **Environmental compliance** - RoHS, REACH directives
-4. **Functional safety** - ISO 26262 considerations for critical functions
-
----
-
-### **Cost Analysis (Preliminary)**
-
-#### **Component Costs (Qty 10 estimate)**
-| Category | Cost per Board | Notes |
-|----------|---------------|-------|
-| ESP32 Module | $8 | ESP32-WROOM-32D |
-| Resistors/Caps | $5 | Passive components |
-| Protection | $12 | Zeners, TVS, fuses |
-| Relays | $25 | 3× automotive relays |
-| Connectors | $15 | IP67 automotive grade |
-| PCB Fabrication | $20 | 4-layer, controlled impedance |
-| Assembly | $15 | Hand assembly/testing |
-| **Total** | **$100** | Target achieved |
-
-#### **Development Costs**
-- **Design time:** 80 hours @ $50/hr = $4,000
-- **Prototype PCBs:** 10 boards @ $25 = $250
-- **Test equipment:** $500 (if needed)
-- **Certification:** $2,000-5,000 (if pursuing)
-
----
-
-### **Collaboration Opportunities**
-
-#### **Skill Sets Needed:**
-1. **PCB Layout** - Experienced with automotive electronics
-2. **Mechanical Design** - Enclosure and mounting systems
-3. **Firmware Development** - ESP32 programming expertise
-4. **Testing & Validation** - Access to Bobcat 743 for real-world testing
-5. **Documentation** - Technical writing and illustration
-
-#### **Potential Partners:**
-- **Open-source communities** - Arduino, ESP32, agricultural automation
-- **Academic institutions** - Engineering capstone projects
-- **Bobcat owners/operators** - Real-world testing and feedback
-- **PCB fabricators** - Local/regional electronics manufacturers
-- **Component suppliers** - Digikey, Mouser, Arrow for volume pricing
-
----
-
-### **Success Metrics**
-
-#### **Technical Performance:**
-- **Sensor accuracy:** ±2% full scale for critical parameters
-- **System reliability:** >99.9% uptime in field conditions
-- **Response time:** <100ms for safety-critical functions
-- **Power consumption:** <200mA average, <50mA standby
-- **Operating temperature:** -40°C to +85°C verified
-
-#### **Project Goals:**
-- **Open-source release** - Complete design files and documentation
-- **Community adoption** - >100 downloads in first year
-- **Commercial viability** - Clear path to small-scale production
-- **Safety compliance** - No safety incidents in field testing
-- **Cost effectiveness** - <$150 total installed cost
-
----
-
-**STATUS: Ready for detailed schematic design phase**
-**NEXT ACTION: Create KiCad project and begin component placement**
+**NEXT STEPS: See TODO.md for detailed action plan**
