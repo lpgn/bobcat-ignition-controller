@@ -1,0 +1,126 @@
+# ESP32 to Diesel Engine Wiring Diagram
+
+```
+                        BOBCAT DIESEL ENGINE CONTROLLER
+                              ESP32 GPIO CONNECTIONS
+
+    ┌─────────────────────────────────────────────────────────────────────────────┐
+    │                              ESP32 MODULE                                   │
+    │                                                                             │
+    │  ┌─────────────────────────────────────────────────────────────────────┐    │
+    │  │                      DIGITAL OUTPUTS (Relays)                      │    │
+    │  │                                                                     │    │
+    │  │  GPIO21 ──────── GLOW PLUGS RELAY ────────── Engine Glow Plugs     │    │
+    │  │  GPIO23 ──────── IGNITION RELAY ──────────── Main Ignition         │    │
+    │  │  GPIO22 ──────── STARTER RELAY ────────────── Starter Solenoid     │    │
+    │  │  GPIO19 ──────── FUEL PUMP RELAY ──────────── Electric Fuel Pump   │    │
+    │  │  GPIO18 ──────── COOLING FAN RELAY ────────── Radiator Fan         │    │
+    │  │                                                                     │    │
+    │  └─────────────────────────────────────────────────────────────────────┘    │
+    │                                                                             │
+    │  ┌─────────────────────────────────────────────────────────────────────┐    │
+    │  │                    ANALOG INPUTS (Sensors)                         │    │
+    │  │                                                                     │    │
+    │  │  GPIO36 (ADC1_CH0) ──── COOLANT TEMP ──── Temperature Sensor       │    │
+    │  │  GPIO39 (ADC1_CH3) ──── OIL PRESSURE ──── Pressure Transducer     │    │
+    │  │  GPIO34 (ADC1_CH6) ──── BATTERY VOLTAGE ── Voltage Divider         │    │
+    │  │  GPIO35 (ADC1_CH7) ──── FUEL LEVEL ───── Fuel Tank Sender         │    │
+    │  │  GPIO32 (ADC1_CH4) ──── ENGINE RPM ───── RPM Signal (analog)       │    │
+    │  │                                                                     │    │
+    │  └─────────────────────────────────────────────────────────────────────┘    │
+    │                                                                             │
+    │  ┌─────────────────────────────────────────────────────────────────────┐    │
+    │  │                   DIGITAL INPUTS (Switches)                        │    │
+    │  │                                                                     │    │
+    │  │  GPIO25 ──────── OIL PRESSURE SWITCH ──── Low Oil Pressure         │    │
+    │  │  GPIO26 ──────── COOLANT TEMP SWITCH ──── High Temperature         │    │
+    │  │  GPIO27 ──────── ALTERNATOR CHARGE ────── Charge Indicator         │    │
+    │  │  GPIO14 ──────── ENGINE RUN FEEDBACK ──── Engine Running Signal    │    │
+    │  │  GPIO12 ──────── EMERGENCY STOP ──────── E-Stop Switch             │    │
+    │  │                                                                     │    │
+    │  └─────────────────────────────────────────────────────────────────────┘    │
+    │                                                                             │
+    │  ┌─────────────────────────────────────────────────────────────────────┐    │
+    │  │                    PULSE INPUTS (RPM/Frequency)                    │    │
+    │  │                                                                     │    │
+    │  │  GPIO13 ──────── RPM SENSOR ──────────── Magnetic Pickup           │    │
+    │  │  GPIO15 ──────── HOUR METER ──────────── Pulse Counter             │    │
+    │  │                                                                     │    │
+    │  └─────────────────────────────────────────────────────────────────────┘    │
+    │                                                                             │
+    └─────────────────────────────────────────────────────────────────────────────┘
+
+                              POWER CONNECTIONS
+
+    ┌─────────────────────────────────────────────────────────────────────────────┐
+    │                                                                             │
+    │  12V/24V Battery ──┬── Relay Power Supply                                   │
+    │                    ├── Sensor Power (5V Regulator)                         │
+    │                    ├── ESP32 Power (3.3V Regulator)                        │
+    │                    └── Main System Ground                                   │
+    │                                                                             │
+    │  Engine Ground ────── Sensor Ground Reference                               │
+    │                                                                             │
+    └─────────────────────────────────────────────────────────────────────────────┘
+
+                              RELAY CONNECTIONS
+
+    ┌─────────────────────────────────────────────────────────────────────────────┐
+    │                                                                             │
+    │  GLOW PLUGS RELAY (40A):                                                    │
+    │  Coil: GPIO21 → Relay Coil → 12V/24V                                       │
+    │  Load: Battery → Relay Contacts → Glow Plug Circuit                        │
+    │                                                                             │
+    │  STARTER RELAY (100A):                                                      │
+    │  Coil: GPIO22 → Relay Coil → 12V/24V                                       │
+    │  Load: Battery → Relay Contacts → Starter Solenoid                         │
+    │                                                                             │
+    │  IGNITION RELAY (30A):                                                      │
+    │  Coil: GPIO23 → Relay Coil → 12V/24V                                       │
+    │  Load: Battery → Relay Contacts → Ignition Switch Circuit                  │
+    │                                                                             │
+    └─────────────────────────────────────────────────────────────────────────────┘
+
+                              SENSOR CONNECTIONS
+
+    ┌─────────────────────────────────────────────────────────────────────────────┐
+    │                                                                             │
+    │  COOLANT TEMPERATURE SENSOR:                                                │
+    │  Engine Temp Sensor → Signal Conditioner → GPIO36                          │
+    │  (NTC Thermistor with Wheatstone bridge and op-amp buffer)                 │
+    │                                                                             │
+    │  OIL PRESSURE SENSOR:                                                       │
+    │  Pressure Transducer (0-5V) → GPIO39                                       │
+    │  +5V → Red Wire, GND → Black Wire, Signal → Blue Wire                      │
+    │                                                                             │
+    │  BATTERY VOLTAGE MONITOR:                                                   │
+    │  12V/24V → 47kΩ → GPIO34 → 4.7kΩ → GND                                     │
+    │  (Voltage divider to scale battery voltage to 3.3V max)                    │
+    │                                                                             │
+    │  RPM SENSOR (Magnetic Pickup):                                              │
+    │  Pickup Coil → AC Coupling → Comparator → GPIO13                           │
+    │  (Signal conditioning converts AC pulses to 3.3V digital levels)           │
+    │                                                                             │
+    └─────────────────────────────────────────────────────────────────────────────┘
+
+                              SAFETY SWITCHES
+
+    ┌─────────────────────────────────────────────────────────────────────────────┐
+    │                                                                             │
+    │  LOW OIL PRESSURE SWITCH (Normally Closed):                                 │
+    │  +3.3V → 10kΩ → GPIO25 → Oil Pressure Switch → Engine Ground               │
+    │  Normal: Switch closed = GPIO25 LOW                                         │
+    │  Alarm:  Switch open = GPIO25 HIGH                                          │
+    │                                                                             │
+    │  HIGH COOLANT TEMP SWITCH (Normally Open):                                  │
+    │  GPIO26 → 10kΩ → +3.3V, GPIO26 → Temp Switch → Engine Ground               │
+    │  Normal: Switch open = GPIO26 HIGH                                          │
+    │  Alarm:  Switch closed = GPIO26 LOW                                         │
+    │                                                                             │
+    │  EMERGENCY STOP SWITCH (Normally Closed):                                   │
+    │  +3.3V → 10kΩ → GPIO12 → E-Stop Switch → GND                               │
+    │  Normal: Switch closed = GPIO12 LOW                                         │
+    │  STOP:   Switch open = GPIO12 HIGH                                          │
+    │                                                                             │
+    └─────────────────────────────────────────────────────────────────────────────┘
+```
