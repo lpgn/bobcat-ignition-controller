@@ -4,15 +4,16 @@
 
 ```
 Web Interface Buttons:
-┌─────────────┐  ┌──────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-│  Power ON   │  │ Ignition ON  │  │ Front Light │  │ Back Light  │  │ Override    │
-└─────────────┘  └──────────────┘  └─────────────┘  └─────────────┘  └─────────────┘
-       │                │                │               │               │
-       ▼                ▼                ▼               ▼               ▼
-┌─────────────┐  ┌──────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-│Main Power   │  │Glow Plugs +  │  │Front Light  │  │Back Light   │  │Emergency    │
-│Relay ON     │  │Starter Motor │  │Relay Toggle │  │Relay Toggle │  │Start Bypass │
-└─────────────┘  └──────────────┘  └─────────────┘  └─────────────┘  └─────────────┘
+┌─────────────┐  ┌──────────────┐  ┌─────────────┐  ┌─────────────┐
+│  Power ON   │  │ Ignition ON  │  │ Lights      │  │ Override    │
+│             │  │              │  │ Toggle      │  │ Start       │
+└─────────────┘  └──────────────┘  └─────────────┘  └─────────────┘
+       │                │                │               │
+       ▼                ▼                ▼               ▼
+┌─────────────┐  ┌──────────────┐  ┌─────────────┐  ┌─────────────┐
+│Main Power   │  │Glow Plugs +  │  │Front & Back │  │Emergency    │
+│Relay ON     │  │Starter Motor │  │Lights Relay │  │Start Bypass │
+└─────────────┘  └──────────────┘  └─────────────┘  └─────────────┘
 ```
 
 ## System States and Transitions
@@ -50,15 +51,16 @@ Web Interface Buttons:
 
 ## Hardware Control Points
 
-### What the System CAN Control:
+### What the System CAN Control
+
 - ✅ Main Power Relay (Powers all systems)
 - ✅ Glow Plug Relay (Preheating)
 - ✅ Starter Motor Relay (Engine cranking)
-- ✅ Front Light Relay
-- ✅ Back Light Relay
+- ✅ Combined Lights Relay (Front and back lights together)
 - ✅ Safety Alert Display
 
-### What the System CANNOT Control:
+### What the System CANNOT Control
+
 - ❌ Engine Stop (Manual lever only)
 - ❌ Fuel Shutoff (Manual lever only)
 

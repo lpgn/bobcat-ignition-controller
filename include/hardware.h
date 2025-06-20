@@ -20,8 +20,7 @@ void initializePins();
 void controlMainPower(bool enable);
 void controlGlowPlugs(bool enable);      // Glow plug relay control
 void controlStarter(bool enable);        // Starter solenoid relay
-void controlFrontLight(bool enable);
-void controlBackLight(bool enable);
+void controlLights(bool enable);         // Both front and back lights relay
 
 // ============================================================================
 // VIRTUAL BUTTON FUNCTIONS - Web Interface Control
@@ -29,8 +28,7 @@ void controlBackLight(bool enable);
 void virtualPowerOnButton();
 void virtualPowerOffButton();
 void virtualStartButton();     // Virtual start button for web interface
-void virtualFrontLightButton();
-void virtualBackLightButton();
+void virtualLightsButton();    // Combined front and back lights toggle
 // Note: No virtualStopButton - engine must be stopped manually with lever
 
 // ============================================================================

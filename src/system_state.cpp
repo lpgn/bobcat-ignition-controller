@@ -24,8 +24,7 @@ void runIgnitionSequence() {
         Serial.println("Power OFF - System shutdown");
         currentState = IDLE;
         controlMainPower(false);
-        controlFrontLight(false);
-        controlBackLight(false);
+        controlLights(false);
         powerOffButtonPressed = false;
       } else if (startButtonPressed) {
         Serial.println("Starting ignition sequence...");

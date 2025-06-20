@@ -14,8 +14,7 @@ const int MAIN_POWER_PIN = 5;         // GPIO5 - Main Power Relay Control
 const int GLOW_PLUGS_PIN = 21;        // GPIO21 - Glow Plug Relay Control
 // const int IGNITION_PIN = 23;       // This is not used in this Bobcat model
 const int STARTER_PIN = 22;           // GPIO22 - Starter Solenoid Relay
-const int FRONT_LIGHT_PIN = 18;       // GPIO18 - Front Light Relay
-const int BACK_LIGHT_PIN = 19;        // GPIO19 - Back Light Relay
+const int LIGHTS_PIN = 18;            // GPIO18 - Both Front and Back Lights Relay
 
 // ============================================================================
 // ANALOG INPUT PINS - Engine Sensors (ADC1 channels for WiFi compatibility)

@@ -2,10 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const powerOnBtn = document.getElementById('power-on-btn');
     const powerOffBtn = document.getElementById('power-off-btn');
     const startBtn = document.getElementById('start-btn');
-    const stopBtn = document.getElementById('stop-btn');
     const overrideBtn = document.getElementById('override-btn');
-    const frontLightBtn = document.getElementById('front-light-btn');
-    const backLightBtn = document.getElementById('back-light-btn');
+    const lightsBtn = document.getElementById('lights-btn');
     const statusMessage = document.getElementById('status-message');
     const tempValue = document.getElementById('temp-value');
     const pressureValue = document.getElementById('pressure-value');
@@ -60,14 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    frontLightBtn.addEventListener('click', () => {
-        fetch('/toggle_front_light')
-            .then(response => response.text())
-            .then(data => console.log(data));
-    });
-
-    backLightBtn.addEventListener('click', () => {
-        fetch('/toggle_back_light')
+    lightsBtn.addEventListener('click', () => {
+        fetch('/toggle_lights')
             .then(response => response.text())
             .then(data => console.log(data));
     });

@@ -94,16 +94,10 @@ void setupWebServer() {
 
     // Note: No engine stop endpoint - engine must be stopped manually with lever
 
-    // Handle the front light toggle
-    server.on("/toggle_front_light", HTTP_GET, [](AsyncWebServerRequest *request){
-        virtualFrontLightButton();
-        request->send(200, "text/plain", "Front light toggled");
-    });
-
-    // Handle the back light toggle
-    server.on("/toggle_back_light", HTTP_GET, [](AsyncWebServerRequest *request){
-        virtualBackLightButton();
-        request->send(200, "text/plain", "Back light toggled");
+    // Handle the lights toggle
+    server.on("/toggle_lights", HTTP_GET, [](AsyncWebServerRequest *request){
+        virtualLightsButton();
+        request->send(200, "text/plain", "Lights toggled");
     });
 
     // Handle the override button press
