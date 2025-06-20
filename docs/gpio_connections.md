@@ -1,52 +1,284 @@
-# Bobcat Diesel Engine Controller - GPIO Connection Guide
+# GPIO Connection Guide
+
+Complete reference for ESP32 GPIO pin assignments in the Bobcat Ignition Controller using the LILYGO T-Relay 4-channel board.
 
 ## Overview
-This document details the ESP32 GPIO connections for interfacing with a typical diesel engine's sensors and control systems. The design supports common diesel engine components found on Bobcat equipment.
 
-## Power Supply Requirements
-- **ESP32 Power**: 3.3V (regulated from 12V/24V system)
-- **Relay Coils**: 12V/24V (depending on system voltage)
-- **Sensor Power**: 5V regulated (for pressure/temperature sensors)
+This document provides the definitive GPIO pin mapping for the current 4-relay controller design. All pin assignments have been optimized for the LILYGO T-Relay hardware and the specific requirements of Bobcat equipment with manual engine stop.
 
----
+## Key Design Principles
+
+- **4-Relay Configuration**: Optimized for LILYGO T-Relay board limitations
+- **Manual Engine Stop**: No electronic engine shutdown capability
+- **Safety-First**: Visual alerts only, no automatic shutdowns
+- **Combined Lighting**: Single relay controls all work lights
+
+## Power Supply Connections
+
+| Terminal | Voltage | Function | Current Capacity |
+|----------|---------|----------|------------------|
+| VIN | 12V DC | Main power input | 2A maximum |
+| GND | 0V | System ground | - |
+| 3V3 | 3.3V | ESP32 supply (regulated) | 600mA |
+| 5V | 5V | Sensor excitation (regulated) | 500mA |
 
 ## Digital Output Pins (Relay Control)
 
-### Primary Engine Control
-| GPIO | Function | Relay Type | Load Current | Notes |
-|------|----------|------------|--------------|-------|
-| 21 | Glow Plugs | SPST 40A | 20-40A | Controls glow plug heating circuit |
-| 23 | Ignition/Run | SPST 30A | 5-15A | Main ignition switch position |
-| 22 | Starter | SPST 100A | 80-150A | Starter solenoid activation |
+### Active Relay Assignments
 
-### Auxiliary Systems
-| GPIO | Function | Relay Type | Load Current | Notes |
-|------|----------|------------|--------------|-------|
-| 19 | Fuel Pump | SPST 20A | 3-8A | Electric fuel pump (if equipped) |
-| 18 | Cooling Fan | SPST 30A | 10-20A | Radiator cooling fan override |
+| GPIO | Pin Name | Relay | Function | Load Rating | Purpose |
+|------|----------|-------|----------|-------------|---------|
+| GPIO5 | D5 | Relay 1 | Main Power | 10A @ 12V | Master electrical system control |
+| GPIO21 | D21 | Relay 2 | Glow Plugs | 10A @ 12V | Diesel preheating (20-sec timer) |
+| GPIO22 | D22 | Relay 3 | Starter | 10A @ 12V | Starter solenoid activation |
+| GPIO18 | D18 | Relay 4 | Lights | 10A @ 12V | Combined work lights |
 
----
+### Relay Control Logic
 
-## Analog Input Pins (Engine Sensors)
+- **Active HIGH**: GPIO output HIGH energizes relay coil
+- **Switching Delay**: ~10ms mechanical switching time
+- **Coil Resistance**: ~150Ω per relay coil
+- **LED Indicators**: Green LED on board shows relay status
 
-### Primary Engine Parameters
-| GPIO | ADC Ch | Sensor Type | Range | Signal Type | Connection |
-|------|--------|-------------|-------|-------------|------------|
-| 36 | ADC1_CH0 | Coolant Temp | -40°C to 150°C | 0-5V | NTC Thermistor via signal conditioner |
-| 39 | ADC1_CH3 | Oil Pressure | 0-689 kPa | 0-5V | Pressure transducer |
-| 34 | ADC1_CH6 | Battery Voltage | 0-30V | 0-3.3V | Voltage divider (10:1 ratio) |
-| 35 | ADC1_CH7 | Fuel Level | 0-100% | 0-5V | Resistive fuel sender |
-| 32 | ADC1_CH4 | RPM (Analog) | 0-4000 RPM | 0-5V | Frequency-to-voltage converter |
+## Analog Input Pins (Sensor Monitoring)
 
-### Sensor Wiring Details
+### Engine Sensor Inputs
 
-#### Coolant Temperature Sensor
+| GPIO | ADC Channel | Function | Input Range | Resolution | Update Rate |
+|------|-------------|----------|-------------|------------|-------------|
+| GPIO36 | ADC1_CH0 | Engine Temperature | 0-3.3V | 12-bit | 2 seconds |
+| GPIO39 | ADC1_CH3 | Oil Pressure | 0-3.3V | 12-bit | 2 seconds |
+| GPIO34 | ADC1_CH6 | Battery Voltage | 0-3.3V | 12-bit | 2 seconds |
+| GPIO35 | ADC1_CH7 | Fuel Level | 0-3.3V | 12-bit | 2 seconds |
+
+### Signal Conditioning Requirements
+
+#### Engine Temperature (GPIO36)
+```text
+Engine Coolant Temp Sender
+    ↓
+[Voltage Divider/Signal Conditioner]
+    ↓
+GPIO36 (0-3.3V range)
 ```
-Engine Temp Sensor (2-wire)
-├── Wire 1 (Signal) → Signal Conditioner → GPIO36
-├── Wire 2 (Ground) → Engine Ground
-└── Pull-up resistor: 4.7kΩ to +5V
+
+- **Sensor Type**: NTC thermistor or linear voltage output
+- **Input Protection**: 3.3V clamping, 100nF filter capacitor
+- **Calibration**: Software scaling for specific sensor characteristics
+
+#### Oil Pressure (GPIO39)
+```text
+Oil Pressure Sender
+    ↓
+[Signal Conditioner if needed]
+    ↓
+GPIO39 (0-3.3V range)
 ```
+
+- **Sensor Type**: Resistive sender or voltage transducer
+- **Range**: 0-100 PSI (0-689 kPa)
+- **Alert Threshold**: <10 PSI triggers warning
+
+#### Battery Voltage (GPIO34)
+```text
++12V Battery
+    ↓
+[Voltage Divider 4:1]
+    ↓
+GPIO34 (max 3.2V at 16V input)
+```
+
+- **Voltage Divider**: 30kΩ / 10kΩ resistors
+- **Input Range**: 8-16V DC (covers normal battery range)
+- **Alert Levels**: <11V (low), >15V (overcharge)
+
+#### Fuel Level (GPIO35)
+```text
+Fuel Tank Sender
+    ↓
+[Pull-up resistor network]
+    ↓
+GPIO35 (0-3.3V range)
+```
+
+- **Sender Type**: Variable resistance (240Ω-33Ω typical)
+- **Signal Conditioning**: May require pull-up resistor
+- **Range**: 0-100% fuel level
+
+## Digital Input Pins (Status Monitoring)
+
+### Engine Status Inputs
+
+| GPIO | Function | Signal Type | Logic Level | Purpose |
+|------|----------|-------------|-------------|---------|
+| GPIO27 | Alternator Charge | Digital | Active LOW | Charging system status |
+| GPIO14 | Engine Run Feedback | Digital | Active HIGH | Engine running confirmation |
+
+### Input Specifications
+
+#### Alternator Charge Status (GPIO27)
+```text
+Alternator "L" Terminal
+    ↓
+[Optional signal conditioning]
+    ↓
+GPIO27 (with internal pull-up)
+```
+
+- **Signal Source**: Alternator lamp terminal (typically blue wire)
+- **Logic**: LOW = charging, HIGH = not charging
+- **Protection**: Internal pull-up resistor enabled
+- **Debouncing**: Software debouncing implemented
+
+#### Engine Run Feedback (GPIO14)
+```text
+Oil Pressure Switch or Tach Signal
+    ↓
+[Signal conditioning if needed]
+    ↓
+GPIO14
+```
+
+- **Purpose**: Confirms engine is actually running
+- **Signal Options**: Oil pressure switch, alternator W-terminal, or tach signal
+- **Logic**: HIGH = engine running, LOW = engine stopped
+- **Timeout**: Used for safety interlocks
+
+## Unused/Available Pins
+
+### Available for Future Expansion
+
+| GPIO | Capabilities | Restrictions | Suggested Use |
+|------|--------------|--------------|---------------|
+| GPIO0 | Digital I/O | Boot mode pin | External button input |
+| GPIO2 | Digital I/O, LED | Used for WiFi status LED | Additional status output |
+| GPIO4 | Digital I/O | - | External alarm output |
+| GPIO12 | Digital I/O | Must be LOW at boot | Expansion input |
+| GPIO13 | Digital I/O | - | Additional sensor input |
+| GPIO15 | Digital I/O | Must be LOW at boot | Expansion output |
+| GPIO16 | Digital I/O | - | Serial communication |
+| GPIO17 | Digital I/O | - | Serial communication |
+| GPIO25 | Digital I/O, DAC | - | Analog output if needed |
+| GPIO26 | Digital I/O, DAC | - | Analog output if needed |
+| GPIO32 | Digital I/O, ADC | - | Additional analog input |
+| GPIO33 | Digital I/O, ADC | - | Additional analog input |
+
+### Expansion Considerations
+
+- **Current Limitation**: 12mA maximum per GPIO pin
+- **Voltage Level**: 3.3V logic levels only (not 5V tolerant)
+- **Total Current**: 200mA maximum for all GPIO pins combined
+- **Boot Strapping**: Some pins have boot-time restrictions
+
+## Communication Interfaces
+
+### WiFi (Built-in)
+- **Standard**: 802.11 b/g/n (2.4GHz only)
+- **Range**: 50-100 meters line of sight
+- **Security**: WPA2/WPA3 encryption supported
+- **Access Point**: Can create hotspot for direct connection
+
+### USB Programming Port
+- **Connector**: USB-C
+- **Chip**: CH340 USB-to-serial converter
+- **Baud Rate**: 115200 bps (default)
+- **Auto-programming**: Automatic boot mode selection
+
+### Future Communication Options
+
+#### CAN Bus Interface (if added)
+- **Potential Pins**: GPIO16 (TX), GPIO17 (RX)
+- **Transceiver**: External CAN transceiver IC required
+- **Protocol**: CANopen or J1939 for heavy equipment
+
+#### RS485 Interface (if added)
+- **Potential Pins**: GPIO32 (TX), GPIO33 (RX)
+- **Transceiver**: External RS485 transceiver required
+- **Use**: Modbus communication with external systems
+
+## Wiring Harness Connections
+
+### Main Power Harness
+
+| Wire Color | Function | Gauge | Fuse | Destination |
+|------------|----------|-------|------|-------------|
+| Red | +12V Main | 12 AWG | 20A | Battery positive |
+| Black | Ground | 12 AWG | - | Chassis ground |
+| Yellow | Relay Commons | 14 AWG | 15A | Power distribution |
+
+### Relay Output Harness
+
+| Wire Color | Function | GPIO | Gauge | Fuse | Bobcat Connection |
+|------------|----------|------|-------|------|-------------------|
+| Orange | Main Power | GPIO5 | 14 AWG | 15A | Main electrical bus |
+| Blue | Glow Plugs | GPIO21 | 14 AWG | 10A | Glow plug controller |
+| Purple | Starter | GPIO22 | 16 AWG | 5A | Starter solenoid |
+| White | Lights | GPIO18 | 14 AWG | 10A | Work light circuits |
+
+### Sensor Input Harness
+
+| Wire Color | Function | GPIO | Gauge | Shielding | Bobcat Connection |
+|------------|----------|------|-------|-----------|-------------------|
+| Green | Engine Temp | GPIO36 | 22 AWG | Yes | Coolant temp sender |
+| Brown | Oil Pressure | GPIO39 | 22 AWG | Yes | Oil pressure sender |
+| Gray | Battery Voltage | GPIO34 | 22 AWG | No | Battery positive tap |
+| Pink | Fuel Level | GPIO35 | 22 AWG | Yes | Fuel tank sender |
+
+### Status Input Harness
+
+| Wire Color | Function | GPIO | Gauge | Bobcat Connection |
+|------------|----------|------|-------|-------------------|
+| Light Blue | Alternator | GPIO27 | 22 AWG | Alternator L terminal |
+| Violet | Engine Run | GPIO14 | 22 AWG | Oil pressure switch |
+
+## Installation Guidelines
+
+### Routing Recommendations
+
+1. **Power Wires**: Route separately from signal wires
+2. **Sensor Wires**: Use shielded cable for analog inputs
+3. **Ground Loops**: Single-point grounding system
+4. **Protection**: Fuse all power circuits appropriately
+
+### Connection Best Practices
+
+1. **Crimped Connections**: Use proper automotive crimp terminals
+2. **Weather Sealing**: Use weatherproof connectors outdoors
+3. **Strain Relief**: Provide adequate strain relief at connections
+4. **Labeling**: Label all wires for future maintenance
+
+### Testing Procedures
+
+1. **Continuity Check**: Verify all connections before power-on
+2. **Voltage Verification**: Check all power supply levels
+3. **Sensor Testing**: Verify sensor readings make sense
+4. **Relay Testing**: Confirm all relays switch properly
+
+## Troubleshooting Reference
+
+### Common GPIO Issues
+
+**Relay Not Switching**
+- Check GPIO output voltage (should be 3.3V when active)
+- Verify relay coil continuity (~150Ω)
+- Confirm adequate power supply to relay coils
+
+**Sensor Reading Problems**
+- Check input voltage levels (should be 0-3.3V)
+- Verify sensor power supply and ground connections
+- Look for electrical noise on sensor lines
+
+**Communication Issues**
+- Verify WiFi antenna placement
+- Check for interference from ignition system
+- Confirm adequate power supply to ESP32
+
+### Diagnostic Tools
+
+- **Multimeter**: Essential for voltage and continuity testing
+- **Oscilloscope**: Helpful for analyzing signal quality
+- **WiFi Analyzer**: Check for interference and signal strength
+- **Serial Monitor**: Debug software issues via USB connection
 
 #### Oil Pressure Sensor  
 ```

@@ -1,54 +1,114 @@
-# Bobcat Ignition Controller - Hardware Schematic
+# Hardware Summary
 
-## System Overview
+Quick reference for the Bobcat Ignition Controller hardware configuration.
 
-This document describes the hardware connections for the ESP32-based Bobcat ignition controller.
+## Current Hardware Platform
 
-## Power Supply
+**Controller Board**: LILYGO T-Relay ESP32 (4-channel relay version)
 
-- **Input**: 12V DC from Bobcat electrical system
-- **ESP32 Power**: Use 12V to 3.3V regulator or USB power during development
-- **Relay Power**: 12V DC for relay coils
+### Key Specifications
+- **Microcontroller**: ESP32-WROOM-32
+- **Relays**: 4x SPDT, 10A capacity each
+- **Power Input**: 12V DC (7-30V range)
+- **Communication**: WiFi 802.11 b/g/n (2.4GHz)
+- **Programming**: USB-C connector
 
-## Relay Connections
+## 4-Relay Configuration
 
-### Glow Plug Relay (Relay 1)
-```
-ESP32 GPIO2 → Relay Driver → Relay Coil (+)
-GND → Relay Coil (-)
-12V+ → Relay Common (COM)
-Glow Plug Circuit → Relay NO (Normally Open)
-```
+| Relay | GPIO | Function | Load Rating |
+|-------|------|----------|-------------|
+| 1 | GPIO5 | Main Power | 10A @ 12V |
+| 2 | GPIO21 | Glow Plugs | 10A @ 12V |
+| 3 | GPIO22 | Starter | 10A @ 12V |
+| 4 | GPIO18 | Lights | 10A @ 12V |
 
-### Ignition/Starter Relay (Relay 2)
-```
-ESP32 GPIO4 → Relay Driver → Relay Coil (+)
-GND → Relay Coil (-)
-12V+ → Relay Common (COM)
-Starter Circuit → Relay NO (Normally Open)
-```
+## Sensor Inputs
 
-## Button Connections
+| GPIO | Function | Input Type |
+|------|----------|------------|
+| GPIO36 | Engine Temperature | 0-3.3V ADC |
+| GPIO39 | Oil Pressure | 0-3.3V ADC |
+| GPIO34 | Battery Voltage | 0-3.3V ADC |
+| GPIO35 | Fuel Level | 0-3.3V ADC |
 
-### Start Button
-```
-ESP32 GPIO18 (with internal pullup enabled)
-Button: One side to GPIO18, other side to GND
-```
+## Status Inputs
 
-### Stop Button
-```
-ESP32 GPIO19 (with internal pullup enabled)
-Button: One side to GPIO19, other side to GND
-```
+| GPIO | Function | Signal Type |
+|------|----------|-------------|
+| GPIO27 | Alternator Status | Digital (Active LOW) |
+| GPIO14 | Engine Run | Digital (Active HIGH) |
 
-## Status Indicators
+## System Constraints
 
-### Status LED
-```
-ESP32 GPIO5 → 220Ω Resistor → LED Anode
-LED Cathode → GND
-```
+### Design Limitations
+- **No Engine Stop**: Cannot electronically stop engine (manual lever only)
+- **4-Relay Maximum**: Limited by LILYGO T-Relay board capacity
+- **Safety Alerts Only**: Visual warnings, no automatic shutdowns
+- **12V System**: Designed for 12V Bobcat electrical systems
+
+### Key Features
+- **Combined Lighting**: Single relay controls front and back work lights
+- **Glow Plug Timer**: 20-second automated preheating cycle
+- **Web Interface**: Mobile-responsive control via WiFi (192.168.4.1)
+- **Real-time Monitoring**: Engine temperature, oil pressure, battery voltage
+
+## Complete Documentation
+
+For detailed information, refer to these comprehensive documents:
+
+### Hardware Reference
+- **[Hardware Overview](hardware_overview.md)** - Complete specifications and requirements
+- **[Board Pinout](board_pinout.md)** - Detailed GPIO assignments and electrical specs
+- **[Wiring Guide](wiring_guide.md)** - Step-by-step installation instructions
+
+### System Documentation
+- **[GPIO Connections](gpio_connections.md)** - Pin assignments and interface details
+- **[Schematics](schematics.mmd)** - System diagrams and block diagrams
+- **[System Control Diagram](system_control_diagram.md)** - Logic and state machine
+
+## Target Equipment
+
+**Primary Target**: Bobcat 743 Skid Steer
+- **Engine**: Kubota V1702-BA (4-cylinder diesel)
+- **Electrical**: 12V negative ground system
+- **Glow Plugs**: 12V ceramic fast-heat type
+- **Engine Stop**: Manual fuel shutoff lever (not electronic)
+
+## Installation Requirements
+
+### Minimum Requirements
+- LILYGO T-Relay ESP32 board
+- 12V power connection to Bobcat electrical system
+- Weather-resistant mounting enclosure
+- Automotive-grade wiring and connectors
+- Individual fuses for each relay circuit
+
+### Optional Components
+- Engine temperature sensor (if not equipped)
+- Oil pressure sender (if not equipped)
+- Fuel level sender (if not equipped)
+- External status indicators
+- Emergency stop switch (power cut only)
+
+## Safety Considerations
+
+⚠️ **Important Safety Notes**
+
+1. **Engine Stop**: Engine must be stopped manually - cannot be stopped electronically
+2. **Fuse Protection**: All relay outputs must be individually fused
+3. **Power Disconnect**: Always disconnect battery before making connections
+4. **Alert System**: Safety alerts are visual only - no automatic shutdowns
+5. **Manual Override**: Always maintain manual control capability
+
+## Quick Start
+
+1. **Read Documentation**: Start with [Hardware Overview](hardware_overview.md)
+2. **Plan Installation**: Review [Wiring Guide](wiring_guide.md)
+3. **Prepare Hardware**: Gather components and tools
+4. **Install Safely**: Follow safety procedures and fusing requirements
+5. **Test System**: Verify all functions before operational use
+
+For complete installation and operation instructions, see the comprehensive documentation referenced above.
 
 ### Buzzer (Optional)
 ```
