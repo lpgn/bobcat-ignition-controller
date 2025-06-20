@@ -11,19 +11,39 @@
 void runIgnitionSequence() {
   switch (currentState) {
     case IDLE:
-      if (startButtonPressed) {
+      if (powerOnButtonPressed) {
+        Serial.println("Power ON - System energized");
+        currentState = POWER_ON;
+        controlMainPower(true);
+        powerOnButtonPressed = false;
+      }
+      break;
+      
+    case POWER_ON:
+      if (powerOffButtonPressed) {
+        Serial.println("Power OFF - System shutdown");
+        currentState = IDLE;
+        controlMainPower(false);
+        controlFrontLight(false);
+        controlBackLight(false);
+        powerOffButtonPressed = false;
+      } else if (startButtonPressed) {
         Serial.println("Starting ignition sequence...");
         Serial.println("Phase 1: Glow plug heating (20 seconds)");
         currentState = GLOW_PLUG_HEATING;
         glowPlugStartTime = millis();
         controlGlowPlugs(true);
+        startButtonPressed = false;
       }
       break;
       
     case GLOW_PLUG_HEATING:
-      if (stopButtonPressed) {
+      if (powerOffButtonPressed) {
         Serial.println("Ignition sequence aborted");
-        currentState = SHUTDOWN;
+        currentState = IDLE;
+        controlMainPower(false);
+        controlGlowPlugs(false);
+        powerOffButtonPressed = false;
       } else if (millis() - glowPlugStartTime >= GLOW_PLUG_DURATION) {
         Serial.println("Glow plug heating complete");
         Serial.println("Ready to start engine - Press START again to crank");
@@ -33,63 +53,72 @@ void runIgnitionSequence() {
       break;
       
     case READY_TO_START:
-      if (stopButtonPressed) {
+      if (powerOffButtonPressed) {
         Serial.println("Start sequence cancelled");
-        currentState = SHUTDOWN;
+        currentState = IDLE;
+        controlMainPower(false);
+        powerOffButtonPressed = false;
       } else if (startButtonPressed) {
         Serial.println("Phase 2: Engine cranking");
         currentState = STARTING;
         ignitionStartTime = millis();
-        controlIgnition(true);
+        controlStarter(true);
+        startButtonPressed = false;
       }
       // Timeout after 30 seconds of waiting
       else if (millis() - glowPlugStartTime >= (GLOW_PLUG_DURATION + 30000)) {
-        Serial.println("Start timeout - returning to idle");
-        currentState = IDLE;
+        Serial.println("Start timeout - returning to power on state");
+        currentState = POWER_ON;
       }
       break;
       
     case STARTING:
-      if (stopButtonPressed) {
+      if (powerOffButtonPressed) {
         Serial.println("Engine start aborted");
-        currentState = SHUTDOWN;
+        currentState = IDLE;
+        controlMainPower(false);
+        controlStarter(false);
+        powerOffButtonPressed = false;
       } else if (millis() - ignitionStartTime >= IGNITION_TIMEOUT) {
         Serial.println("Engine start timeout - stopping cranking");
-        controlIgnition(false);
-        currentState = RUNNING; // Assume engine started or ready to retry
+        controlStarter(false);
+        currentState = RUNNING; // Assume engine started
       }
-      // In a real implementation, you'd check engine RPM or oil pressure
-      // to determine if engine actually started
       break;
       
     case RUNNING:
-      if (stopButtonPressed) {
-        Serial.println("Engine shutdown requested");
-        currentState = SHUTDOWN;
+      if (powerOffButtonPressed) {
+        Serial.println("Power shutdown requested - engine must be stopped manually");
+        currentState = IDLE;
+        controlMainPower(false);
+        powerOffButtonPressed = false;
       }
       // Monitor engine parameters here
       break;
       
-    case SHUTDOWN:
-      if (!shutdownInProgress) {
-        Serial.println("Shutting down system...");
-        controlGlowPlugs(false);
-        controlIgnition(false);
-        shutdownStartTime = millis();
-        shutdownInProgress = true;
-      } else if (millis() - shutdownStartTime >= 1000) {
-        // Brief delay for relay settling completed
+    case LOW_OIL_PRESSURE:
+    case HIGH_TEMPERATURE:
+      // Alert states - continue monitoring but show warning
+      if (powerOffButtonPressed) {
+        Serial.println("Power shutdown during alert state");
         currentState = IDLE;
-        shutdownInProgress = false;
-        Serial.println("System ready for next start cycle");
+        controlMainPower(false);
+        powerOffButtonPressed = false;
       }
       break;
       
     case ERROR:
       // Handle error state - status will be shown in web interface
-      if (stopButtonPressed) {
-        currentState = SHUTDOWN;
+      if (powerOffButtonPressed) {
+        currentState = IDLE;
+        controlMainPower(false);
+        powerOffButtonPressed = false;
       }
       break;
   }
+
+  // Reset button flags after processing
+  startButtonPressed = false;
+  powerOnButtonPressed = false;
+  powerOffButtonPressed = false;
 }

@@ -10,9 +10,12 @@
 // ============================================================================
 // DIGITAL OUTPUT PINS - Relay Control (Active HIGH)
 // ============================================================================
+const int MAIN_POWER_PIN = 5;         // GPIO5 - Main Power Relay Control
 const int GLOW_PLUGS_PIN = 21;        // GPIO21 - Glow Plug Relay Control
-const int IGNITION_PIN = 23;          // GPIO23 - Main Ignition/Run Relay  
+// const int IGNITION_PIN = 23;       // This is not used in this Bobcat model
 const int STARTER_PIN = 22;           // GPIO22 - Starter Solenoid Relay
+const int FRONT_LIGHT_PIN = 18;       // GPIO18 - Front Light Relay
+const int BACK_LIGHT_PIN = 19;        // GPIO19 - Back Light Relay
 
 // ============================================================================
 // ANALOG INPUT PINS - Engine Sensors (ADC1 channels for WiFi compatibility)
@@ -54,11 +57,13 @@ extern const int MAX_BATTERY_VOLTAGE;        // Maximum battery voltage (12V sys
 // System states
 enum SystemState {
   IDLE,
+  POWER_ON,
   GLOW_PLUG_HEATING,
   READY_TO_START,
   STARTING,
   RUNNING,
-  SHUTDOWN,
+  LOW_OIL_PRESSURE,
+  HIGH_TEMPERATURE,
   ERROR
 };
 
@@ -68,6 +73,10 @@ extern unsigned long glowPlugStartTime;
 extern unsigned long ignitionStartTime;
 extern bool startButtonPressed;
 extern bool stopButtonPressed;
+
+// New button states for power and lights
+extern bool powerOnButtonPressed;
+extern bool powerOffButtonPressed;
 
 // Non-blocking timing variables
 extern unsigned long shutdownStartTime;

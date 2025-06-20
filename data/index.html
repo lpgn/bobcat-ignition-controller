@@ -13,9 +13,22 @@
             <h1>Bobcat Ignition Control</h1>
         </header>
         <main>
-            <div class="controls">
-                <button id="start-btn" class="btn btn-start">Start Engine</button>
-                <button id="stop-btn" class="btn btn-stop">Stop Engine</button>
+            <div class="controls-container">
+                <div class="controls-group">
+                    <h3>Power</h3>
+                    <button id="power-on-btn" class="btn btn-power">Power ON</button>
+                    <button id="power-off-btn" class="btn btn-stop">Power OFF</button>
+                </div>
+                <div class="controls-group">
+                    <h3>Engine</h3>
+                    <button id="start-btn" class="btn btn-start">Ignition ON</button>
+                    <button id="override-btn" class="btn btn-danger">Override Start</button>
+                </div>
+                <div class="controls-group">
+                    <h3>Lights</h3>
+                    <button id="front-light-btn" class="btn btn-light">Front Light</button>
+                    <button id="back-light-btn" class="btn btn-light">Back Light</button>
+                </div>
             </div>
             <div class="status">
                 <h2>System Status</h2>

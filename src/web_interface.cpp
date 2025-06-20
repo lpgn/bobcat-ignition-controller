@@ -24,11 +24,13 @@ AsyncWebServer server(80);
 const char* systemStateToString(SystemState state) {
     switch (state) {
         case IDLE: return "IDLE";
+        case POWER_ON: return "POWER ON";
         case GLOW_PLUG_HEATING: return "GLOW PLUG HEATING";
         case READY_TO_START: return "READY TO START";
         case STARTING: return "STARTING";
         case RUNNING: return "RUNNING";
-        case SHUTDOWN: return "SHUTDOWN";
+        case LOW_OIL_PRESSURE: return "LOW OIL PRESSURE";
+        case HIGH_TEMPERATURE: return "HIGH TEMPERATURE";
         case ERROR: return "ERROR";
         default: return "UNKNOWN";
     }
@@ -78,10 +80,36 @@ void setupWebServer() {
         request->send(200, "text/plain", "Start request received");
     });
 
-    // Handle the stop button press
-    server.on("/stop", HTTP_GET, [](AsyncWebServerRequest *request){
-        virtualStopButton();
-        request->send(200, "text/plain", "Stop request received");
+    // Handle the power on button press
+    server.on("/power_on", HTTP_GET, [](AsyncWebServerRequest *request){
+        virtualPowerOnButton();
+        request->send(200, "text/plain", "Power on request received");
+    });
+
+    // Handle the power off button press
+    server.on("/power_off", HTTP_GET, [](AsyncWebServerRequest *request){
+        virtualPowerOffButton();
+        request->send(200, "text/plain", "Power off request received");
+    });
+
+    // Note: No engine stop endpoint - engine must be stopped manually with lever
+
+    // Handle the front light toggle
+    server.on("/toggle_front_light", HTTP_GET, [](AsyncWebServerRequest *request){
+        virtualFrontLightButton();
+        request->send(200, "text/plain", "Front light toggled");
+    });
+
+    // Handle the back light toggle
+    server.on("/toggle_back_light", HTTP_GET, [](AsyncWebServerRequest *request){
+        virtualBackLightButton();
+        request->send(200, "text/plain", "Back light toggled");
+    });
+
+    // Handle the override button press
+    server.on("/override", HTTP_GET, [](AsyncWebServerRequest *request){
+        overrideStart();
+        request->send(200, "text/plain", "Override request received");
     });
 
     // Provide the system status as a JSON object

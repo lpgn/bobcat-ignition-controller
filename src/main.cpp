@@ -20,7 +20,7 @@
 #include "web_interface.h"
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(74880);
   Serial.println("Bobcat Ignition Controller Starting...");
   
   initializePins();
@@ -35,7 +35,11 @@ void setup() {
 void loop() {
   // Fly-by-wire control - no physical buttons, only web interface
   runIgnitionSequence();
-  checkSafetyInputs();
+  if (currentState == RUNNING) { 
+    checkEngineVitals();
+  } else if (currentState != STARTING) { // Don't run safety checks when overriding
+    checkSafetyInputs();
+  }
   
   // No delay needed - ESP32 handles timing efficiently with millis()
 }

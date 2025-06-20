@@ -52,12 +52,17 @@ const int MIN_OIL_PRESSURE = 69;             // Minimum oil pressure (kPa, ~0.7 
 const int MAX_COOLANT_TEMP = 104;            // Maximum coolant temp (°C)
 const int MIN_BATTERY_VOLTAGE = 11;          // Minimum battery voltage (12V system)
 const int MAX_BATTERY_VOLTAGE = 15;          // Maximum battery voltage (12V system)
+
 // Global variables
 SystemState currentState = IDLE;
 unsigned long glowPlugStartTime = 0;
 unsigned long ignitionStartTime = 0;
 bool startButtonPressed = false;
 bool stopButtonPressed = false;
+
+// New button states for power and lights
+bool powerOnButtonPressed = false;
+bool powerOffButtonPressed = false;
 
 // Non-blocking timing variables
 unsigned long shutdownStartTime = 0;

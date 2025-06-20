@@ -1,14 +1,24 @@
 # Bobcat Ignition Controller
 
-ESP32-based control system for managing Bobcat equipment ignition sequence with glow plug preheating and safety monitoring.
+ESP32-based control system for managing old Bobcat equipment with web-based interface, glow plug preheating, and safety monitoring.
 
 ## Features
 
+- **Web Interface**: Modern responsive web interface with grouped controls
+- **Power Management**: Main power relay control for all electrical systems
 - **Glow Plug Control**: Automatic 20-second preheat cycle before engine start
-- **Ignition Control**: Manages starter motor engagement with timeout protection
-- **Safety Monitoring**: Battery voltage, engine temperature, and oil pressure monitoring
-- **User Interface**: Start/Stop buttons with status LED feedback  
-- **Error Handling**: Comprehensive safety interlocks and error reporting
+- **Starter Control**: Manages starter motor engagement with timeout protection
+- **Light Controls**: Independent front and back light relay control
+- **Safety Monitoring**: Engine temperature and oil pressure monitoring with visual alerts
+- **Override Function**: Emergency start bypass for critical situations
+- **Alert System**: Visual web interface alerts for safety conditions
+
+## Important Notes
+
+⚠️ **This system is designed for older Bobcat equipment where:**
+- Engine cannot be stopped electronically (manual lever only)
+- No ignition/run relay is present (engine runs independently once started)
+- Safety system provides alerts only - cannot auto-shutdown engine
 
 ## Hardware Requirements
 

@@ -11,5 +11,9 @@
 // Safety monitoring functions
 void checkSafetyInputs();
 void handleError(const char* errorMessage);
+void checkEngineVitals();
+
+// Override function
+void overrideStart();
 
 #endif // SAFETY_H

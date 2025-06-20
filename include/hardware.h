@@ -17,15 +17,21 @@ void initializePins();
 // ============================================================================
 // RELAY CONTROL FUNCTIONS - Diesel Engine Control
 // ============================================================================
+void controlMainPower(bool enable);
 void controlGlowPlugs(bool enable);      // Glow plug relay control
-void controlIgnition(bool enable);       // Main ignition/run relay
 void controlStarter(bool enable);        // Starter solenoid relay
+void controlFrontLight(bool enable);
+void controlBackLight(bool enable);
 
 // ============================================================================
 // VIRTUAL BUTTON FUNCTIONS - Web Interface Control
 // ============================================================================
+void virtualPowerOnButton();
+void virtualPowerOffButton();
 void virtualStartButton();     // Virtual start button for web interface
-void virtualStopButton();      // Virtual stop button for web interface
+void virtualFrontLightButton();
+void virtualBackLightButton();
+// Note: No virtualStopButton - engine must be stopped manually with lever
 
 // ============================================================================
 // ANALOG SENSOR READING FUNCTIONS
