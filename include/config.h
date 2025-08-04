@@ -8,27 +8,27 @@
 #define CONFIG_H
 
 // ============================================================================
-// DIGITAL OUTPUT PINS - Relay Control (Active HIGH)
+// DIGITAL OUTPUT PINS - Relay Control (Active HIGH) - LILYGO T-Relay 4-Channel
 // ============================================================================
-const int MAIN_POWER_PIN = 5;         // GPIO5 - Main Power Relay Control
-const int GLOW_PLUGS_PIN = 21;        // GPIO21 - Glow Plug Relay Control
+const int MAIN_POWER_PIN = 21;        // GPIO21 - Main Power Relay Control (Relay 1)
+const int GLOW_PLUGS_PIN = 19;        // GPIO19 - Glow Plug Relay Control (Relay 2)
 // const int IGNITION_PIN = 23;       // This is not used in this Bobcat model
-const int STARTER_PIN = 22;           // GPIO22 - Starter Solenoid Relay
-const int LIGHTS_PIN = 18;            // GPIO18 - Both Front and Back Lights Relay
+const int STARTER_PIN = 18;           // GPIO18 - Starter Solenoid Relay (Relay 3)
+const int LIGHTS_PIN = 5;             // GPIO5 - Both Front and Back Lights Relay (Relay 4)
 
 // ============================================================================
-// ANALOG INPUT PINS - Engine Sensors (ADC1 channels for WiFi compatibility)
+// ANALOG INPUT PINS - Engine Sensors (Physical sequence from header left to right)
 // ============================================================================
-extern const int ENGINE_TEMP_PIN;     // ADC1_CH0 (GPIO36) - Coolant Temperature
-extern const int OIL_PRESSURE_PIN;    // ADC1_CH3 (GPIO39) - Oil Pressure Sensor
-extern const int BATTERY_VOLTAGE_PIN; // ADC1_CH6 (GPIO34) - Battery Voltage (12V/24V)
-extern const int FUEL_LEVEL_PIN;      // ADC1_CH7 (GPIO35) - Fuel Tank Level
+extern const int ENGINE_TEMP_PIN;     // ADC1_CH3 (GPIO39) - Coolant Temperature (4th pin top row)
+extern const int OIL_PRESSURE_PIN;    // ADC1_CH7 (GPIO35) - Oil Pressure Sensor (5th pin top row)
+extern const int BATTERY_VOLTAGE_PIN; // ADC1_CH0 (GPIO36) - Battery Voltage (4th pin bottom row)
+extern const int FUEL_LEVEL_PIN;      // ADC1_CH6 (GPIO34) - Fuel Tank Level (5th pin bottom row)
 
 // ============================================================================
-// DIGITAL INPUT PINS - Status Feedback
+// DIGITAL INPUT PINS - Status Feedback (Physical sequence from header)
 // ============================================================================
-extern const int ALTERNATOR_CHARGE_PIN;    // GPIO27 - Alternator Charge Indicator
-extern const int ENGINE_RUN_FEEDBACK_PIN;  // GPIO14 - Engine Running Feedback
+extern const int ALTERNATOR_CHARGE_PIN;    // GPIO22 - Alternator Charge Indicator (1st pin top row)
+extern const int ENGINE_RUN_FEEDBACK_PIN;  // GPIO26 - Engine Running Feedback (2nd pin top row)
 
 // ============================================================================// DIESEL ENGINE TIMING CONSTANTS
 // ============================================================================

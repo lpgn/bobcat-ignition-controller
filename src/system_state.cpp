@@ -43,11 +43,30 @@ void runIgnitionSequence() {
         controlMainPower(false);
         controlGlowPlugs(false);
         powerOffButtonPressed = false;
+      } else if (startButtonPressed) {
+        Serial.println("FORCED START - Skipping remaining glow plug time");
+        Serial.println("Phase 2: Engine cranking (forced)");
+        currentState = STARTING;
+        ignitionStartTime = millis();
+        controlGlowPlugs(false);  // Turn off glow plugs
+        controlStarter(true);     // Start cranking immediately
+        startButtonPressed = false;
       } else if (millis() - glowPlugStartTime >= GLOW_PLUG_DURATION) {
         Serial.println("Glow plug heating complete");
         Serial.println("Ready to start engine - Press START again to crank");
         currentState = READY_TO_START;
         controlGlowPlugs(false);
+      } else {
+        // Show countdown every 2 seconds
+        unsigned long elapsed = millis() - glowPlugStartTime;
+        unsigned long remaining = (GLOW_PLUG_DURATION - elapsed) / 1000;
+        static unsigned long lastCountdown = 0;
+        if (millis() - lastCountdown >= 2000) {
+          Serial.print("Glow plug heating... ");
+          Serial.print(remaining);
+          Serial.println(" seconds remaining (press START to force crank)");
+          lastCountdown = millis();
+        }
       }
       break;
       
@@ -91,6 +110,12 @@ void runIgnitionSequence() {
         currentState = IDLE;
         controlMainPower(false);
         powerOffButtonPressed = false;
+      } else if (startButtonPressed) {
+        Serial.println("HOT RESTART - Engine already running, cranking briefly");
+        currentState = STARTING;
+        ignitionStartTime = millis();
+        controlStarter(true);
+        startButtonPressed = false;
       }
       // Monitor engine parameters here
       break;
@@ -103,6 +128,12 @@ void runIgnitionSequence() {
         currentState = IDLE;
         controlMainPower(false);
         powerOffButtonPressed = false;
+      } else if (startButtonPressed) {
+        Serial.println("FORCED START during alert - attempting engine crank");
+        currentState = STARTING;
+        ignitionStartTime = millis();
+        controlStarter(true);
+        startButtonPressed = false;
       }
       break;
       
@@ -112,12 +143,16 @@ void runIgnitionSequence() {
         currentState = IDLE;
         controlMainPower(false);
         powerOffButtonPressed = false;
+      } else if (startButtonPressed) {
+        Serial.println("OVERRIDE START from error state");
+        currentState = STARTING;
+        ignitionStartTime = millis();
+        controlStarter(true);
+        startButtonPressed = false;
       }
       break;
   }
 
-  // Reset button flags after processing
-  startButtonPressed = false;
-  powerOnButtonPressed = false;
-  powerOffButtonPressed = false;
+  // Don't reset button flags here - let each case handle its own flags
+  // This prevents buttons from being cleared before they're processed
 }

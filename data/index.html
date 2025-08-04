@@ -3,55 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bobcat Control Panel</title>
+    <title>Bobcat 743 Control Panel</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <img src="logo.png" alt="Bobcat Logo" class="logo">
-            <h1>Bobcat Ignition Control</h1>
+    <div class="dashboard">
+        <!-- Header with Bobcat branding -->
+        <header class="dashboard-header">
+            <div class="logo-section">
+                <img src="logo.png" alt="Bobcat" class="bobcat-logo">
+                <div class="model-info">
+                    <h1>BOBCAT 743</h1>
+                    <span class="model-subtitle">SKID STEER LOADER</span>
+                </div>
+            </div>
+            <div class="status-indicator">
+                <div id="master-status" class="master-status">SYSTEM OFF</div>
+            </div>
         </header>
-        <main>
-            <div class="controls-container">
-                <div class="controls-group">
-                    <h3>Power</h3>
-                    <button id="power-on-btn" class="btn btn-power">Power ON</button>
-                    <button id="power-off-btn" class="btn btn-stop">Power OFF</button>
+
+        <!-- Main Control Panel -->
+        <div class="control-panel">
+            <!-- Left Panel - Engine Controls -->
+            <div class="left-panel">
+                <div class="panel-section engine-controls">
+                    <h2>ENGINE CONTROLS</h2>
+                    
+                    <!-- Key Switch -->
+                    <div class="key-switch-section">
+                        <div class="key-switch">
+                            <button class="key-position off active" data-position="off">OFF</button>
+                            <button class="key-position on" data-position="on">ON</button>
+                            <button class="key-position start" data-position="start">START</button>
+                        </div>
+                        <label>IGNITION SWITCH</label>
+                    </div>
+
+                    <!-- Glow Plug Indicator -->
+                    <div class="glow-plug-section">
+                        <div id="glow-plug-indicator" class="indicator-light">
+                            <div class="light-bulb"></div>
+                        </div>
+                        <div class="glow-info">
+                            <label>GLOW PLUGS</label>
+                            <div id="countdown-display" class="countdown">--</div>
+                        </div>
+                    </div>
+
+                    <!-- Override Emergency Start -->
+                    <div class="emergency-section">
+                        <button class="emergency-btn" data-action="emergency_stop">
+                            <span>EMERGENCY</span>
+                            <span>STOP</span>
+                        </button>
+                        <label>EMERGENCY STOP</label>
+                    </div>
                 </div>
-                <div class="controls-group">
-                    <h3>Engine</h3>
-                    <button id="start-btn" class="btn btn-start">Ignition ON</button>
-                    <button id="override-btn" class="btn btn-danger">Override Start</button>
-                </div>
-                <div class="controls-group">
-                    <h3>Lights</h3>
-                    <button id="lights-btn" class="btn btn-light">Lights Toggle</button>
+
+                <!-- Auxiliary Controls -->
+                <div class="panel-section aux-controls">
+                    <h2>AUXILIARY</h2>
+                    <div class="aux-buttons">
+                        <button class="aux-btn" data-action="lights">
+                            <div class="btn-icon">💡</div>
+                            <span>WORK LIGHTS</span>
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div class="status">
-                <h2>System Status</h2>
-                <div id="status-message" class="status-message">IDLE</div>
+
+            <!-- Center Panel - Status Display -->
+            <div class="center-panel">
+                <div class="status-display">
+                    <div class="status-screen">
+                        <div id="status-message" class="main-status">SYSTEM IDLE</div>
+                        <div id="detailed-status" class="detailed-status">
+                            System ready for operation
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Warning Lights -->
+                <div class="warning-lights">
+                    <div class="warning-row">
+                        <div id="oil-warning" class="warning-light">
+                            <div class="light red"></div>
+                            <span>LOW OIL</span>
+                        </div>
+                        <div id="temp-warning" class="warning-light">
+                            <div class="light red"></div>
+                            <span>HIGH TEMP</span>
+                        </div>
+                        <div id="battery-warning" class="warning-light">
+                            <div class="light amber"></div>
+                            <span>BATTERY</span>
+                        </div>
+                    </div>
+                    <div class="warning-row">
+                        <div id="charge-indicator" class="warning-light">
+                            <div class="light green"></div>
+                            <span>CHARGING</span>
+                        </div>
+                        <div id="engine-run" class="warning-light">
+                            <div class="light green"></div>
+                            <span>ENGINE RUN</span>
+                        </div>
+                        <div id="fuel-warning" class="warning-light">
+                            <div class="light amber"></div>
+                            <span>LOW FUEL</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="readouts">
-                <div class="readout">
-                    <h3>Engine Temp</h3>
-                    <div id="temp-value" class="value">-- &deg;C</div>
-                </div>
-                <div class="readout">
-                    <h3>Oil Pressure</h3>
-                    <div id="pressure-value" class="value">-- PSI</div>
-                </div>
-                <div class="readout">
-                    <h3>Battery</h3>
-                    <div id="battery-value" class="value">-- V</div>
+
+            <!-- Right Panel - Gauges -->
+            <div class="right-panel">
+                <div class="panel-section gauges">
+                    <h2>ENGINE GAUGES</h2>
+                    
+                    <!-- Temperature Gauge -->
+                    <div class="gauge-container">
+                        <div class="gauge temp-gauge">
+                            <div class="gauge-face">
+                                <div class="gauge-needle" id="temp-needle"></div>
+                                <div class="gauge-center"></div>
+                            </div>
+                            <div class="gauge-labels">
+                                <span class="min-label">C</span>
+                                <span class="max-label">H</span>
+                            </div>
+                        </div>
+                        <div class="gauge-info">
+                            <label>COOLANT TEMP</label>
+                            <div id="temp-value" class="gauge-value">-- °C</div>
+                        </div>
+                    </div>
+
+                    <!-- Oil Pressure Gauge -->
+                    <div class="gauge-container">
+                        <div class="gauge pressure-gauge">
+                            <div class="gauge-face">
+                                <div class="gauge-needle" id="pressure-needle"></div>
+                                <div class="gauge-center"></div>
+                            </div>
+                            <div class="gauge-labels">
+                                <span class="min-label">0</span>
+                                <span class="max-label">100</span>
+                            </div>
+                        </div>
+                        <div class="gauge-info">
+                            <label>OIL PRESSURE</label>
+                            <div id="pressure-value" class="gauge-value">-- PSI</div>
+                        </div>
+                    </div>
+
+                    <!-- Battery/Fuel Gauges -->
+                    <div class="small-gauges">
+                        <div class="small-gauge-container">
+                            <div class="digital-display">
+                                <div id="battery-value" class="digital-value">12.4V</div>
+                            </div>
+                            <label>BATTERY</label>
+                        </div>
+                        <div class="small-gauge-container">
+                            <div class="digital-display">
+                                <div id="fuel-value" class="digital-value">75%</div>
+                            </div>
+                            <label>FUEL</label>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </main>
-        <footer>
-            <p>&copy; 2025 Bobcat Ignition Controller</p>
+        </div>
+
+        <!-- Footer with Technical Info -->
+        <footer class="dashboard-footer">
+            <div class="tech-info">
+                <span>Model: 743 • Engine: Kubota V1702-BA • 12V System</span>
+            </div>
+            <div class="wifi-info">
+                <span id="wifi-status">WiFi: Bobcat-Control</span>
+            </div>
         </footer>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>

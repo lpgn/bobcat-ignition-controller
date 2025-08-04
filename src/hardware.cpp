@@ -7,11 +7,19 @@
 #include "config.h"
 
 void initializePins() {
+  Serial.println("Initializing GPIO pins...");
+  
   // Initialize output pins for relays
   pinMode(MAIN_POWER_PIN, OUTPUT);
   pinMode(GLOW_PLUGS_PIN, OUTPUT);
   pinMode(STARTER_PIN, OUTPUT);
   pinMode(LIGHTS_PIN, OUTPUT);
+
+  Serial.print("Relay pins configured: ");
+  Serial.print("Main Power (GPIO"); Serial.print(MAIN_POWER_PIN); Serial.print("), ");
+  Serial.print("Glow Plugs (GPIO"); Serial.print(GLOW_PLUGS_PIN); Serial.print("), ");
+  Serial.print("Starter (GPIO"); Serial.print(STARTER_PIN); Serial.print("), ");
+  Serial.print("Lights (GPIO"); Serial.print(LIGHTS_PIN); Serial.println(")");
 
   // Initialize digital input pins
   pinMode(ENGINE_RUN_FEEDBACK_PIN, INPUT_PULLUP);
@@ -24,24 +32,35 @@ void initializePins() {
   digitalWrite(GLOW_PLUGS_PIN, LOW);
   digitalWrite(STARTER_PIN, LOW);
   digitalWrite(LIGHTS_PIN, LOW);
+  
+  Serial.println("All relays initialized to OFF state");
+  Serial.println("GPIO initialization complete");
 }
 
 void controlMainPower(bool enable) {
     digitalWrite(MAIN_POWER_PIN, enable ? HIGH : LOW);
+    Serial.print("Main Power: ");
+    Serial.println(enable ? "ON" : "OFF");
 }
 
 void controlGlowPlugs(bool enable) {
   digitalWrite(GLOW_PLUGS_PIN, enable ? HIGH : LOW);
+  Serial.print("Glow Plugs: ");
+  Serial.println(enable ? "ON" : "OFF");
 }
 
 // controlIgnition function removed - not used in this Bobcat model
 
 void controlStarter(bool enable) {
   digitalWrite(STARTER_PIN, enable ? HIGH : LOW);
+  Serial.print("Starter: ");
+  Serial.println(enable ? "ON" : "OFF");
 }
 
 void controlLights(bool enable) {
     digitalWrite(LIGHTS_PIN, enable ? HIGH : LOW);
+    Serial.print("Lights: ");
+    Serial.println(enable ? "ON" : "OFF");
 }
 
 // Virtual button functions for web interface - Tesla-style fly-by-wire control
@@ -70,7 +89,8 @@ void virtualLightsButton() {
     static bool lightsOn = false;
     lightsOn = !lightsOn;
     controlLights(lightsOn);
-    Serial.println(lightsOn ? "Web Interface: Lights ON" : "Web Interface: Lights OFF");
+    Serial.print("Web Interface: Lights ");
+    Serial.println(lightsOn ? "ON" : "OFF");
 }
 
 // Note: No virtualStopButton - engine must be stopped manually with lever

@@ -27,30 +27,30 @@ The Bobcat Ignition Controller is built around the LILYGO T-Relay ESP32 board, p
 - **WiFi**: 802.11 b/g/n (2.4GHz)
 - **Programming**: USB-C connector with CH340 USB-to-Serial
 
-### Relay Assignments
+### Relay Assignments - LILYGO T-Relay 4-Channel ESP32
 
 | Relay | GPIO | Function | Load | Description |
 |-------|------|----------|------|-------------|
-| 1 | GPIO5 | Main Power | 5A | Master power control for all electrical systems |
-| 2 | GPIO21 | Glow Plugs | 8A | Diesel glow plug preheating (20-second cycle) |
-| 3 | GPIO22 | Starter Motor | 3A | Starter solenoid relay control signal |
-| 4 | GPIO18 | Lights | 6A | Combined front and back work lights |
+| 1 | GPIO21 | Main Power | 5A | Master power control for all electrical systems |
+| 2 | GPIO19 | Glow Plugs | 8A | Diesel glow plug preheating (20-second cycle) |
+| 3 | GPIO18 | Starter Motor | 3A | Starter solenoid relay control signal |
+| 4 | GPIO5 | Lights | 6A | Combined front and back work lights |
 
-### Sensor Inputs
+### Sensor Inputs - Physical sequence from development header
 
-| GPIO | ADC Channel | Sensor | Range | Signal Type |
-|------|-------------|--------|-------|-------------|
-| GPIO36 | ADC1_CH0 | Engine Temperature | -40°C to 150°C | 0-3.3V via voltage divider |
-| GPIO39 | ADC1_CH3 | Oil Pressure | 0-689 kPa | 0-3.3V via voltage divider |
-| GPIO34 | ADC1_CH6 | Battery Voltage | 8-16V | 0-3.3V via voltage divider (4:1) |
-| GPIO35 | ADC1_CH7 | Fuel Level | 0-100% | 0-3.3V via voltage divider |
+| GPIO | ADC Channel | Sensor | Range | Physical Position |
+|------|-------------|--------|-------|-------------------|
+| GPIO39 | ADC1_CH3 | Engine Temperature | -40°C to 150°C | Top row, 4th pin |
+| GPIO35 | ADC1_CH7 | Oil Pressure | 0-689 kPa | Top row, 5th pin |
+| GPIO36 | ADC1_CH0 | Battery Voltage | 8-16V | Bottom row, 4th pin |
+| GPIO34 | ADC1_CH6 | Fuel Level | 0-100% | Bottom row, 5th pin |
 
-### Status Inputs
+### Status Inputs - Physical sequence from development header
 
-| GPIO | Function | Signal Type | Description |
-|------|----------|-------------|-------------|
-| GPIO27 | Alternator Charge | Digital (Active LOW) | Charging system status |
-| GPIO14 | Engine Run Feedback | Digital (Active HIGH) | Engine running confirmation |
+| GPIO | Function | Signal Type | Physical Position |
+|------|----------|-------------|-------------------|
+| GPIO22 | Alternator Charge | Digital (Active LOW) | Top row, 1st pin |
+| GPIO26 | Engine Run Feedback | Digital (Active HIGH) | Top row, 2nd pin |
 
 ## Power Supply Design
 
@@ -123,7 +123,7 @@ The Bobcat Ignition Controller is built around the LILYGO T-Relay ESP32 board, p
 
 All relay contacts handle the actual load currents to the Bobcat systems:
 
-#### Main Power Relay (GPIO5)
+#### Main Power Relay (GPIO21)
 
 ```text
 Common: +12V from battery
@@ -131,7 +131,7 @@ NO: To all downstream systems (lights, ignition)
 NC: Not used
 ```
 
-#### Glow Plug Relay (GPIO21)
+#### Glow Plug Relay (GPIO19)
 
 ```text
 Common: +12V from main power relay
@@ -139,7 +139,7 @@ NO: To glow plug controller input
 NC: Not used
 ```
 
-#### Starter Relay (GPIO22)
+#### Starter Relay (GPIO18)
 
 ```text
 Common: +12V from main power relay
@@ -147,7 +147,7 @@ NO: To starter solenoid coil
 NC: Not used
 ```
 
-#### Lights Relay (GPIO18)
+#### Lights Relay (GPIO5)
 
 ```text
 Common: +12V from main power relay

@@ -24,14 +24,14 @@ This document provides the definitive GPIO pin mapping for the current 4-relay c
 
 ## Digital Output Pins (Relay Control)
 
-### Active Relay Assignments
+### Active Relay Assignments - LILYGO T-Relay 4-Channel ESP32
 
 | GPIO | Pin Name | Relay | Function | Load Rating | Purpose |
 |------|----------|-------|----------|-------------|---------|
-| GPIO5 | D5 | Relay 1 | Main Power | 10A @ 12V | Master electrical system control |
-| GPIO21 | D21 | Relay 2 | Glow Plugs | 10A @ 12V | Diesel preheating (20-sec timer) |
-| GPIO22 | D22 | Relay 3 | Starter | 10A @ 12V | Starter solenoid activation |
-| GPIO18 | D18 | Relay 4 | Lights | 10A @ 12V | Combined work lights |
+| GPIO21 | D21 | Relay 1 | Main Power | 10A @ 12V | Master electrical system control |
+| GPIO19 | D19 | Relay 2 | Glow Plugs | 10A @ 12V | Diesel preheating (20-sec timer) |
+| GPIO18 | D18 | Relay 3 | Starter | 10A @ 12V | Starter solenoid activation |
+| GPIO5 | D5 | Relay 4 | Lights | 10A @ 12V | Combined work lights |
 
 ### Relay Control Logic
 
@@ -42,14 +42,14 @@ This document provides the definitive GPIO pin mapping for the current 4-relay c
 
 ## Analog Input Pins (Sensor Monitoring)
 
-### Engine Sensor Inputs
+### Engine Sensor Inputs - Physical sequence from development header
 
-| GPIO | ADC Channel | Function | Input Range | Resolution | Update Rate |
-|------|-------------|----------|-------------|------------|-------------|
-| GPIO36 | ADC1_CH0 | Engine Temperature | 0-3.3V | 12-bit | 2 seconds |
-| GPIO39 | ADC1_CH3 | Oil Pressure | 0-3.3V | 12-bit | 2 seconds |
-| GPIO34 | ADC1_CH6 | Battery Voltage | 0-3.3V | 12-bit | 2 seconds |
-| GPIO35 | ADC1_CH7 | Fuel Level | 0-3.3V | 12-bit | 2 seconds |
+| GPIO | ADC Channel | Function | Input Range | Physical Position |
+|------|-------------|----------|-------------|-------------------|
+| GPIO39 | ADC1_CH3 | Engine Temperature | 0-3.3V | Top row, 4th pin |
+| GPIO35 | ADC1_CH7 | Oil Pressure | 0-3.3V | Top row, 5th pin |
+| GPIO36 | ADC1_CH0 | Battery Voltage | 0-3.3V | Bottom row, 4th pin |
+| GPIO34 | ADC1_CH6 | Fuel Level | 0-3.3V | Bottom row, 5th pin |
 
 ### Signal Conditioning Requirements
 
@@ -107,37 +107,41 @@ GPIO35 (0-3.3V range)
 
 ## Digital Input Pins (Status Monitoring)
 
-### Engine Status Inputs
+### Engine Status Inputs - Physical sequence from development header
 
-| GPIO | Function | Signal Type | Logic Level | Purpose |
-|------|----------|-------------|-------------|---------|
-| GPIO27 | Alternator Charge | Digital | Active LOW | Charging system status |
-| GPIO14 | Engine Run Feedback | Digital | Active HIGH | Engine running confirmation |
+| GPIO | Function | Signal Type | Logic Level | Physical Position |
+|------|----------|-------------|-------------|-------------------|
+| GPIO22 | Alternator Charge | Digital | Active LOW | Top row, 1st pin |
+| GPIO26 | Engine Run Feedback | Digital | Active HIGH | Top row, 2nd pin |
 
 ### Input Specifications
 
-#### Alternator Charge Status (GPIO27)
+#### Alternator Charge Status (GPIO22)
+
 ```text
 Alternator "L" Terminal
     ↓
 [Optional signal conditioning]
     ↓
-GPIO27 (with internal pull-up)
+GPIO22 (with internal pull-up)
 ```
 
 - **Signal Source**: Alternator lamp terminal (typically blue wire)
 - **Logic**: LOW = charging, HIGH = not charging
 - **Protection**: Internal pull-up resistor enabled
-- **Debouncing**: Software debouncing implemented
+- **Physical Position**: Top row, 1st pin
 
-#### Engine Run Feedback (GPIO14)
+#### Engine Run Feedback (GPIO26)
+
 ```text
 Oil Pressure Switch or Tach Signal
     ↓
 [Signal conditioning if needed]
     ↓
-GPIO14
+GPIO26
 ```
+
+- **Physical Position**: Top row, 2nd pin
 
 - **Purpose**: Confirms engine is actually running
 - **Signal Options**: Oil pressure switch, alternator W-terminal, or tach signal
@@ -146,22 +150,23 @@ GPIO14
 
 ## Unused/Available Pins
 
-### Available for Future Expansion
+### Available for Future Expansion (From LILYGO T-Relay Header)
 
 | GPIO | Capabilities | Restrictions | Suggested Use |
 |------|--------------|--------------|---------------|
-| GPIO0 | Digital I/O | Boot mode pin | External button input |
 | GPIO2 | Digital I/O, LED | Used for WiFi status LED | Additional status output |
 | GPIO4 | Digital I/O | - | External alarm output |
 | GPIO12 | Digital I/O | Must be LOW at boot | Expansion input |
 | GPIO13 | Digital I/O | - | Additional sensor input |
 | GPIO15 | Digital I/O | Must be LOW at boot | Expansion output |
-| GPIO16 | Digital I/O | - | Serial communication |
-| GPIO17 | Digital I/O | - | Serial communication |
-| GPIO25 | Digital I/O, DAC | - | Analog output if needed |
+| GPIO22 | Digital I/O | - | Serial communication (TX) |
+| GPIO23 | Digital I/O | - | Serial communication (RX) |
 | GPIO26 | Digital I/O, DAC | - | Analog output if needed |
 | GPIO32 | Digital I/O, ADC | - | Additional analog input |
 | GPIO33 | Digital I/O, ADC | - | Additional analog input |
+
+**Available ADC pins**: GPIO32, GPIO33, GPIO34, GPIO35, GPIO36, GPIO39
+**Note**: GPIO27 and GPIO14 are used for status inputs
 
 ### Expansion Considerations
 
@@ -187,11 +192,13 @@ GPIO14
 ### Future Communication Options
 
 #### CAN Bus Interface (if added)
-- **Potential Pins**: GPIO16 (TX), GPIO17 (RX)
+
+- **Potential Pins**: GPIO22 (TX), GPIO23 (RX)
 - **Transceiver**: External CAN transceiver IC required
 - **Protocol**: CANopen or J1939 for heavy equipment
 
 #### RS485 Interface (if added)
+
 - **Potential Pins**: GPIO32 (TX), GPIO33 (RX)
 - **Transceiver**: External RS485 transceiver required
 - **Use**: Modbus communication with external systems
@@ -210,26 +217,26 @@ GPIO14
 
 | Wire Color | Function | GPIO | Gauge | Fuse | Bobcat Connection |
 |------------|----------|------|-------|------|-------------------|
-| Orange | Main Power | GPIO5 | 14 AWG | 15A | Main electrical bus |
-| Blue | Glow Plugs | GPIO21 | 14 AWG | 10A | Glow plug controller |
-| Purple | Starter | GPIO22 | 16 AWG | 5A | Starter solenoid |
-| White | Lights | GPIO18 | 14 AWG | 10A | Work light circuits |
+| Orange | Main Power | GPIO21 | 14 AWG | 15A | Main electrical bus |
+| Blue | Glow Plugs | GPIO19 | 14 AWG | 10A | Glow plug controller |
+| Purple | Starter | GPIO18 | 16 AWG | 5A | Starter solenoid |
+| White | Lights | GPIO5 | 14 AWG | 10A | Work light circuits |
 
 ### Sensor Input Harness
 
 | Wire Color | Function | GPIO | Gauge | Shielding | Bobcat Connection |
 |------------|----------|------|-------|-----------|-------------------|
-| Green | Engine Temp | GPIO36 | 22 AWG | Yes | Coolant temp sender |
-| Brown | Oil Pressure | GPIO39 | 22 AWG | Yes | Oil pressure sender |
-| Gray | Battery Voltage | GPIO34 | 22 AWG | No | Battery positive tap |
-| Pink | Fuel Level | GPIO35 | 22 AWG | Yes | Fuel tank sender |
+| Green | Engine Temp | GPIO39 | 22 AWG | Yes | Coolant temp sender |
+| Brown | Oil Pressure | GPIO35 | 22 AWG | Yes | Oil pressure sender |
+| Gray | Battery Voltage | GPIO36 | 22 AWG | No | Battery positive tap |
+| Pink | Fuel Level | GPIO34 | 22 AWG | Yes | Fuel tank sender |
 
 ### Status Input Harness
 
 | Wire Color | Function | GPIO | Gauge | Bobcat Connection |
 |------------|----------|------|-------|-------------------|
-| Light Blue | Alternator | GPIO27 | 22 AWG | Alternator L terminal |
-| Violet | Engine Run | GPIO14 | 22 AWG | Oil pressure switch |
+| Light Blue | Alternator | GPIO22 | 22 AWG | Alternator L terminal |
+| Violet | Engine Run | GPIO26 | 22 AWG | Oil pressure switch |
 
 ## Installation Guidelines
 

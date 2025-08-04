@@ -23,15 +23,15 @@ AsyncWebServer server(80);
 // Helper function to convert SystemState enum to a string for the web interface
 const char* systemStateToString(SystemState state) {
     switch (state) {
-        case IDLE: return "IDLE";
-        case POWER_ON: return "POWER ON";
-        case GLOW_PLUG_HEATING: return "GLOW PLUG HEATING";
-        case READY_TO_START: return "READY TO START";
+        case IDLE: return "OFF";
+        case POWER_ON: return "ON"; 
+        case GLOW_PLUG_HEATING: return "GLOW_HEATING";
+        case READY_TO_START: return "READY";
         case STARTING: return "STARTING";
         case RUNNING: return "RUNNING";
-        case LOW_OIL_PRESSURE: return "LOW OIL PRESSURE";
-        case HIGH_TEMPERATURE: return "HIGH TEMPERATURE";
-        case ERROR: return "ERROR";
+        case LOW_OIL_PRESSURE: return "LOW_OIL_PRESSURE";
+        case HIGH_TEMPERATURE: return "HIGH_TEMPERATURE";
+        case ERROR: return "EMERGENCY_STOP";
         default: return "UNKNOWN";
     }
 }
@@ -74,45 +74,129 @@ void setupWebServer() {
         request->send(LittleFS, "/logo.png", "image/png");
     });
 
-    // Handle the start button press
+    // Handle the start button press (keep for backward compatibility)
     server.on("/start", HTTP_GET, [](AsyncWebServerRequest *request){
+        Serial.println("Legacy start endpoint called");
         virtualStartButton();
         request->send(200, "text/plain", "Start request received");
     });
 
-    // Handle the power on button press
+    // Handle the power on button press (keep for backward compatibility)
     server.on("/power_on", HTTP_GET, [](AsyncWebServerRequest *request){
+        Serial.println("Legacy power_on endpoint called");
         virtualPowerOnButton();
         request->send(200, "text/plain", "Power on request received");
     });
 
-    // Handle the power off button press
+    // Handle the power off button press (keep for backward compatibility)
     server.on("/power_off", HTTP_GET, [](AsyncWebServerRequest *request){
+        Serial.println("Legacy power_off endpoint called");
         virtualPowerOffButton();
         request->send(200, "text/plain", "Power off request received");
     });
 
     // Note: No engine stop endpoint - engine must be stopped manually with lever
 
-    // Handle the lights toggle
+    // Handle the lights toggle (keep for backward compatibility)
     server.on("/toggle_lights", HTTP_GET, [](AsyncWebServerRequest *request){
+        Serial.println("Legacy toggle_lights endpoint called");
         virtualLightsButton();
         request->send(200, "text/plain", "Lights toggled");
     });
 
-    // Handle the override button press
+    // Handle the override button press (keep for backward compatibility)
     server.on("/override", HTTP_GET, [](AsyncWebServerRequest *request){
+        Serial.println("Legacy override endpoint called");
         overrideStart();
         request->send(200, "text/plain", "Override request received");
     });
 
+    // Handle unified control endpoint for the new dashboard
+    server.on("/control", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,
+        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+            // Parse JSON command
+            StaticJsonDocument<256> doc;
+            DeserializationError error = deserializeJson(doc, (char*)data, len);
+            
+            if (error) {
+                Serial.println("Failed to parse JSON command");
+                request->send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON\"}");
+                return;
+            }
+            
+            String action = doc["action"];
+            Serial.print("Web command received: ");
+            Serial.println(action);
+            
+            bool success = true;
+            String message = "Command executed";
+            
+            // Execute the requested action
+            if (action == "start") {
+                virtualStartButton();
+            } else if (action == "power_on") {
+                virtualPowerOnButton();
+            } else if (action == "shutdown") {
+                virtualPowerOffButton();
+            } else if (action == "emergency_stop") {
+                // Force emergency stop state
+                currentState = ERROR;
+                digitalWrite(STARTER_PIN, LOW);
+                digitalWrite(LIGHTS_PIN, LOW);
+                digitalWrite(GLOW_PLUGS_PIN, LOW);
+                digitalWrite(MAIN_POWER_PIN, LOW);
+                Serial.println("EMERGENCY STOP activated via web interface");
+            } else if (action == "lights") {
+                virtualLightsButton();
+            } else if (action == "horn") {
+                // Horn action - could trigger a horn relay if available
+                Serial.println("Horn activated via web interface");
+            } else {
+                success = false;
+                message = "Unknown action: " + action;
+            }
+            
+            // Send response
+            StaticJsonDocument<256> response;
+            response["success"] = success;
+            response["message"] = message;
+            
+            String jsonResponse;
+            serializeJson(response, jsonResponse);
+            request->send(success ? 200 : 400, "application/json", jsonResponse);
+        });
+
     // Provide the system status as a JSON object
     server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request){
-        StaticJsonDocument<256> doc;
-        doc["status"] = systemStateToString(currentState);
+        StaticJsonDocument<512> doc;
+        doc["state"] = systemStateToString(currentState);
+        doc["status"] = systemStateToString(currentState); // Keep for backward compatibility
         doc["temperature"] = readEngineTemp();
         doc["pressure"] = readOilPressure();
         doc["battery"] = readBatteryVoltage();
+        doc["battery_voltage"] = readBatteryVoltage();
+        doc["engine_temp"] = readEngineTemp();
+        doc["oil_pressure"] = readOilPressure();
+        
+        // Add state flags for dashboard
+        doc["lights_on"] = digitalRead(LIGHTS_PIN);
+        doc["engine_fault"] = (currentState == ERROR);
+        doc["low_oil_pressure"] = (currentState == LOW_OIL_PRESSURE);
+        doc["high_temperature"] = (currentState == HIGH_TEMPERATURE);
+        doc["low_battery"] = (readBatteryVoltage() < 11.5);
+        
+        // Add mock data for missing sensors
+        doc["fuel_level"] = 75;
+        doc["engine_hours"] = 1234;
+        
+        // Add glow plug countdown
+        if (currentState == GLOW_PLUG_HEATING) {
+            unsigned long elapsed = millis() - glowPlugStartTime;
+            unsigned long remaining = (GLOW_PLUG_DURATION - elapsed) / 1000;
+            doc["countdown"] = remaining;
+        } else {
+            doc["countdown"] = 0;
+        }
 
         String jsonResponse;
         serializeJson(doc, jsonResponse);

@@ -1,23 +1,29 @@
 /*
- * Configuration Implementation for Bobcat Ignition Controller
+ * C// ============================================================================
+// ANALOG INPUT PINS - Engine Sensors (Physical sequence from header)
+// ============================================================================
+const int ENGINE_TEMP_PIN = 39;       // ADC1_CH3 - Coolant Temperature Sensor (4th pin top row)
+const int OIL_PRESSURE_PIN = 35;      // ADC1_CH7 - Oil Pressure Sensor (5th pin top row)
+const int BATTERY_VOLTAGE_PIN = 36;   // ADC1_CH0 - Battery Voltage (4th pin bottom row)
+const int FUEL_LEVEL_PIN = 34;        // ADC1_CH6 - Fuel Level Sensor (5th pin bottom row)ation Implementation for Bobcat Ignition Controller
  * Defines all constants and global variables for Diesel Engine Control
  */
 
 #include "config.h"
 
 // ============================================================================
-// ANALOG INPUT PINS - Engine Sensors (ADC1 channels)
+// ANALOG INPUT PINS - Engine Sensors (ADC1 channels) - Sequential assignment
 // ============================================================================
-const int ENGINE_TEMP_PIN = 36;       // ADC1_CH0 - Coolant Temperature Sensor
-const int OIL_PRESSURE_PIN = 39;      // ADC1_CH3 - Oil Pressure Sensor (0-5V)
-const int BATTERY_VOLTAGE_PIN = 34;   // ADC1_CH6 - Battery Voltage (via divider)
-const int FUEL_LEVEL_PIN = 35;        // ADC1_CH7 - Fuel Level Sensor (0-5V)
+const int ENGINE_TEMP_PIN = 34;       // ADC1_CH6 - Coolant Temperature Sensor
+const int OIL_PRESSURE_PIN = 35;      // ADC1_CH7 - Oil Pressure Sensor (0-5V)
+const int BATTERY_VOLTAGE_PIN = 36;   // ADC1_CH0 - Battery Voltage (via divider)
+const int FUEL_LEVEL_PIN = 39;        // ADC1_CH3 - Fuel Level Sensor (0-5V)
 
 // ============================================================================
-// DIGITAL INPUT PINS - Status Feedback
+// DIGITAL INPUT PINS - Status Feedback (Physical sequence from header)
 // ============================================================================
-const int ALTERNATOR_CHARGE_PIN = 27;   // Alternator Charge Indicator
-const int ENGINE_RUN_FEEDBACK_PIN = 14;   // Engine Running Feedback
+const int ALTERNATOR_CHARGE_PIN = 22;     // GPIO22 - Alternator Charge Indicator (1st pin top row)
+const int ENGINE_RUN_FEEDBACK_PIN = 26;   // GPIO26 - Engine Running Feedback (2nd pin top row)
 
 // ============================================================================
 // DIESEL ENGINE TIMING CONSTANTS (in milliseconds)

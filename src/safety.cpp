@@ -64,7 +64,14 @@ void handleError(const char* errorMessage) {
 
 void overrideStart() {
     Serial.println("OVERRIDE: Bypassing safety checks and starting engine!");
+    
+    // Make sure main power is on
+    controlMainPower(true);
+    
+    // Set state and start cranking
     currentState = STARTING;
     ignitionStartTime = millis();
     controlStarter(true);
+    
+    Serial.println("OVERRIDE: Starter engaged");
 }
