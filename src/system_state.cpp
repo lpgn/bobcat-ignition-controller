@@ -160,9 +160,11 @@ void runIgnitionSequence() {
       
       // Check if glow plug heating is complete
       if (millis() - g_systemState.glowPlugStartTime >= GLOW_PLUG_DURATION) {
-        // Glow plug heating complete - turn off glow plugs
-        Serial.println("Glow plug heating complete - ready for start");
+        // Glow plug heating complete - turn off glow plugs and return key to ON
+        Serial.println("Glow plug heating complete - automatically returning to ON position");
         controlGlowPlugs(false);
+        g_systemState.currentState = ON;
+        g_systemState.keyPosition = 1;  // Automatically return key to ON position
       } else {
         // Show countdown every 2 seconds during heating (only while heating)
         static unsigned long lastCountdown = 0;
@@ -192,10 +194,12 @@ void runIgnitionSequence() {
         controlStarter(false);
         controlGlowPlugs(false);
       } else if (!g_systemState.keyStartHeld || g_systemState.keyPosition < 3) {  // Key released from START position
-        Serial.println("Start key released - returning to GLOW position");
-        g_systemState.currentState = GLOW_PLUG;  // Return to GLOW, not RUNNING
+        Serial.println("Start key released - returning to ON position");
+        g_systemState.currentState = ON;  // Return to ON, not GLOW_PLUG
+        g_systemState.keyPosition = 1;    // Set key position to ON
         controlStarter(false);
-        // Note: Let glow plugs continue their natural cycle - don't turn them off here
+        // Turn off glow plugs when returning to ON after start attempt
+        controlGlowPlugs(false);
       } else if (millis() - g_systemState.ignitionStartTime >= IGNITION_TIMEOUT) {
         // Start timeout - stop cranking but stay in START until key is released
         Serial.println("Engine start timeout - stopping cranking (release key)");

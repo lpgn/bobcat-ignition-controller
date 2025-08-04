@@ -44,10 +44,6 @@ body {
 
 .header {
     margin-bottom: 40px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
 }
 
 .header h1 {
@@ -92,7 +88,6 @@ body {
     border-radius: 50%;
     border: 2px solid #4a5b6c;
     position: relative;
-    overflow: visible;
     box-shadow: 
         inset 0 0 15px rgba(0, 0, 0, 0.7),
         0 2px 10px rgba(0, 0, 0, 0.3);
@@ -215,24 +210,6 @@ body {
     animation: glow-pulse 1s ease-in-out infinite alternate;
 }
 
-.glow-timer {
-    position: absolute;
-    top: 45px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 11px;
-    font-weight: bold;
-    color: #ff9800;
-    text-shadow: 
-        1px 1px 2px rgba(0, 0, 0, 0.8),
-        0 0 8px #ff9800;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 2px 6px;
-    border-radius: 3px;
-    border: 1px solid #ff9800;
-    white-space: nowrap;
-}
-
 /* START position at 3 o'clock (90°) - curved */
 .start-label {
     top: 45%;
@@ -270,7 +247,6 @@ body {
     transform-origin: center center;
     transition: none;
     transform: rotate(-30deg); /* Start at OFF position (11 o'clock) */
-    z-index: 15;
 }
 
 .key.transitioning {
@@ -293,22 +269,17 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     width: 10px;
-    height: 120px;
-    background: linear-gradient(to bottom, #f0f0f0, #c8c8c8, #a0a0a0);
+    height: 160px;
+    background: linear-gradient(to bottom, #ffd700, var(--key-color), #b8860b);
     border-radius: 5px;
     box-shadow: 
-        0 4px 12px rgba(0, 0, 0, 0.5),
-        inset 0 2px 4px rgba(255, 255, 255, 0.8),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+        0 3px 8px var(--key-shadow),
+        inset 0 1px 3px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 3px rgba(0, 0, 0, 0.2);
     
-    /* Add some metallic texture */
+    /* Add some texture to make it look more like a switch lever */
     background-image: 
-        linear-gradient(90deg, transparent 20%, rgba(255, 255, 255, 0.4) 50%, transparent 80%);
-    
-    /* Ensure it's visible and clickable */
-    display: block !important;
-    z-index: 20;
-    opacity: 1;
+        linear-gradient(90deg, transparent 40%, rgba(255, 255, 255, 0.1) 50%, transparent 60%);
 }
 
 /* Center dot */
@@ -448,6 +419,33 @@ body {
 }
 
 /* Status Display */
+.status-display {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.main-status {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--text-color);
+    margin-bottom: 5px;
+}
+
+.detailed-status {
+    font-size: 0.9rem;
+    color: #bdc3c7;
+    margin-bottom: 5px;
+}
+
+.countdown-display {
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--glow-color);
+}
+
 /* Warning Lights */
 .warning-lights {
     display: flex;
@@ -459,7 +457,6 @@ body {
 .warning-row {
     display: flex;
     justify-content: center;
-    align-items: center;
     gap: 15px;
 }
 
@@ -470,15 +467,6 @@ body {
     gap: 5px;
     font-size: 0.7rem;
     color: #bdc3c7;
-}
-
-/* Control Buttons Row */
-.control-buttons {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 50px;
-    margin-top: 30px;
 }
 
 .light {
@@ -506,9 +494,7 @@ body {
 
 /* Emergency Stop */
 .emergency-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    margin-top: 30px;
 }
 
 .emergency-btn {
@@ -516,9 +502,9 @@ body {
     color: white;
     border: none;
     border-radius: 50%;
-    width: 100px;
-    height: 100px;
-    font-size: 0.7rem;
+    width: 80px;
+    height: 80px;
+    font-size: 0.8rem;
     font-weight: bold;
     cursor: pointer;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -529,42 +515,6 @@ body {
     justify-content: center;
     text-transform: uppercase;
     letter-spacing: 1px;
-    line-height: 1.1;
-}
-
-/* Work Lights Button */
-.light-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.light-btn {
-    background: linear-gradient(145deg, #ffaa00, #e69500);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 100px;
-    height: 100px;
-    font-size: 0.7rem;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    line-height: 1.1;
-}
-
-.light-btn.active {
-    background: linear-gradient(145deg, #ffdd00, #ffcc00);
-    box-shadow: 
-        0 4px 8px rgba(0, 0, 0, 0.3),
-        0 0 20px rgba(255, 221, 0, 0.4);
 }
 
 .emergency-btn:hover {
@@ -573,16 +523,6 @@ body {
 }
 
 .emergency-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.light-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-}
-
-.light-btn:active {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
@@ -656,8 +596,8 @@ body {
     }
     
     .key-shaft {
-        width: 6px;
-        height: 90px;
+        width: 8px;
+        height: 120px;
     }
     
     .position-label {
@@ -716,7 +656,7 @@ body {
     }
     
     .key-shaft {
-        width: 5px;
-        height: 70px;
+        width: 7px;
+        height: 90px;
     }
 }

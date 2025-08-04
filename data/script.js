@@ -1,201 +1,446 @@
-// Bobcat 743 Dashboard Control Script
-// All state is now managed by the backend - this is a stateless client
+// Bobcat Ignition Controller - Using Original Working Design with Backend API
+class IgnitionController {
+    constructor() {
+        this.key = document.getElementById('ignitionKey');
+        this.face = document.querySelector('.face');
+        
+        // Position label elements
+        this.labels = {
+            off: document.querySelector('.off-label'),
+            on: document.querySelector('.on-label'),
+            glow: document.querySelector('.glow-label'),
+            start: document.querySelector('.start-label')
+        };
+        
+        // Gauge elements
+        this.pressureNeedle = document.getElementById('pressureNeedle');
+        this.tempNeedle = document.getElementById('tempNeedle');
+        this.voltageNeedle = document.getElementById('voltageNeedle');
+        this.fuelNeedle = document.getElementById('fuelNeedle');
+        
+        this.pressureValue = document.getElementById('pressureValue');
+        this.tempValue = document.getElementById('tempValue');
+        this.voltageValue = document.getElementById('voltageValue');
+        this.fuelValue = document.getElementById('fuelValue');
+        
+        this.pressureGauge = document.querySelector('.pressure-gauge');
+        this.tempGauge = document.querySelector('.temp-gauge');
+        this.voltageGauge = document.querySelector('.voltage-gauge');
+        this.fuelGauge = document.querySelector('.fuel-gauge');
+        
+        // State management - using your original working logic
+        this.currentState = 'off';
+        this.currentAngle = -30; // Start at OFF position (11 o'clock)
+        this.isDragging = false;
+        this.startAngle = 0;
+        this.isTransitioning = false;
+        
+        // Position definitions (clock-based angles) - your original working design
+        this.positions = {
+            off: { angle: -30, label: 'OFF', color: 'off' },      // 11 o'clock
+            on: { angle: 0, label: 'ON', color: 'on' },           // 12 o'clock
+            glow: { angle: 45, label: 'GLOW', color: 'glow' },    // 1:30 o'clock
+            start: { angle: 90, label: 'START', color: 'start' }  // 3 o'clock
+        };
+        
+        // State progression order
+        this.stateOrder = ['off', 'on', 'glow', 'start'];
+        
+        // Backend integration
+        this.backendKeyPosition = 0;
+        
+        this.init();
+    }
+    
+    init() {
+        this.setupEventListeners();
+        this.updateDisplay();
+        this.updateKeyPosition();
+    }
+    
+    setupEventListeners() {
+        // Mouse events
+        this.key.addEventListener('mousedown', this.handleStart.bind(this));
+        document.addEventListener('mousemove', this.handleMove.bind(this));
+        document.addEventListener('mouseup', this.handleEnd.bind(this));
+        
+        // Touch events for mobile
+        this.key.addEventListener('touchstart', this.handleStart.bind(this), { passive: false });
+        document.addEventListener('touchmove', this.handleMove.bind(this), { passive: false });
+        document.addEventListener('touchend', this.handleEnd.bind(this));
+        
+        // Prevent context menu on right click
+        this.key.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        // Prevent default drag behavior
+        this.key.addEventListener('dragstart', (e) => e.preventDefault());
+        
+        // Emergency stop button
+        const emergencyBtn = document.querySelector('.emergency-btn');
+        if (emergencyBtn) {
+            emergencyBtn.addEventListener('click', () => this.emergencyStop());
+        }
+        
+        // Work lights button
+        const workLightsBtn = document.querySelector('[data-action="toggle_lights"]');
+        if (workLightsBtn) {
+            workLightsBtn.addEventListener('click', () => this.toggleWorkLights());
+        }
+    }
+    
+    handleStart(event) {
+        if (this.isTransitioning) return;
+        
+        event.preventDefault();
+        this.isDragging = true;
+        this.key.style.cursor = 'grabbing';
+        
+        // Get the starting angle relative to the center
+        const rect = this.key.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        const clientX = event.clientX || (event.touches && event.touches[0].clientX);
+        const clientY = event.clientY || (event.touches && event.touches[0].clientY);
+        
+        this.startAngle = this.calculateAngle(clientX, clientY, centerX, centerY) - this.currentAngle;
+    }
+    
+    handleMove(event) {
+        if (!this.isDragging || this.isTransitioning) return;
+        
+        event.preventDefault();
+        
+        const rect = this.key.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        const clientX = event.clientX || (event.touches && event.touches[0].clientX);
+        const clientY = event.clientY || (event.touches && event.touches[0].clientY);
+        
+        const currentMouseAngle = this.calculateAngle(clientX, clientY, centerX, centerY);
+        let targetAngle = currentMouseAngle - this.startAngle;
+        
+        // Normalize angle to 0-360 range
+        targetAngle = this.normalizeAngle(targetAngle);
+        
+        // Convert to our coordinate system (-30 to 90)
+        if (targetAngle > 180) {
+            targetAngle = targetAngle - 360;
+        }
+        
+        // Constrain movement based on current state and clockwise-only rule
+        const constrainedAngle = this.constrainAngle(targetAngle);
+        
+        if (constrainedAngle !== this.currentAngle) {
+            this.currentAngle = constrainedAngle;
+            this.updateKeyPosition();
+            
+            // Update state based on angle - IMMEDIATE RESPONSE like your original
+            const newState = this.getStateFromAngle(this.currentAngle);
+            if (newState !== this.currentState) {
+                this.currentState = newState;
+                this.updateDisplay();
+                
+                // Send command to backend immediately (API integration)
+                this.sendStateChangeToBackend(newState);
+            }
+        }
+    }
+    
+    handleEnd(event) {
+        if (!this.isDragging) return;
+        
+        this.isDragging = false;
+        this.key.style.cursor = 'pointer';
+        
+        // Snap to nearest valid position
+        this.snapToPosition();
+    }
+    
+    calculateAngle(x, y, centerX, centerY) {
+        const deltaX = x - centerX;
+        const deltaY = y - centerY;
+        let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+        
+        // Convert to our coordinate system where 0° is pointing up
+        angle = angle + 90;
+        
+        return this.normalizeAngle(angle);
+    }
+    
+    normalizeAngle(angle) {
+        while (angle < 0) angle += 360;
+        while (angle >= 360) angle -= 360;
+        return angle;
+    }
+    
+    constrainAngle(targetAngle) {
+        const currentStateIndex = this.stateOrder.indexOf(this.currentState);
+        
+        // Allow movement within current range and forward progression
+        let minAngle = this.positions.off.angle;
+        let maxAngle = this.positions[this.stateOrder[Math.min(currentStateIndex + 1, this.stateOrder.length - 1)]].angle;
+        
+        // Allow backward movement to previous states
+        if (targetAngle < this.currentAngle) {
+            minAngle = this.positions.off.angle;
+            maxAngle = this.currentAngle;
+        }
+        
+        return Math.max(minAngle, Math.min(maxAngle, targetAngle));
+    }
+    
+    getStateFromAngle(angle) {
+        // Find the appropriate state based on angle ranges - your original logic
+        if (angle >= -30 && angle < -15) return 'off';    // 11 o'clock area
+        if (angle >= -15 && angle < 22.5) return 'on';    // 12 o'clock area
+        if (angle >= 22.5 && angle < 67.5) return 'glow'; // 1:30 o'clock area
+        if (angle >= 67.5) return 'start';                // 3 o'clock area
+        return 'off';
+    }
+    
+    snapToPosition() {
+        this.isTransitioning = true;
+        
+        // Find the closest valid position
+        let closestState = 'off';
+        let closestDistance = Infinity;
+        
+        for (const [state, position] of Object.entries(this.positions)) {
+            const distance = Math.abs(this.currentAngle - position.angle);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestState = state;
+            }
+        }
+        
+        // Snap to the closest position
+        this.currentAngle = this.positions[closestState].angle;
+        this.currentState = closestState;
+        
+        // Enable transition animation
+        this.key.classList.add('transitioning');
+        this.updateKeyPosition();
+        this.updateDisplay();
+        
+        // Handle START position spring-back - your original behavior
+        if (closestState === 'start') {
+            setTimeout(() => {
+                this.springBackFromStart();
+            }, 300);
+        } else {
+            // Remove transition class after animation
+            setTimeout(() => {
+                this.key.classList.remove('transitioning');
+                this.isTransitioning = false;
+            }, 200);
+        }
+    }
+    
+    springBackFromStart() {
+        // Auto-return from START to ON - your original behavior
+        this.currentAngle = this.positions.on.angle;
+        this.currentState = 'on';
+        this.updateKeyPosition();
+        this.updateDisplay();
+        
+        // Send backend command for spring-back
+        this.sendCommand('key_start_hold', { held: false });
+        
+        setTimeout(() => {
+            this.key.classList.remove('transitioning');
+            this.isTransitioning = false;
+        }, 200);
+    }
+    
+    updateKeyPosition() {
+        this.key.style.transform = `rotate(${this.currentAngle}deg)`;
+    }
+    
+    updateDisplay() {
+        // Remove active class from all labels
+        Object.values(this.labels).forEach(label => {
+            if (label) label.classList.remove('active');
+        });
+        
+        // Add active class to current position label
+        if (this.labels[this.currentState]) {
+            this.labels[this.currentState].classList.add('active');
+        }
+        
+        // Control face glow effects for different positions
+        this.face.classList.remove('on-active', 'glow-active', 'start-active');
+        
+        if (this.currentState === 'on') {
+            this.face.classList.add('on-active');
+        } else if (this.currentState === 'glow') {
+            this.face.classList.add('glow-active');
+        } else if (this.currentState === 'start') {
+            this.face.classList.add('start-active');
+        }
+        
+        // Update gauges based on ignition state - your original behavior
+        this.updateGauges();
+        
+        // Update page title
+        const position = this.positions[this.currentState];
+        document.title = `Bobcat Ignition - ${position.label}`;
+    }
+    
+    // API Integration Methods
+    sendStateChangeToBackend(state) {
+        const stateToPosition = { 'off': 0, 'on': 1, 'glow': 2, 'start': 3 };
+        const position = stateToPosition[state];
+        
+        if (position === 3) { // START
+            this.sendCommand('key_start_hold', { held: true });
+        } else {
+            this.sendCommand('key_position', { position: position });
+        }
+    }
+    
+    sendCommand(action, data = {}) {
+        const payload = { action: action, ...data };
+        
+        fetch('/control', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                console.error('Command failed:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error sending command:', error);
+        });
+    }
+    
+    emergencyStop() {
+        console.log('EMERGENCY STOP ACTIVATED!');
+        this.sendCommand('emergency_stop');
+    }
+    
+    toggleWorkLights() {
+        console.log('WORK LIGHTS TOGGLE');
+        this.sendCommand('lights');
+    }
+    
+    // Backend sync method
+    updateFromBackend(status) {
+        const backendKeyPosition = status.key_position || 0;
+        const positionToState = ['off', 'on', 'glow', 'start'];
+        const backendState = positionToState[backendKeyPosition];
+        
+        // Only update if not currently dragging
+        if (!this.isDragging && backendState !== this.currentState) {
+            this.currentState = backendState;
+            this.currentAngle = this.positions[backendState].angle;
+            this.updateKeyPosition();
+            this.updateDisplay();
+        }
+        
+        this.backendKeyPosition = backendKeyPosition;
+        this.updateGauges(status);
+    }
+    
+    updateGauges(status) {
+        // Use backend sensor data or simulate based on state
+        let pressure, temperature, voltage, fuel;
+        
+        if (status) {
+            // Use real backend data
+            pressure = (status.oil_pressure || 0) * 0.0689476; // Convert PSI to BAR
+            temperature = status.engine_temp || 20;
+            voltage = status.battery_voltage || 0;
+            fuel = status.fuel_level || 75;
+        } else {
+            // Simulate realistic values based on ignition state - your original logic
+            switch (this.currentState) {
+                case 'off':
+                    pressure = 0;
+                    temperature = 20;
+                    voltage = 0;
+                    fuel = 75 + Math.random() * 5;
+                    break;
+                case 'on':
+                    pressure = 1 + Math.random() * 0.3;
+                    temperature = 25 + Math.random() * 5;
+                    voltage = 12 + Math.random() * 0.5;
+                    fuel = 75 + Math.random() * 5;
+                    break;
+                case 'glow':
+                    pressure = 1.3 + Math.random() * 0.4;
+                    temperature = 50 + Math.random() * 10;
+                    voltage = 11.5 + Math.random() * 0.5;
+                    fuel = 75 + Math.random() * 5;
+                    break;
+                case 'start':
+                    pressure = 2.4 + Math.random() * 0.7;
+                    temperature = 60 + Math.random() * 10;
+                    voltage = 10 + Math.random() * 1;
+                    fuel = 74 + Math.random() * 5;
+                    break;
+            }
+        }
+        
+        // Activate gauges based on state
+        const gaugesActive = this.currentState !== 'off';
+        
+        [this.pressureGauge, this.tempGauge, this.voltageGauge, this.fuelGauge].forEach(gauge => {
+            if (gauge) {
+                if (gaugesActive) {
+                    gauge.classList.add('active');
+                } else {
+                    gauge.classList.remove('active');
+                }
+            }
+        });
+        
+        // Update needle positions (0-180 degrees for half circle, -90 to +90)
+        const pressureAngle = Math.min(Math.max((pressure / 4.0) * 180 - 90, -90), 90);
+        const tempAngle = Math.min(Math.max(((temperature - 20) / 80) * 180 - 90, -90), 90);
+        const voltageAngle = Math.min(Math.max(((voltage - 8) / 8) * 180 - 90, -90), 90);
+        const fuelAngle = Math.min(Math.max((fuel / 100) * 180 - 90, -90), 90);
+        
+        if (this.pressureNeedle) this.pressureNeedle.style.transform = `translate(-50%, -50%) rotate(${pressureAngle}deg)`;
+        if (this.tempNeedle) this.tempNeedle.style.transform = `translate(-50%, -50%) rotate(${tempAngle}deg)`;
+        if (this.voltageNeedle) this.voltageNeedle.style.transform = `translate(-50%, -50%) rotate(${voltageAngle}deg)`;
+        if (this.fuelNeedle) this.fuelNeedle.style.transform = `translate(-50%, -50%) rotate(${fuelAngle}deg)`;
+        
+        // Update value displays
+        if (this.pressureValue) this.pressureValue.textContent = `${pressure.toFixed(1)} BAR`;
+        if (this.tempValue) this.tempValue.textContent = `${Math.round(temperature)}°C`;
+        if (this.voltageValue) this.voltageValue.textContent = `${voltage.toFixed(1)}V`;
+        if (this.fuelValue) this.fuelValue.textContent = `${Math.round(fuel)}%`;
+    }
+}
+
+// Main dashboard controller that integrates the ignition key with backend polling
 let pollingInterval;
+let ignitionController;
 const POLLING_INTERVAL = 1000; // 1 second
 
 // Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Bobcat 743 Dashboard Initializing...');
-    initializeDashboard();
+    console.log('Bobcat Ignition Controller Initializing...');
+    
+    // Initialize the ignition key controller
+    ignitionController = new IgnitionController();
+    
+    // Start backend polling
     startPolling();
-});
-
-function initializeDashboard() {
-    console.log('Setting up event listeners...');
-    
-    // Set up key switch event listeners
-    const keyPositions = document.querySelectorAll('.key-position');
-    console.log('Found', keyPositions.length, 'key position buttons');
-    keyPositions.forEach(button => {
-        const position = parseInt(button.dataset.position);
-        
-        if (position === 3) { // START position
-            // START position: crank while held, return to ON when released
-            button.addEventListener('mousedown', function(e) {
-                e.preventDefault();
-                holdStartPosition();
-            });
-            
-            button.addEventListener('mouseup', function(e) {
-                e.preventDefault();
-                releaseStartPosition();
-            });
-            
-            button.addEventListener('mouseleave', function(e) {
-                e.preventDefault();
-                releaseStartPosition();
-            });
-            
-            // Touch events for mobile
-            button.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                holdStartPosition();
-            });
-            
-            button.addEventListener('touchend', function(e) {
-                e.preventDefault();
-                releaseStartPosition();
-            });
-            
-            button.addEventListener('touchcancel', function(e) {
-                e.preventDefault();
-                releaseStartPosition();
-            });
-        } else {
-            // OFF, ON, and GLOW positions: sequential progression
-            button.addEventListener('click', function() {
-                setKeyPosition(parseInt(this.dataset.position));
-            });
-        }
-    });
-    
-    // Set up auxiliary button event listeners
-    const auxButtons = document.querySelectorAll('.aux-btn');
-    console.log('Found', auxButtons.length, 'auxiliary buttons');
-    auxButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const action = this.dataset.action;
-            if (action) {
-                sendCommand(action);
-            } else {
-                console.warn('Button missing data-action attribute:', this);
-            }
-        });
-    });
-    
-    // Set up emergency stop
-    const emergencyBtn = document.querySelector('.emergency-btn');
-    if (emergencyBtn) {
-        console.log('Emergency button found, setting up listener');
-        emergencyBtn.addEventListener('click', function() {
-            emergencyStop();
-        });
-    } else {
-        console.warn('Emergency button not found');
-    }
-    
-    console.log('Dashboard initialization complete');
     
     // Initial status update
     updateStatus();
-}
-
-function setKeyPosition(position) {
-    console.log('Key position command sent:', position);
     
-    if (position < 0 || position > 3) {
-        console.error('Invalid key position:', position);
-        return;
-    }
-    
-    // Simply send command to backend - no local state management
-    sendCommand('key_position', { position: position });
-}
-
-function holdStartPosition() {
-    console.log('START key held - sending command to backend');
-    
-    // Simply send start command - backend will handle all validation and logic
-    sendCommand('key_start_hold', { held: true });
-}
-
-function releaseStartPosition() {
-    console.log('START key released - sending command to backend');
-    
-    // Simply send release command - backend will handle state transition
-    sendCommand('key_start_hold', { held: false });
-}
-
-function sendCommand(action, data = {}) {
-    console.log('Sending command:', action, data);
-    
-    // Show immediate feedback
-    showCommandFeedback(action);
-    
-    const payload = { action: action, ...data };
-    
-    fetch('/control', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Command response:', data);
-        if (data.success) {
-            console.log('Command executed successfully:', action);
-            // Show success message briefly if it's informative
-            if (data.message && data.message.includes('Cannot skip') || data.message.includes('Emergency')) {
-                showAlert(data.message);
-            }
-        } else {
-            console.error('Command failed:', data.message);
-            showAlert('Command failed: ' + data.message);
-        }
-        // Status updates are handled by regular polling
-    })
-    .catch(error => {
-        console.error('Error sending command:', error);
-        showAlert('Communication error');
-    });
-}
-
-function showCommandFeedback(action) {
-    const statusScreen = document.querySelector('.main-status');
-    const originalText = statusScreen.textContent;
-    
-    let feedbackText;
-    switch(action) {
-        case 'start':
-            feedbackText = 'STARTING...';
-            break;
-        case 'shutdown':
-            feedbackText = 'SHUTTING DOWN...';
-            break;
-        case 'power_on':
-            feedbackText = 'POWERING ON...';
-            break;
-        case 'emergency_stop':
-            feedbackText = 'EMERGENCY STOP!';
-            break;
-        case 'lights':
-            feedbackText = 'TOGGLING LIGHTS...';
-            break;
-        case 'horn':
-            feedbackText = 'HORN ACTIVATED';
-            break;
-        default:
-            feedbackText = 'PROCESSING...';
-    }
-    
-    statusScreen.textContent = feedbackText;
-    statusScreen.className = 'main-status status-alert';
-    
-    // Restore after 2 seconds
-    setTimeout(() => {
-        statusScreen.textContent = originalText;
-        updateStatus();
-    }, 2000);
-}
-
-function emergencyStop() {
-    console.log('EMERGENCY STOP ACTIVATED!');
-    
-    // Simply send emergency stop command - backend handles everything
-    sendCommand('emergency_stop');
-}
+    console.log('Ignition Controller loaded!');
+});
 
 function updateStatus() {
     fetch('/status')
@@ -206,153 +451,45 @@ function updateStatus() {
         })
         .catch(error => {
             console.error('Error fetching status:', error);
-            showConnectionError();
+            console.error('CONNECTION ERROR: Check network connection');
         });
 }
 
 function updateDashboard(status) {
-    // Update main status display
-    updateMainStatus(status);
+    // Update ignition controller with backend data
+    if (ignitionController) {
+        ignitionController.updateFromBackend(status);
+    }
     
-    // Update key position from backend (authoritative source)
-    updateKeyPosition(status.key_position || 0);
-    
-    // Update glow plug indicator and countdown
-    updateGlowPlug(status);
+    // Update countdown display
+    updateCountdownDisplay(status);
     
     // Update warning lights
     updateWarningLights(status);
-    
-    // Update gauges
-    updateGauges(status);
-    
-    // Update auxiliary button states
-    updateAuxiliaryStates(status);
     
     // Update master status in header
     updateMasterStatus(status);
 }
 
-function updateKeyPosition(backendKeyPosition) {
-    // Update visual key switch to match backend state (backend is authoritative)
-    document.querySelectorAll('.key-position').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    const activeButton = document.querySelector(`[data-position="${backendKeyPosition}"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
-    }
-}
-
-function updateMainStatus(status) {
-    const statusElement = document.querySelector('.main-status');
-    const detailedElement = document.querySelector('.detailed-status');
-    
-    if (!statusElement) return;
-    
-    let statusText = status.state || 'UNKNOWN';
-    let statusClass = 'main-status';
-    let detailedText = '';
-    
-    switch(status.state) {
-        case 'OFF':
-            statusText = 'SYSTEM OFF';
-            statusClass += ' status-off';
-            detailedText = 'Turn key to ON position';
-            break;
-        case 'ON':
-            statusText = 'SYSTEM ON';
-            statusClass += ' status-ready';
-            detailedText = 'Turn key to GLOW position to heat glow plugs';
-            break;
-        case 'GLOW_HEATING':
-            statusText = 'GLOW PLUGS HEATING';
-            statusClass += ' status-glow-heating';
-            detailedText = status.countdown ? 
-                `${status.countdown}s remaining (or hold START to force crank)` : 
-                'Glow plugs ready - hold START to crank engine';
-            break;
-        case 'STARTING':
-            statusText = 'CRANKING ENGINE';
-            statusClass += ' status-starting';
-            detailedText = 'Engine cranking... (release START key when engine starts)';
-            break;
-        case 'RUNNING':
-            statusText = 'ENGINE RUNNING';
-            statusClass += ' status-running';
-            detailedText = 'All systems operational (key in ON position)';
-            break;
-        case 'LOW_OIL_PRESSURE':
-            statusText = 'LOW OIL PRESSURE';
-            statusClass += ' status-alert';
-            detailedText = 'Check oil level - hold START to override';
-            break;
-        case 'HIGH_TEMPERATURE':
-            statusText = 'HIGH TEMPERATURE';
-            statusClass += ' status-alert';
-            detailedText = 'Engine overheating - hold START to override';
-            break;
-        case 'EMERGENCY_STOP':
-            statusText = 'EMERGENCY STOP';
-            statusClass += ' status-alert';
-            detailedText = 'Emergency stop activated - turn key to OFF to reset';
-            break;
-        default:
-            statusText = status.state;
-            detailedText = 'Turn key step by step: OFF → ON → GLOW → START';
-    }
-    
-    statusElement.textContent = statusText;
-    statusElement.className = statusClass;
-    
-    if (detailedElement) {
-        detailedElement.textContent = detailedText;
-    }
-}
-
-function updateGlowPlug(status) {
-    const glowLight = document.querySelector('.light-bulb');
-    const countdownElement = document.querySelector('.countdown');
-    
-    if (glowLight) {
-        // Use actual relay status for accurate indication
-        if (status.glow_plugs_on || status.glow_active) {
-            glowLight.classList.add('active');
-        } else {
-            glowLight.classList.remove('active');
-        }
-    }
+function updateCountdownDisplay(status) {
+    const countdownElement = document.querySelector('#glow-timer');
     
     if (countdownElement) {
-        // Show countdown if glow plugs are active OR if there's a countdown value
         if ((status.glow_active || status.glow_plugs_on) && status.countdown && status.countdown > 0) {
             countdownElement.textContent = `${status.countdown}s`;
             countdownElement.style.display = 'block';
         } else if (status.glow_active || status.glow_plugs_on) {
-            // Glow plugs are on but no countdown (heating complete)
             countdownElement.textContent = 'Ready';
             countdownElement.style.display = 'block';
         } else {
-            countdownElement.textContent = '--';
-            countdownElement.style.display = 'block';
+            countdownElement.style.display = 'none';
         }
     }
 }
 
 function updateWarningLights(status) {
-    // Engine warning light
-    const engineLight = document.querySelector('[data-warning="engine"] .light');
-    if (engineLight) {
-        if (status.state === 'EMERGENCY_STOP' || status.engine_fault) {
-            engineLight.classList.add('active');
-        } else {
-            engineLight.classList.remove('active');
-        }
-    }
-    
     // Oil pressure light
-    const oilLight = document.querySelector('[data-warning="oil"] .light');
+    const oilLight = document.querySelector('#oil-warning .light');
     if (oilLight) {
         if (status.low_oil_pressure) {
             oilLight.classList.add('active');
@@ -362,7 +499,7 @@ function updateWarningLights(status) {
     }
     
     // Temperature light
-    const tempLight = document.querySelector('[data-warning="temp"] .light');
+    const tempLight = document.querySelector('#temp-warning .light');
     if (tempLight) {
         if (status.high_temperature) {
             tempLight.classList.add('active');
@@ -372,7 +509,7 @@ function updateWarningLights(status) {
     }
     
     // Battery light
-    const batteryLight = document.querySelector('[data-warning="battery"] .light');
+    const batteryLight = document.querySelector('#battery-warning .light');
     if (batteryLight) {
         if (status.low_battery) {
             batteryLight.classList.add('active');
@@ -381,83 +518,35 @@ function updateWarningLights(status) {
         }
     }
     
-    // Work lights indicator
-    const workLight = document.querySelector('[data-warning="work"] .light');
-    if (workLight) {
-        if (status.lights_on) {
-            workLight.classList.add('active');
+    // Charge indicator
+    const chargeLight = document.querySelector('#charge-indicator .light');
+    if (chargeLight) {
+        if (status.charging || (status.battery_voltage && status.battery_voltage > 13.0)) {
+            chargeLight.classList.add('active');
         } else {
-            workLight.classList.remove('active');
+            chargeLight.classList.remove('active');
         }
     }
     
-    // System ready light
-    const readyLight = document.querySelector('[data-warning="ready"] .light');
-    if (readyLight) {
-        if (status.state === 'READY' || status.state === 'RUNNING') {
-            readyLight.classList.add('active');
+    // Engine run light
+    const engineLight = document.querySelector('#engine-run .light');
+    if (engineLight) {
+        if (status.state === 'RUNNING') {
+            engineLight.classList.add('active');
         } else {
-            readyLight.classList.remove('active');
-        }
-    }
-}
-
-function updateGauges(status) {
-    // Fuel gauge
-    updateGauge('fuel', status.fuel_level || 75, 0, 100);
-    
-    // Temperature gauge
-    updateGauge('temp', status.engine_temp || 85, 0, 120);
-    
-    // Oil pressure (digital)
-    updateDigitalGauge('oil-pressure', status.oil_pressure || 45, 'PSI');
-    
-    // Battery voltage (digital)
-    updateDigitalGauge('battery', status.battery_voltage || 12.8, 'V');
-    
-    // Engine hours (digital)
-    updateDigitalGauge('hours', status.engine_hours || 1234, 'HR');
-}
-
-function updateGauge(gaugeName, value, min, max) {
-    const needle = document.querySelector(`[data-gauge="${gaugeName}"] .gauge-needle`);
-    const valueElement = document.querySelector(`[data-gauge="${gaugeName}"] .gauge-value`);
-    
-    if (needle) {
-        // Calculate rotation (-90 to 90 degrees)
-        const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
-        const rotation = -90 + (percentage * 1.8); // 180 degrees total range
-        needle.style.transform = `translate(-50%, -100%) rotate(${rotation}deg)`;
-    }
-    
-    if (valueElement) {
-        valueElement.textContent = Math.round(value);
-    }
-}
-
-function updateDigitalGauge(gaugeName, value, unit) {
-    const valueElement = document.querySelector(`[data-gauge="${gaugeName}"] .digital-value`);
-    if (valueElement) {
-        if (typeof value === 'number') {
-            valueElement.textContent = value.toFixed(1) + (unit || '');
-        } else {
-            valueElement.textContent = value + (unit || '');
-        }
-    }
-}
-
-function updateAuxiliaryStates(status) {
-    // Update lights button
-    const lightsBtn = document.querySelector('[data-action="lights"]');
-    if (lightsBtn) {
-        if (status.lights_on) {
-            lightsBtn.classList.add('active');
-        } else {
-            lightsBtn.classList.remove('active');
+            engineLight.classList.remove('active');
         }
     }
     
-    // Add other auxiliary states as needed
+    // Fuel warning light
+    const fuelLight = document.querySelector('#fuel-warning .light');
+    if (fuelLight) {
+        if (status.fuel_level && status.fuel_level < 25) {
+            fuelLight.classList.add('active');
+        } else {
+            fuelLight.classList.remove('active');
+        }
+    }
 }
 
 function updateMasterStatus(status) {
@@ -499,40 +588,6 @@ function updateMasterStatus(status) {
     }
 }
 
-function showConnectionError() {
-    const statusElement = document.querySelector('.main-status');
-    const detailedElement = document.querySelector('.detailed-status');
-    
-    if (statusElement) {
-        statusElement.textContent = 'CONNECTION ERROR';
-        statusElement.className = 'main-status status-alert';
-    }
-    
-    if (detailedElement) {
-        detailedElement.textContent = 'Check network connection';
-    }
-}
-
-function showAlert(message) {
-    // You could implement a proper alert system here
-    console.warn('Alert:', message);
-    
-    // For now, just update the status briefly
-    const statusElement = document.querySelector('.main-status');
-    if (statusElement) {
-        const originalText = statusElement.textContent;
-        const originalClass = statusElement.className;
-        
-        statusElement.textContent = message;
-        statusElement.className = 'main-status status-alert';
-        
-        setTimeout(() => {
-            statusElement.textContent = originalText;
-            statusElement.className = originalClass;
-        }, 3000);
-    }
-}
-
 function startPolling() {
     // Clear any existing interval
     if (pollingInterval) {
@@ -554,3 +609,18 @@ function stopPolling() {
 
 // Clean up when page is unloaded
 window.addEventListener('beforeunload', stopPolling);
+
+// Prevent zoom on double-tap for mobile devices
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (event) => {
+    const now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+    }
+    lastTouchEnd = now;
+}, false);
+
+// Add helpful console methods for debugging
+console.log('Available commands:');
+console.log('- ignitionController.setKeyPosition(0-3) - Set key position');
+console.log('- ignitionController.emergencyStop() - Emergency stop');

@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bobcat 743 Control Panel</title>
+    <title>Bobcat Ignition Controller</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="dashboard">
+    <div class="ignition-container">
         <!-- Header with Bobcat branding -->
-        <header class="dashboard-header">
+        <header class="header">
             <div class="logo-section">
                 <img src="logo.png" alt="Bobcat" class="bobcat-logo">
                 <div class="model-info">
@@ -22,164 +22,130 @@
             </div>
         </header>
 
-        <!-- Main Control Panel -->
-        <div class="control-panel">
-            <!-- Left Panel - Engine Controls -->
-            <div class="left-panel">
-                <div class="panel-section engine-controls">
-                    <h2>ENGINE CONTROLS</h2>
-                    
-                    <!-- Key Switch - Realistic 4-position switch -->
-                    <div class="key-switch-section">
-                        <div class="key-switch">
-                            <button class="key-position off active" data-position="0">OFF</button>
-                            <button class="key-position on" data-position="1">ON</button>
-                            <button class="key-position glow" data-position="2">GLOW</button>
-                            <button class="key-position start" data-position="3">START</button>
+        <!-- Main Ignition Control Interface -->
+        <div class="main-interface">
+            <div class="ignition-assembly">
+                <div class="bezel">
+                    <div class="face" id="clockFace">
+                        <!-- Position Labels around the clock -->
+                        <div class="position-label off-label">
+                            <span class="curved-text">OFF</span>
                         </div>
-                        <label>IGNITION SWITCH</label>
-                        <small style="opacity: 0.8; font-size: 0.8em;">GLOW and START spring back to ON when released</small>
-                    </div>
-
-                    <!-- Glow Plug Indicator -->
-                    <div class="glow-plug-section">
-                        <div id="glow-plug-indicator" class="indicator-light">
-                            <div class="light-bulb"></div>
+                        <div class="position-label on-label">
+                            <span class="curved-text">ON</span>
                         </div>
-                        <div class="glow-info">
-                            <label>GLOW PLUGS</label>
-                            <div id="countdown-display" class="countdown">--</div>
+                        <div class="position-label glow-label">
+                            <span class="curved-text">GLOW</span>
+                            <div id="glow-timer" class="glow-timer" style="display: none;">--</div>
                         </div>
-                    </div>
-
-                    <!-- Override Emergency Start -->
-                    <div class="emergency-section">
-                        <button class="emergency-btn" data-action="emergency_stop">
-                            <span>EMERGENCY</span>
-                            <span>STOP</span>
-                        </button>
-                        <label>EMERGENCY STOP</label>
-                    </div>
-                </div>
-
-                <!-- Auxiliary Controls -->
-                <div class="panel-section aux-controls">
-                    <h2>AUXILIARY</h2>
-                    <div class="aux-buttons">
-                        <button class="aux-btn" data-action="lights">
-                            <div class="btn-icon">💡</div>
-                            <span>WORK LIGHTS</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Center Panel - Status Display -->
-            <div class="center-panel">
-                <div class="status-display">
-                    <div class="status-screen">
-                        <div id="status-message" class="main-status">SYSTEM IDLE</div>
-                        <div id="detailed-status" class="detailed-status">
-                            System ready for operation
+                        <div class="position-label start-label">
+                            <span class="curved-text">START</span>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Warning Lights -->
-                <div class="warning-lights">
-                    <div class="warning-row">
-                        <div id="oil-warning" class="warning-light">
-                            <div class="light red"></div>
-                            <span>LOW OIL</span>
+                        
+                        <!-- Position Markers -->
+                        <div class="position-marker off-marker"></div>
+                        <div class="position-marker on-marker"></div>
+                        <div class="position-marker glow-marker"></div>
+                        <div class="position-marker start-marker"></div>
+                        
+                        <!-- The ignition key - simple bar design -->
+                        <div class="key-container">
+                            <div class="key" id="ignitionKey">
+                                <div class="key-shaft"></div>
+                            </div>
                         </div>
-                        <div id="temp-warning" class="warning-light">
-                            <div class="light red"></div>
-                            <span>HIGH TEMP</span>
-                        </div>
-                        <div id="battery-warning" class="warning-light">
-                            <div class="light amber"></div>
-                            <span>BATTERY</span>
-                        </div>
-                    </div>
-                    <div class="warning-row">
-                        <div id="charge-indicator" class="warning-light">
-                            <div class="light green"></div>
-                            <span>CHARGING</span>
-                        </div>
-                        <div id="engine-run" class="warning-light">
-                            <div class="light green"></div>
-                            <span>ENGINE RUN</span>
-                        </div>
-                        <div id="fuel-warning" class="warning-light">
-                            <div class="light amber"></div>
-                            <span>LOW FUEL</span>
+                        
+                        <!-- Center dot -->
+                        <div class="center-dot"></div>
+                        
+                        <!-- Compact gauges integrated around the key -->
+                        <div class="gauge-container">
+                            <div class="gauge pressure-gauge">
+                                <div class="gauge-arc">
+                                    <div class="gauge-needle" id="pressureNeedle"></div>
+                                </div>
+                                <div class="gauge-label">PRESSURE</div>
+                                <div class="gauge-value" id="pressureValue">0.0 BAR</div>
+                            </div>
+                            
+                            <div class="gauge temp-gauge">
+                                <div class="gauge-arc">
+                                    <div class="gauge-needle" id="tempNeedle"></div>
+                                </div>
+                                <div class="gauge-label">TEMP</div>
+                                <div class="gauge-value" id="tempValue">20°C</div>
+                            </div>
+                            
+                            <div class="gauge voltage-gauge">
+                                <div class="gauge-arc">
+                                    <div class="gauge-needle" id="voltageNeedle"></div>
+                                </div>
+                                <div class="gauge-label">VOLTS</div>
+                                <div class="gauge-value" id="voltageValue">0.0V</div>
+                            </div>
+                            
+                            <div class="gauge fuel-gauge">
+                                <div class="gauge-arc">
+                                    <div class="gauge-needle" id="fuelNeedle"></div>
+                                </div>
+                                <div class="gauge-label">FUEL</div>
+                                <div class="gauge-value" id="fuelValue">75%</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Panel - Gauges -->
-            <div class="right-panel">
-                <div class="panel-section gauges">
-                    <h2>ENGINE GAUGES</h2>
-                    
-                    <!-- Temperature Gauge -->
-                    <div class="gauge-container">
-                        <div class="gauge temp-gauge">
-                            <div class="gauge-face">
-                                <div class="gauge-needle" id="temp-needle"></div>
-                                <div class="gauge-center"></div>
-                            </div>
-                            <div class="gauge-labels">
-                                <span class="min-label">C</span>
-                                <span class="max-label">H</span>
-                            </div>
-                        </div>
-                        <div class="gauge-info">
-                            <label>COOLANT TEMP</label>
-                            <div id="temp-value" class="gauge-value">-- °C</div>
-                        </div>
+            <!-- Warning Lights -->
+            <div class="warning-lights">
+                <div class="warning-row">
+                    <div id="oil-warning" class="warning-light">
+                        <div class="light red"></div>
+                        <span>LOW OIL</span>
                     </div>
-
-                    <!-- Oil Pressure Gauge -->
-                    <div class="gauge-container">
-                        <div class="gauge pressure-gauge">
-                            <div class="gauge-face">
-                                <div class="gauge-needle" id="pressure-needle"></div>
-                                <div class="gauge-center"></div>
-                            </div>
-                            <div class="gauge-labels">
-                                <span class="min-label">0</span>
-                                <span class="max-label">100</span>
-                            </div>
-                        </div>
-                        <div class="gauge-info">
-                            <label>OIL PRESSURE</label>
-                            <div id="pressure-value" class="gauge-value">-- PSI</div>
-                        </div>
+                    <div id="temp-warning" class="warning-light">
+                        <div class="light red"></div>
+                        <span>HIGH TEMP</span>
                     </div>
-
-                    <!-- Battery/Fuel Gauges -->
-                    <div class="small-gauges">
-                        <div class="small-gauge-container">
-                            <div class="digital-display">
-                                <div id="battery-value" class="digital-value">12.4V</div>
-                            </div>
-                            <label>BATTERY</label>
-                        </div>
-                        <div class="small-gauge-container">
-                            <div class="digital-display">
-                                <div id="fuel-value" class="digital-value">75%</div>
-                            </div>
-                            <label>FUEL</label>
-                        </div>
+                    <div id="battery-warning" class="warning-light">
+                        <div class="light amber"></div>
+                        <span>BATTERY</span>
+                    </div>
+                </div>
+                <div class="warning-row">
+                    <div id="charge-indicator" class="warning-light">
+                        <div class="light green"></div>
+                        <span>CHARGING</span>
+                    </div>
+                    <div id="engine-run" class="warning-light">
+                        <div class="light green"></div>
+                        <span>ENGINE RUN</span>
+                    </div>
+                    <div id="fuel-warning" class="warning-light">
+                        <div class="light amber"></div>
+                        <span>LOW FUEL</span>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Footer with Technical Info -->
-        <footer class="dashboard-footer">
+            <!-- Control Buttons Row -->
+            <div class="control-buttons">
+                <div class="emergency-section">
+                    <button class="emergency-btn" data-action="emergency_stop">
+                        <span>EMERGENCY</span>
+                        <span>STOP</span>
+                    </button>
+                </div>
+                
+                <div class="light-section">
+                    <button class="light-btn" data-action="toggle_lights">
+                        <span>WORK</span>
+                        <span>LIGHTS</span>
+                    </button>
+                </div>
+            </div>
+        </div>        <!-- Footer with Technical Info -->
+        <footer class="footer">
             <div class="tech-info">
                 <span>Model: 743 • Engine: Kubota V1702-BA • 12V System</span>
             </div>
@@ -188,6 +154,17 @@
             </div>
         </footer>
     </div>
+
+    <!-- Audio elements for sound feedback -->
+    <audio id="clickSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYfCTmV3PLJeS4FJH7K8dmLOQgSZ7zs4J5NDAxSr+LytmQdCDaP1fPNdiMIKHzH8N+SQAoTXrTp66hVFApGnt/yvmYfCTmV3PLJeS4FJH7K8dmLOQgSZ7zs4J5NDAxSr+LytmQdCDaP1fPNdiMIKHzH8N+SQAoTXrTp66hVFApGnt/yvmYfCTmV3PLJeS4FJH7K8dmLOQgSZ7zs4J5NDAxSr+LytmQdCDaP1fPNdiMIKHzH8N+SQAoT" type="audio/wav">
+    </audio>
+    <audio id="glowSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYfCTmV3PLJeS4FJH7K8dmLOQgSZ7zs4J5NDAxSr+LytmQdCDaP1fPNdiMIKHzH8N+SQAoTXrTp66hVFApGnt/yvmYfCTmV3PLJeS4FJH7K8dmLOQgSZ7zs4J5NDAxSr+LytmQdCDaP1fPNdiMIKHzH8N+SQAoTXrTp66hVFApGnt/yvmYfCTmV3PLJeS4FJH7K8dmLOQgSZ7zs4J5NDAxSr+LytmQdCDaP1fPNdiMIKHzH8N+SQAoT" type="audio/wav">
+    </audio>
+    <audio id="startSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYfCTmV3PLJeS4FJH7K8dmLOQgSZ7zs4J5NDAxSr+LytmQdCDaP1fPNdiMIKHzH8N+SQAoTXrTp66hVFApGnt/yvmYfCTmV3PLJeS4FJH7K8dmLOQgSZ7zs4J5NDAxSr+LytmQdCDaP1fPNdiMIKHzH8N+SQAoTXrTp66hVFApGnt/yvmYfCTmV3PLJeS4FJH7K8dmLOQgSZ7zs4J5NDAxSr+LytmQdCDaP1fPNdiMIKHzH8N+SQAoT" type="audio/wav">
+    </audio>
 
     <script src="script.js"></script>
 </body>
