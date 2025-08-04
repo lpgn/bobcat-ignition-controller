@@ -1,7 +1,8 @@
 // Bobcat 743 Dashboard Control Script
-let currentKeyPosition = 'off';
+let currentKeyPosition = 0; // 0=OFF, 1=ON, 2=GLOW, 3=START
 let pollingInterval;
 let isCranking = false;
+let startKeyHeld = false;
 const POLLING_INTERVAL = 1000; // 1 second
 
 // Initialize dashboard when page loads
@@ -18,44 +19,44 @@ function initializeDashboard() {
     const keyPositions = document.querySelectorAll('.key-position');
     console.log('Found', keyPositions.length, 'key position buttons');
     keyPositions.forEach(button => {
-        const position = button.dataset.position;
+        const position = parseInt(button.dataset.position);
         
-        if (position === 'start') {
+        if (position === 3) { // START position
             // START position: crank while held, return to ON when released
             button.addEventListener('mousedown', function(e) {
                 e.preventDefault();
-                startCranking();
+                holdStartPosition();
             });
             
             button.addEventListener('mouseup', function(e) {
                 e.preventDefault();
-                stopCranking();
+                releaseStartPosition();
             });
             
             button.addEventListener('mouseleave', function(e) {
                 e.preventDefault();
-                stopCranking();
+                releaseStartPosition();
             });
             
             // Touch events for mobile
             button.addEventListener('touchstart', function(e) {
                 e.preventDefault();
-                startCranking();
+                holdStartPosition();
             });
             
             button.addEventListener('touchend', function(e) {
                 e.preventDefault();
-                stopCranking();
+                releaseStartPosition();
             });
             
             button.addEventListener('touchcancel', function(e) {
                 e.preventDefault();
-                stopCranking();
+                releaseStartPosition();
             });
         } else {
-            // OFF and ON positions: toggle states
+            // OFF, ON, and GLOW positions: sequential progression
             button.addEventListener('click', function() {
-                setKeyPosition(this.dataset.position);
+                setKeyPosition(parseInt(this.dataset.position));
             });
         }
     });
@@ -94,8 +95,16 @@ function initializeDashboard() {
 function setKeyPosition(position) {
     console.log('Key position changed to:', position);
     
-    if (!position) {
-        console.error('No position provided to setKeyPosition');
+    if (position < 0 || position > 3) {
+        console.error('Invalid key position:', position);
+        return;
+    }
+    
+    // Enforce sequential progression for realistic key behavior
+    // You can only advance one position at a time or go back to any previous position
+    if (position > currentKeyPosition + 1) {
+        console.warn('Cannot skip key positions. Must turn key step by step.');
+        showAlert('Turn key step by step: OFF → ON → GLOW → START');
         return;
     }
     
@@ -114,47 +123,29 @@ function setKeyPosition(position) {
     }
     
     // Send command to controller
-    let command;
-    switch(position) {
-        case 'off':
-            command = 'shutdown';
-            break;
-        case 'on':
-            command = 'power_on';
-            break;
-        case 'start':
-            command = 'start';
-            // Auto-return to ON position after start attempt
-            setTimeout(() => {
-                if (currentKeyPosition === 'start') {
-                    setKeyPosition('on');
-                }
-            }, 2000);
-            break;
-        default:
-            console.error('Unknown key position:', position);
-            return;
-    }
-    
-    if (command) {
-        sendCommand(command);
-    }
+    sendCommand('key_position', { position: position });
 }
 
-function startCranking() {
-    if (isCranking) return; // Prevent multiple starts
+function holdStartPosition() {
+    if (currentKeyPosition < 2) {
+        showAlert('Turn key to GLOW position first');
+        return;
+    }
     
-    console.log('Starting engine crank (key held in START position)');
+    if (startKeyHeld) return; // Already holding
+    
+    console.log('START key held - cranking engine');
+    startKeyHeld = true;
     isCranking = true;
     
     // Visual feedback - highlight START button
-    const startButton = document.querySelector('[data-position="start"]');
+    const startButton = document.querySelector('[data-position="3"]');
     if (startButton) {
-        startButton.classList.add('active');
+        startButton.classList.add('active', 'cranking');
     }
     
     // Send start command
-    sendCommand('start');
+    sendCommand('key_start_hold', { held: true });
     
     // Update status display
     const statusScreen = document.querySelector('.main-status');
@@ -164,29 +155,30 @@ function startCranking() {
     }
 }
 
-function stopCranking() {
-    if (!isCranking) return; // Not currently cranking
+function releaseStartPosition() {
+    if (!startKeyHeld) return; // Not currently holding
     
-    console.log('Stopping engine crank (key released from START position)');
+    console.log('START key released - returning to ON position');
+    startKeyHeld = false;
     isCranking = false;
     
-    // Visual feedback - remove START highlight, show ON as active
-    const startButton = document.querySelector('[data-position="start"]');
-    const onButton = document.querySelector('[data-position="on"]');
+    // Visual feedback - remove START highlight, return to GLOW position
+    const startButton = document.querySelector('[data-position="3"]');
+    const glowButton = document.querySelector('[data-position="2"]');
     
     if (startButton) {
-        startButton.classList.remove('active');
+        startButton.classList.remove('active', 'cranking');
     }
     
-    if (onButton) {
-        onButton.classList.add('active');
+    if (glowButton) {
+        glowButton.classList.add('active');
     }
     
-    // Update current position to ON
-    currentKeyPosition = 'on';
+    // Return to GLOW position (realistic key behavior)
+    currentKeyPosition = 2;
     
-    // Send command to stop cranking and return to ON state
-    sendCommand('stop_crank');
+    // Send command to stop cranking
+    sendCommand('key_start_hold', { held: false });
     
     // Update status after a brief delay
     setTimeout(() => {
@@ -194,18 +186,20 @@ function stopCranking() {
     }, 500);
 }
 
-function sendCommand(action) {
-    console.log('Sending command:', action);
+function sendCommand(action, data = {}) {
+    console.log('Sending command:', action, data);
     
     // Show immediate feedback
     showCommandFeedback(action);
+    
+    const payload = { action: action, ...data };
     
     fetch('/control', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action: action })
+        body: JSON.stringify(payload)
     })
     .then(response => response.json())
     .then(data => {
@@ -268,7 +262,9 @@ function emergencyStop() {
     sendCommand('emergency_stop');
     
     // Reset key to OFF position
-    setKeyPosition('off');
+    setKeyPosition(0);
+    startKeyHeld = false;
+    isCranking = false;
     
     // Flash emergency state
     const statusScreen = document.querySelector('.main-status');
@@ -333,48 +329,43 @@ function updateMainStatus(status) {
         case 'ON':
             statusText = 'SYSTEM ON';
             statusClass += ' status-ready';
-            detailedText = 'Turn key to START to begin glow plug heating';
+            detailedText = 'Turn key to GLOW position to heat glow plugs';
             break;
         case 'GLOW_HEATING':
             statusText = 'GLOW PLUGS HEATING';
             statusClass += ' status-glow-heating';
             detailedText = status.countdown ? 
-                `${status.countdown}s remaining (or turn key to START to force crank)` : 
-                'Turn key to START to force crank';
-            break;
-        case 'READY':
-            statusText = 'READY TO START';
-            statusClass += ' status-ready';
-            detailedText = 'Turn key to START position to crank engine';
+                `${status.countdown}s remaining (or hold START to force crank)` : 
+                'Glow plugs ready - hold START to crank engine';
             break;
         case 'STARTING':
-            statusText = 'STARTING ENGINE';
+            statusText = 'CRANKING ENGINE';
             statusClass += ' status-starting';
-            detailedText = 'Engine cranking...';
+            detailedText = 'Engine cranking... (release START key when engine starts)';
             break;
         case 'RUNNING':
             statusText = 'ENGINE RUNNING';
             statusClass += ' status-running';
-            detailedText = 'All systems operational (turn key to START for hot restart)';
+            detailedText = 'All systems operational (key in ON position)';
             break;
         case 'LOW_OIL_PRESSURE':
             statusText = 'LOW OIL PRESSURE';
             statusClass += ' status-alert';
-            detailedText = 'Check oil level - turn key to START to override';
+            detailedText = 'Check oil level - hold START to override';
             break;
         case 'HIGH_TEMPERATURE':
             statusText = 'HIGH TEMPERATURE';
             statusClass += ' status-alert';
-            detailedText = 'Engine overheating - turn key to START to override';
+            detailedText = 'Engine overheating - hold START to override';
             break;
         case 'EMERGENCY_STOP':
             statusText = 'EMERGENCY STOP';
             statusClass += ' status-alert';
-            detailedText = 'Turn key to START to override and restart';
+            detailedText = 'Emergency stop activated - turn key to OFF to reset';
             break;
         default:
             statusText = status.state;
-            detailedText = 'Turn key to START to attempt engine start';
+            detailedText = 'Turn key step by step: OFF → ON → GLOW → START';
     }
     
     statusElement.textContent = statusText;
@@ -390,7 +381,8 @@ function updateGlowPlug(status) {
     const countdownElement = document.querySelector('.countdown');
     
     if (glowLight) {
-        if (status.state === 'GLOW_HEATING') {
+        // Use actual relay status for accurate indication
+        if (status.glow_plugs_on || status.glow_active) {
             glowLight.classList.add('active');
         } else {
             glowLight.classList.remove('active');
@@ -538,13 +530,13 @@ function updateMasterStatus(status) {
             case 'OFF':
                 statusText = 'OFFLINE';
                 break;
+            case 'ON':
+                statusText = 'STANDBY';
+                statusClass += ' status-ready';
+                break;
             case 'GLOW_HEATING':
                 statusText = 'HEATING';
                 statusClass += ' status-glow-heating';
-                break;
-            case 'READY':
-                statusText = 'READY';
-                statusClass += ' status-ready';
                 break;
             case 'STARTING':
                 statusText = 'STARTING';
@@ -558,6 +550,8 @@ function updateMasterStatus(status) {
                 statusText = 'EMERGENCY';
                 statusClass += ' status-alert';
                 break;
+            default:
+                statusText = 'STANDBY';
         }
         
         masterStatus.textContent = statusText;

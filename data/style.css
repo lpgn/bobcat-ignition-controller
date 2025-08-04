@@ -106,22 +106,24 @@ body {
 }
 
 .key-switch {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     border: 3px solid #666;
     border-radius: 50px;
     overflow: hidden;
     margin-bottom: 10px;
+    gap: 2px;
 }
 
 .key-position {
-    flex: 1;
-    padding: 15px 20px;
+    padding: 12px 8px;
     border: none;
     font-weight: bold;
-    font-size: 1em;
+    font-size: 0.85em;
     cursor: pointer;
     transition: all 0.3s ease;
     text-transform: uppercase;
+    position: relative;
 }
 
 .key-position.off {
@@ -131,6 +133,11 @@ body {
 
 .key-position.on {
     background: #4CAF50;
+    color: white;
+}
+
+.key-position.glow {
+    background: #FF9800;
     color: white;
 }
 
@@ -146,12 +153,13 @@ body {
     bottom: -20px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 0.7em;
+    font-size: 0.6em;
     opacity: 0.8;
 }
 
 .key-position.start:active,
-.key-position.start.active {
+.key-position.start.active,
+.key-position.start.cranking {
     background: #1976D2;
     box-shadow: inset 0 0 15px rgba(255,255,255,0.4);
     transform: scale(0.95);
@@ -159,7 +167,7 @@ body {
 
 .key-position:hover {
     filter: brightness(1.2);
-    transform: scale(1.05);
+    transform: scale(1.02);
 }
 
 .key-position.active {

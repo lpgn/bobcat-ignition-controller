@@ -53,14 +53,13 @@ extern const int MAX_COOLANT_TEMP;           // Maximum coolant temp (°C)
 extern const int MIN_BATTERY_VOLTAGE;        // Minimum battery voltage (12V system)
 extern const int MAX_BATTERY_VOLTAGE;        // Maximum battery voltage (12V system)
 
-// System states
+// System states - Updated to match actual ignition key positions
 enum SystemState {
-  IDLE,
-  POWER_ON,
-  GLOW_PLUG_HEATING,
-  READY_TO_START,
-  STARTING,
-  RUNNING,
+  OFF,                    // Key off - everything off
+  ON,                     // Key on - electrical systems active
+  GLOW_PLUG,              // Key in glow plug position - heating glow plugs
+  START,                  // Key in start position - cranking engine (momentary)
+  RUNNING,                // Engine running - key returned to ON position
   LOW_OIL_PRESSURE,
   HIGH_TEMPERATURE,
   ERROR
@@ -70,12 +69,16 @@ enum SystemState {
 extern SystemState currentState;
 extern unsigned long glowPlugStartTime;
 extern unsigned long ignitionStartTime;
-extern bool startButtonPressed;
-extern bool stopButtonPressed;
 
-// New button states for power and lights
-extern bool powerOnButtonPressed;
-extern bool powerOffButtonPressed;
+// Key position variables - simulate actual ignition key
+extern int keyPosition;              // 0=OFF, 1=ON, 2=GLOW_PLUG, 3=START
+extern bool keyStartHeld;            // True while START position is held
+extern unsigned long startHoldTime; // When START position was first engaged
+
+// Button states for emergency stop and lights
+extern bool emergencyStopPressed;
+extern bool lightsTogglePressed;
+extern bool workLightsOn;              // Current state of work lights
 
 // Non-blocking timing variables
 extern unsigned long shutdownStartTime;

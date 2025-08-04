@@ -65,32 +65,35 @@ void controlLights(bool enable) {
 
 // Virtual button functions for web interface - Tesla-style fly-by-wire control
 void virtualPowerOnButton() {
-    if (!powerOnButtonPressed) {
-        powerOnButtonPressed = true;
+    // Set key position to ON
+    if (keyPosition == 0) {
+        keyPosition = 1;
         Serial.println("Web Interface: POWER ON button pressed");
     }
 }
 
 void virtualPowerOffButton() {
-    if (!powerOffButtonPressed) {
-        powerOffButtonPressed = true;
-        Serial.println("Web Interface: POWER OFF button pressed");
-    }
+    // Set key position to OFF
+    keyPosition = 0;
+    Serial.println("Web Interface: POWER OFF button pressed");
 }
 
 void virtualStartButton() {
-  if (!startButtonPressed) {
-    startButtonPressed = true;
-    Serial.println("Web Interface: START button pressed");
-  }
+    // Legacy start button - simulate turning key to GLOW position then START
+    if (keyPosition < 2) {
+        keyPosition = 2; // Move to GLOW position first
+        Serial.println("Web Interface: START button pressed - moving to GLOW position");
+    } else {
+        keyStartHeld = true;
+        keyPosition = 3;
+        startHoldTime = millis();
+        Serial.println("Web Interface: START button pressed - cranking");
+    }
 }
 
 void virtualLightsButton() {
-    static bool lightsOn = false;
-    lightsOn = !lightsOn;
-    controlLights(lightsOn);
-    Serial.print("Web Interface: Lights ");
-    Serial.println(lightsOn ? "ON" : "OFF");
+    lightsTogglePressed = true;
+    Serial.println("Web Interface: Lights toggle pressed");
 }
 
 // Note: No virtualStopButton - engine must be stopped manually with lever

@@ -24,22 +24,29 @@ void setup() {
   Serial.println("Bobcat Ignition Controller Starting...");
   
   initializePins();
-  currentState = IDLE;
+  currentState = OFF;  // Start in OFF state like a real ignition
+  keyPosition = 0;     // Key starts in OFF position
   
   setupWebServer(); // Initialize the web server
 
-  Serial.println("System initialized - Ready for operation");
-  Serial.println("Press START button to begin ignition sequence");
+  Serial.println("System initialized - Key is in OFF position");
+  Serial.println("Turn key to ON, then GLOW PLUG, then hold START to crank engine");
 }
 
 void loop() {
-  // Fly-by-wire control - no physical buttons, only web interface
+  // Main ignition key sequence control
   runIgnitionSequence();
+  
+  // Only check engine vitals when running
   if (currentState == RUNNING) { 
     checkEngineVitals();
-  } else if (currentState != STARTING) { // Don't run safety checks when overriding
+  } 
+  
+  // Always run safety checks except during start cranking
+  if (currentState != START) {
     checkSafetyInputs();
   }
   
-  // No delay needed - ESP32 handles timing efficiently with millis()
+  // Small delay to prevent overwhelming the system
+  delay(10);
 }

@@ -60,15 +60,19 @@ const int MIN_BATTERY_VOLTAGE = 11;          // Minimum battery voltage (12V sys
 const int MAX_BATTERY_VOLTAGE = 15;          // Maximum battery voltage (12V system)
 
 // Global variables
-SystemState currentState = IDLE;
+SystemState currentState = OFF;
 unsigned long glowPlugStartTime = 0;
 unsigned long ignitionStartTime = 0;
-bool startButtonPressed = false;
-bool stopButtonPressed = false;
 
-// New button states for power and lights
-bool powerOnButtonPressed = false;
-bool powerOffButtonPressed = false;
+// Key position variables - simulate actual ignition key
+int keyPosition = 0;                    // 0=OFF, 1=ON, 2=GLOW_PLUG, 3=START
+bool keyStartHeld = false;              // True while START position is held
+unsigned long startHoldTime = 0;       // When START position was first engaged
+
+// Button states for emergency stop and lights
+bool emergencyStopPressed = false;
+bool lightsTogglePressed = false;
+bool workLightsOn = false;              // Current state of work lights
 
 // Non-blocking timing variables
 unsigned long shutdownStartTime = 0;

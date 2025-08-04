@@ -17,17 +17,20 @@
 const char* ssid = "Bobcat-Control";
 const char* password = "bobcat123";
 
+// WiFi credentials for connecting to home network
+const char* home_ssid = "fabfarm";
+const char* home_password = "imakestuff";
+
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 
 // Helper function to convert SystemState enum to a string for the web interface
 const char* systemStateToString(SystemState state) {
     switch (state) {
-        case IDLE: return "OFF";
-        case POWER_ON: return "ON"; 
-        case GLOW_PLUG_HEATING: return "GLOW_HEATING";
-        case READY_TO_START: return "READY";
-        case STARTING: return "STARTING";
+        case OFF: return "OFF";
+        case ON: return "ON"; 
+        case GLOW_PLUG: return "GLOW_HEATING";
+        case START: return "STARTING";
         case RUNNING: return "RUNNING";
         case LOW_OIL_PRESSURE: return "LOW_OIL_PRESSURE";
         case HIGH_TEMPERATURE: return "HIGH_TEMPERATURE";
@@ -44,13 +47,54 @@ void setupWebServer() {
         return;
     }
 
-    // Setup the ESP32 as a Wi-Fi Access Point
+    // Set WiFi to dual mode (Station + Access Point)
+    WiFi.mode(WIFI_AP_STA);
+    
+    // Try to connect to home network first
+    Serial.println("Connecting to home network...");
+    WiFi.begin(home_ssid, home_password);
+    
+    // Wait up to 10 seconds for connection
+    int wifi_timeout = 0;
+    while (WiFi.status() != WL_CONNECTED && wifi_timeout < 20) {
+        delay(500);
+        Serial.print(".");
+        wifi_timeout++;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println();
+        Serial.println("Connected to home network!");
+        Serial.print("Home network IP: ");
+        Serial.println(WiFi.localIP());
+        Serial.print("SSID: ");
+        Serial.println(home_ssid);
+    } else {
+        Serial.println();
+        Serial.println("Failed to connect to home network - continuing with AP only");
+    }
+    
+    // Always start the Access Point (standalone mode)
     WiFi.softAP(ssid, password);
     Serial.println("Access Point Started");
-    Serial.print("SSID: ");
+    Serial.print("AP SSID: ");
     Serial.println(ssid);
     Serial.print("AP IP address: ");
     Serial.println(WiFi.softAPIP());
+    
+    // Print connection summary
+    Serial.println("=== WiFi Status ===");
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.print("Home Network: CONNECTED (");
+        Serial.print(WiFi.localIP());
+        Serial.println(")");
+    } else {
+        Serial.println("Home Network: DISCONNECTED");
+    }
+    Serial.print("Access Point: ACTIVE (");
+    Serial.print(WiFi.softAPIP());
+    Serial.println(")");
+    Serial.println("==================");
 
     // Define the routes for the web server
 
@@ -58,6 +102,7 @@ void setupWebServer() {
     server.onNotFound([](AsyncWebServerRequest *request){
         Serial.print("Captive portal redirect for: ");
         Serial.println(request->url());
+        // Always redirect to AP IP for simplicity
         request->redirect("http://192.168.4.1/");
     });
 
@@ -160,33 +205,51 @@ void setupWebServer() {
             String message = "Command executed";
             
             // Execute the requested action
-            if (action == "start") {
-                virtualStartButton();
-            } else if (action == "stop_crank") {
-                // Stop cranking - turn off starter relay
-                digitalWrite(STARTER_PIN, LOW);
-                Serial.println("Starter relay OFF - cranking stopped");
-                // Return to appropriate state based on current state
-                if (currentState == STARTING) {
-                    currentState = POWER_ON; // Return to power on state
+            if (action == "key_position") {
+                int position = doc["position"];
+                Serial.print("Key position change to: ");
+                Serial.println(position);
+                
+                if (position >= 0 && position <= 3) {
+                    keyPosition = position;
+                    message = "Key position set to " + String(position);
+                } else {
+                    success = false;
+                    message = "Invalid key position: " + String(position);
                 }
-            } else if (action == "power_on") {
-                virtualPowerOnButton();
-            } else if (action == "shutdown") {
-                virtualPowerOffButton();
+            } else if (action == "key_start_hold") {
+                bool held = doc["held"];
+                Serial.print("Start key ");
+                Serial.println(held ? "held" : "released");
+                
+                keyStartHeld = held;
+                if (held) {
+                    startHoldTime = millis();
+                    keyPosition = 3; // Move to START position
+                } else {
+                    keyPosition = 2; // Return to GLOW position when released
+                }
+                message = held ? "Start key held" : "Start key released";
             } else if (action == "emergency_stop") {
                 // Force emergency stop state
-                currentState = ERROR;
-                digitalWrite(STARTER_PIN, LOW);
-                digitalWrite(LIGHTS_PIN, LOW);
-                digitalWrite(GLOW_PLUGS_PIN, LOW);
-                digitalWrite(MAIN_POWER_PIN, LOW);
+                emergencyStopPressed = true;
                 Serial.println("EMERGENCY STOP activated via web interface");
+                message = "Emergency stop activated";
             } else if (action == "lights") {
-                virtualLightsButton();
-            } else if (action == "horn") {
-                // Horn action - could trigger a horn relay if available
-                Serial.println("Horn activated via web interface");
+                lightsTogglePressed = true;
+                message = "Lights toggled";
+            } else if (action == "start") {
+                // Legacy support - keep for backward compatibility
+                virtualStartButton();
+                message = "Legacy start command";
+            } else if (action == "power_on") {
+                // Legacy support
+                virtualPowerOnButton();
+                message = "Legacy power on command";
+            } else if (action == "shutdown") {
+                // Legacy support
+                virtualPowerOffButton();
+                message = "Legacy shutdown command";
             } else {
                 success = false;
                 message = "Unknown action: " + action;
@@ -216,6 +279,9 @@ void setupWebServer() {
         
         // Add state flags for dashboard
         doc["lights_on"] = digitalRead(LIGHTS_PIN);
+        doc["main_power_on"] = digitalRead(MAIN_POWER_PIN);
+        doc["glow_plugs_on"] = digitalRead(GLOW_PLUGS_PIN);
+        doc["starter_on"] = digitalRead(STARTER_PIN);
         doc["engine_fault"] = (currentState == ERROR);
         doc["low_oil_pressure"] = (currentState == LOW_OIL_PRESSURE);
         doc["high_temperature"] = (currentState == HIGH_TEMPERATURE);
@@ -225,15 +291,54 @@ void setupWebServer() {
         doc["fuel_level"] = 75;
         doc["engine_hours"] = 1234;
         
-        // Add glow plug countdown
-        if (currentState == GLOW_PLUG_HEATING) {
+        // Add glow plug countdown (works in GLOW_PLUG, START, and RUNNING states)
+        if (currentState == GLOW_PLUG || currentState == START || currentState == RUNNING) {
             unsigned long elapsed = millis() - glowPlugStartTime;
-            unsigned long remaining = (GLOW_PLUG_DURATION - elapsed) / 1000;
-            doc["countdown"] = remaining;
+            if (elapsed < GLOW_PLUG_DURATION) {
+                unsigned long remaining = (GLOW_PLUG_DURATION - elapsed) / 1000;
+                doc["countdown"] = remaining;
+                doc["glow_active"] = true;
+            } else {
+                doc["countdown"] = 0;
+                doc["glow_active"] = false;
+            }
         } else {
             doc["countdown"] = 0;
+            doc["glow_active"] = false;
         }
+        
+        // Add key position information
+        doc["key_position"] = keyPosition;
+        doc["start_key_held"] = keyStartHeld;
+        
+        // Add WiFi status information
+        doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
+        if (WiFi.status() == WL_CONNECTED) {
+            doc["wifi_ip"] = WiFi.localIP().toString();
+            doc["wifi_ssid"] = WiFi.SSID();
+        }
+        doc["ap_ip"] = WiFi.softAPIP().toString();
+        doc["ap_clients"] = WiFi.softAPgetStationNum();
 
+        String jsonResponse;
+        serializeJson(doc, jsonResponse);
+        request->send(200, "application/json", jsonResponse);
+    });
+
+    // WiFi information endpoint
+    server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *request){
+        StaticJsonDocument<256> doc;
+        doc["mode"] = "AP_STA";
+        doc["home_connected"] = (WiFi.status() == WL_CONNECTED);
+        if (WiFi.status() == WL_CONNECTED) {
+            doc["home_ip"] = WiFi.localIP().toString();
+            doc["home_ssid"] = WiFi.SSID();
+            doc["home_rssi"] = WiFi.RSSI();
+        }
+        doc["ap_ssid"] = ssid;
+        doc["ap_ip"] = WiFi.softAPIP().toString();
+        doc["ap_clients"] = WiFi.softAPgetStationNum();
+        
         String jsonResponse;
         serializeJson(doc, jsonResponse);
         request->send(200, "application/json", jsonResponse);

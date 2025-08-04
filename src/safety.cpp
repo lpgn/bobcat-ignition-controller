@@ -18,7 +18,7 @@ void checkSafetyInputs() {
   float batteryVolts = (batteryVoltage * 3.3 / 4095.0) * (12.0 / 3.3); // Adjust divider ratio as needed
   
   // Check for low battery voltage
-  if (batteryVolts < 10.5 && currentState != IDLE) {
+  if (batteryVolts < 10.5 && currentState != OFF) {
     handleError("Low battery voltage");
     return;
   }
@@ -69,8 +69,11 @@ void overrideStart() {
     controlMainPower(true);
     
     // Set state and start cranking
-    currentState = STARTING;
+    currentState = START;
     ignitionStartTime = millis();
+    keyStartHeld = true;
+    keyPosition = 3;
+    startHoldTime = millis();
     controlStarter(true);
     
     Serial.println("OVERRIDE: Starter engaged");

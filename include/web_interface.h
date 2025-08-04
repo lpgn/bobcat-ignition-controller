@@ -11,4 +11,11 @@
 // Function to initialize and configure the web server
 void setupWebServer();
 
+// Virtual button functions for backward compatibility
+void virtualStartButton();
+void virtualPowerOnButton();
+void virtualPowerOffButton();
+void virtualLightsButton();
+void overrideStart();
+
 #endif // WEB_INTERFACE_H
