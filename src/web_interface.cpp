@@ -206,16 +206,21 @@ void setupWebServer() {
             
             // Execute the requested action
             if (action == "key_position") {
-                int position = doc["position"];
-                Serial.print("Key position change to: ");
-                Serial.println(position);
+                int requestedPosition = doc["position"];
+                Serial.print("Key position command: ");
+                Serial.print(keyPosition);
+                Serial.print(" -> ");
+                Serial.println(requestedPosition);
                 
-                if (position >= 0 && position <= 3) {
-                    keyPosition = position;
-                    message = "Key position set to " + String(position);
+                // Simply accept the command - let the state machine handle all logic
+                if (requestedPosition >= 0 && requestedPosition <= 3) {
+                    keyPosition = requestedPosition;
+                    message = "Key position command accepted: " + String(requestedPosition);
+                    Serial.print("Key position set to: ");
+                    Serial.println(requestedPosition);
                 } else {
                     success = false;
-                    message = "Invalid key position: " + String(position);
+                    message = "Invalid key position: " + String(requestedPosition);
                 }
             } else if (action == "key_start_hold") {
                 bool held = doc["held"];
@@ -291,20 +296,20 @@ void setupWebServer() {
         doc["fuel_level"] = 75;
         doc["engine_hours"] = 1234;
         
-        // Add glow plug countdown (works in GLOW_PLUG, START, and RUNNING states)
-        if (currentState == GLOW_PLUG || currentState == START || currentState == RUNNING) {
+        // Add glow plug countdown (whenever glow plugs are on and timer is running)
+        bool glowPlugsActive = digitalRead(GLOW_PLUGS_PIN);
+        doc["glow_active"] = glowPlugsActive;
+        
+        if (glowPlugsActive && glowPlugStartTime > 0) {
             unsigned long elapsed = millis() - glowPlugStartTime;
             if (elapsed < GLOW_PLUG_DURATION) {
                 unsigned long remaining = (GLOW_PLUG_DURATION - elapsed) / 1000;
                 doc["countdown"] = remaining;
-                doc["glow_active"] = true;
             } else {
-                doc["countdown"] = 0;
-                doc["glow_active"] = false;
+                doc["countdown"] = 0;  // Timer expired but still on
             }
         } else {
             doc["countdown"] = 0;
-            doc["glow_active"] = false;
         }
         
         // Add key position information

@@ -93,37 +93,19 @@ function initializeDashboard() {
 }
 
 function setKeyPosition(position) {
-    console.log('Key position changed to:', position);
+    console.log('Key position command sent:', position);
     
     if (position < 0 || position > 3) {
         console.error('Invalid key position:', position);
         return;
     }
     
-    // Enforce sequential progression for realistic key behavior
-    // You can only advance one position at a time or go back to any previous position
-    if (position > currentKeyPosition + 1) {
-        console.warn('Cannot skip key positions. Must turn key step by step.');
-        showAlert('Turn key step by step: OFF → ON → GLOW → START');
-        return;
-    }
-    
-    currentKeyPosition = position;
-    
-    // Update visual key switch
-    document.querySelectorAll('.key-position').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    const targetButton = document.querySelector(`[data-position="${position}"]`);
-    if (targetButton) {
-        targetButton.classList.add('active');
-    } else {
-        console.error('Target button not found for position:', position);
-    }
-    
-    // Send command to controller
+    // NO local logic - just send command to backend
+    // Backend will decide if it's valid and handle all state transitions
     sendCommand('key_position', { position: position });
+    
+    // Update status immediately to reflect backend changes
+    setTimeout(updateStatus, 100);
 }
 
 function holdStartPosition() {
@@ -206,12 +188,16 @@ function sendCommand(action, data = {}) {
         console.log('Command response:', data);
         if (data.success) {
             console.log('Command executed successfully:', action);
+            // Show success message briefly if it's informative
+            if (data.message && data.message.includes('Cannot skip') || data.message.includes('Emergency')) {
+                showAlert(data.message);
+            }
         } else {
             console.error('Command failed:', data.message);
             showAlert('Command failed: ' + data.message);
         }
-        // Update status after command
-        setTimeout(updateStatus, 500);
+        // Update status immediately after command to get latest state
+        setTimeout(updateStatus, 100);
     })
     .catch(error => {
         console.error('Error sending command:', error);
@@ -294,6 +280,9 @@ function updateDashboard(status) {
     // Update main status display
     updateMainStatus(status);
     
+    // Update key position from backend (authoritative source)
+    updateKeyPosition(status.key_position || 0);
+    
     // Update glow plug indicator and countdown
     updateGlowPlug(status);
     
@@ -308,6 +297,21 @@ function updateDashboard(status) {
     
     // Update master status in header
     updateMasterStatus(status);
+}
+
+function updateKeyPosition(backendKeyPosition) {
+    // Update our local tracking to match backend
+    currentKeyPosition = backendKeyPosition;
+    
+    // Update visual key switch to match backend state
+    document.querySelectorAll('.key-position').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const activeButton = document.querySelector(`[data-position="${backendKeyPosition}"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
 }
 
 function updateMainStatus(status) {
@@ -390,8 +394,13 @@ function updateGlowPlug(status) {
     }
     
     if (countdownElement) {
-        if (status.countdown && status.countdown > 0) {
+        // Show countdown if glow plugs are active OR if there's a countdown value
+        if ((status.glow_active || status.glow_plugs_on) && status.countdown && status.countdown > 0) {
             countdownElement.textContent = `${status.countdown}s`;
+            countdownElement.style.display = 'block';
+        } else if (status.glow_active || status.glow_plugs_on) {
+            // Glow plugs are on but no countdown (heating complete)
+            countdownElement.textContent = 'Ready';
             countdownElement.style.display = 'block';
         } else {
             countdownElement.textContent = '--';

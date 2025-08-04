@@ -26,6 +26,18 @@ void runIgnitionSequence() {
   bool stateChanged = (currentState != lastState);
   bool keyChanged = (keyPosition != lastKeyPosition);
   
+  // Force immediate OFF transition when key is turned to OFF position
+  if (keyPosition == 0 && currentState != OFF) {
+    Serial.println("FORCE OFF - Key turned to OFF position");
+    currentState = OFF;
+    stateChanged = true;
+    controlMainPower(false);
+    controlGlowPlugs(false);
+    controlStarter(false);
+    controlLights(false);
+    workLightsOn = false;
+  }
+  
   // Handle emergency stop (always process immediately)
   if (emergencyStopPressed) {
     Serial.println("EMERGENCY STOP activated - stopping engine processes only");
@@ -90,9 +102,27 @@ void runIgnitionSequence() {
       
     case ON:
       // Key ON - Basic electrical systems active
+      
+      // Check if glow plugs should be turned off (timer expired while in ON)
+      if (glowPlugStartTime > 0 && millis() - glowPlugStartTime >= GLOW_PLUG_DURATION) {
+        controlGlowPlugs(false);
+        Serial.println("Glow plug timer expired while in ON position");
+      }
+      
       if (keyPosition == 0) {  // Key turned back to OFF
         Serial.println("KEY OFF - System shutdown");
         currentState = OFF;
+      } else if (keyPosition == 2) {  // Key turned to GLOW position
+        Serial.println("GLOW PLUG position - Starting/resuming glow plug heating");
+        currentState = GLOW_PLUG;
+        // Only start timer if not already running (allow resuming)
+        if (glowPlugStartTime == 0 || millis() - glowPlugStartTime >= GLOW_PLUG_DURATION) {
+          glowPlugStartTime = millis();  // Start new cycle
+          Serial.println("Starting new glow plug cycle (20 seconds)");
+        } else {
+          Serial.println("Resuming existing glow plug cycle");
+        }
+        controlGlowPlugs(true);
       } else if (keyPosition >= 3 || keyStartHeld) {  // Direct START from ON (auto-glow)
         Serial.println("Direct START - Auto-activating glow plugs and cranking");
         currentState = START;
@@ -101,11 +131,6 @@ void runIgnitionSequence() {
         startHoldTime = millis();
         controlGlowPlugs(true);  // Auto-activate glow plugs for direct start
         controlStarter(true);    // Start cranking
-      } else if (keyPosition >= 2) {  // Key turned to GLOW_PLUG position
-        Serial.println("GLOW PLUG position - Starting glow plug heating (20 seconds)");
-        currentState = GLOW_PLUG;
-        glowPlugStartTime = millis();
-        controlGlowPlugs(true);
       }
       break;
       
@@ -116,9 +141,10 @@ void runIgnitionSequence() {
         currentState = OFF;
         controlGlowPlugs(false);
       } else if (keyPosition == 1) {  // Key returned to ON
-        Serial.println("Key returned to ON - stopping glow plug heating");
+        Serial.println("Key returned to ON - pausing glow plug heating");
         currentState = ON;
-        controlGlowPlugs(false);
+        // Note: Don't turn off glow plugs immediately - let them continue heating
+        // This allows user to return to GLOW position without losing progress
       } else if (keyPosition >= 3 || keyStartHeld) {  // Key turned to START
         Serial.println("START position - Engine cranking");
         currentState = START;
@@ -126,13 +152,15 @@ void runIgnitionSequence() {
         startHoldTime = millis();
         // Keep glow plugs ON during start for full duration - some engines need this
         controlStarter(true);     // Start cranking
-      } else if (millis() - glowPlugStartTime >= GLOW_PLUG_DURATION) {
-        // Glow plug heating complete - automatically move to ready state
+      }
+      
+      // Check if glow plug heating is complete
+      if (millis() - glowPlugStartTime >= GLOW_PLUG_DURATION) {
+        // Glow plug heating complete - turn off glow plugs
         Serial.println("Glow plug heating complete - ready for start");
-        // Stay in GLOW_PLUG state but turn off the glow plugs
         controlGlowPlugs(false);
-        
-        // Show countdown every 2 seconds during heating
+      } else {
+        // Show countdown every 2 seconds during heating (only while heating)
         static unsigned long lastCountdown = 0;
         if (millis() - lastCountdown >= 2000) {
           unsigned long elapsed = millis() - glowPlugStartTime;
@@ -160,8 +188,8 @@ void runIgnitionSequence() {
         controlStarter(false);
         controlGlowPlugs(false);
       } else if (!keyStartHeld || keyPosition < 3) {  // Key released from START position
-        Serial.println("Start key released - assuming engine started, returning to ON");
-        currentState = RUNNING;
+        Serial.println("Start key released - returning to GLOW position");
+        currentState = GLOW_PLUG;  // Return to GLOW, not RUNNING
         controlStarter(false);
         // Note: Let glow plugs continue their natural cycle - don't turn them off here
       } else if (millis() - ignitionStartTime >= IGNITION_TIMEOUT) {
