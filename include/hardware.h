@@ -8,6 +8,7 @@
 #define HARDWARE_H
 
 #include <Arduino.h>
+#include "system_state.h"  // For g_systemState access
 
 // ============================================================================
 // HARDWARE INITIALIZATION

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bobcat Ignition Controller</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Bobcat Ignition Controller</h1>
+            <p>Rotate the key clockwise to start the engine</p>
+        </div>
+        
+        <div class="ignition-assembly">
+            <div class="bezel">
+                <div class="face">
+                    <!-- Position labels arranged like clock positions with curved text -->
+                    <div class="position-label off-label" data-position="off">
+                        <span class="curved-text">OFF</span>
+                    </div>
+                    <div class="position-label on-label" data-position="on">
+                        <span class="curved-text">ON</span>
+                    </div>
+                    <div class="position-label glow-label" data-position="glow">
+                        <span class="curved-text">GLOW</span>
+                    </div>
+                    <div class="position-label start-label" data-position="start">
+                        <span class="curved-text">START</span>
+                    </div>
+                    
+                    <!-- The ignition key -->
+                    <div class="key-container">
+                        <div class="key" id="ignitionKey">
+                            <div class="key-head">
+                                <div class="key-grip"></div>
+                            </div>
+                            <div class="key-shaft"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Center dot -->
+                    <div class="center-dot"></div>
+                    
+                    <!-- Modern gauges in lower section -->
+                    <div class="gauge-container">
+                        <div class="gauge pressure-gauge">
+                            <div class="gauge-arc">
+                                <div class="gauge-needle" id="pressureNeedle"></div>
+                            </div>
+                            <div class="gauge-label">PRESSURE</div>
+                            <div class="gauge-value" id="pressureValue">0 BAR</div>
+                        </div>
+                        
+                        <div class="gauge temp-gauge">
+                            <div class="gauge-arc">
+                                <div class="gauge-needle" id="tempNeedle"></div>
+                            </div>
+                            <div class="gauge-label">TEMP</div>
+                            <div class="gauge-value" id="tempValue">20°C</div>
+                        </div>
+                        
+                        <div class="gauge voltage-gauge">
+                            <div class="gauge-arc">
+                                <div class="gauge-needle" id="voltageNeedle"></div>
+                            </div>
+                            <div class="gauge-label">VOLTS</div>
+                            <div class="gauge-value" id="voltageValue">0V</div>
+                        </div>
+                        
+                        <div class="gauge fuel-gauge">
+                            <div class="gauge-arc">
+                                <div class="gauge-needle" id="fuelNeedle"></div>
+                            </div>
+                            <div class="gauge-label">FUEL</div>
+                            <div class="gauge-value" id="fuelValue">75%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <p>Click and drag the key to rotate through positions:</p>
+            <ul>
+                <li><strong>OFF</strong> - System disabled</li>
+                <li><strong>ON</strong> - Electrical systems active</li>
+                <li><strong>GLOW</strong> - Glow plugs heating</li>
+                <li><strong>START</strong> - Engine cranking (auto-returns to ON)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Audio elements for sound effects -->
+    <audio id="clickSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaBy2Hyvffgj0NHm+z7aOTKAwgbrDp4qpOQAx4qODoQEQHGYjR8dWQQAoUXrTp66hVFApGn+DyvmEaBy2Hyvffgj0NHm+z7aOTKAwgbrDp4qpOQAxkpd7o" type="audio/wav">
+    </audio>
+    
+    <audio id="glowSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaBy2Hyvffgj0NHm+z7aOTKAwgbrDp4qpOQAx4qODoQEQHGYjR8dWQQAoUXrTp66hVFApGn+DyvmEaBy2Hyvffgj0NHm+z7aOTKAwgbrDp4qpOQAxkpd7o" type="audio/wav">
+    </audio>
+    
+    <audio id="startSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaBy2Hyvffgj0NHm+z7aOTKAwgbrDp4qpOQAx4qODoQEQHGYjR8dWQQAoUXrTp66hVFApGn+DyvmEaBy2Hyvffgj0NHm+z7aOTKAwgbrDp4qpOQAxkpd7o" type="audio/wav">
+    </audio>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -65,23 +65,7 @@ enum SystemState {
   ERROR
 };
 
-// Global system variables
-extern SystemState currentState;
-extern unsigned long glowPlugStartTime;
-extern unsigned long ignitionStartTime;
-
-// Key position variables - simulate actual ignition key
-extern int keyPosition;              // 0=OFF, 1=ON, 2=GLOW_PLUG, 3=START
-extern bool keyStartHeld;            // True while START position is held
-extern unsigned long startHoldTime; // When START position was first engaged
-
-// Button states for emergency stop and lights
-extern bool emergencyStopPressed;
-extern bool lightsTogglePressed;
-extern bool workLightsOn;              // Current state of work lights
-
-// Non-blocking timing variables
-extern unsigned long shutdownStartTime;
-extern bool shutdownInProgress;
+// Global system variables moved to SystemState_t struct
+// Access through g_systemState instance in system_state.h
 
 #endif // CONFIG_H

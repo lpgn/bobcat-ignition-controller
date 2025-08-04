@@ -25,7 +25,7 @@ const char* home_password = "imakestuff";
 AsyncWebServer server(80);
 
 // Helper function to convert SystemState enum to a string for the web interface
-const char* systemStateToString(SystemState state) {
+const char* systemStateToString(int state) {
     switch (state) {
         case OFF: return "OFF";
         case ON: return "ON"; 
@@ -208,13 +208,13 @@ void setupWebServer() {
             if (action == "key_position") {
                 int requestedPosition = doc["position"];
                 Serial.print("Key position command: ");
-                Serial.print(keyPosition);
+                Serial.print(g_systemState.keyPosition);
                 Serial.print(" -> ");
                 Serial.println(requestedPosition);
                 
                 // Simply accept the command - let the state machine handle all logic
                 if (requestedPosition >= 0 && requestedPosition <= 3) {
-                    keyPosition = requestedPosition;
+                    g_systemState.keyPosition = requestedPosition;
                     message = "Key position command accepted: " + String(requestedPosition);
                     Serial.print("Key position set to: ");
                     Serial.println(requestedPosition);
@@ -227,21 +227,21 @@ void setupWebServer() {
                 Serial.print("Start key ");
                 Serial.println(held ? "held" : "released");
                 
-                keyStartHeld = held;
+                g_systemState.keyStartHeld = held;
                 if (held) {
-                    startHoldTime = millis();
-                    keyPosition = 3; // Move to START position
+                    g_systemState.startHoldTime = millis();
+                    g_systemState.keyPosition = 3; // Move to START position
                 } else {
-                    keyPosition = 2; // Return to GLOW position when released
+                    g_systemState.keyPosition = 2; // Return to GLOW position when released
                 }
                 message = held ? "Start key held" : "Start key released";
             } else if (action == "emergency_stop") {
                 // Force emergency stop state
-                emergencyStopPressed = true;
+                g_systemState.emergencyStopPressed = true;
                 Serial.println("EMERGENCY STOP activated via web interface");
                 message = "Emergency stop activated";
             } else if (action == "lights") {
-                lightsTogglePressed = true;
+                g_systemState.lightsTogglePressed = true;
                 message = "Lights toggled";
             } else if (action == "start") {
                 // Legacy support - keep for backward compatibility
@@ -273,8 +273,8 @@ void setupWebServer() {
     // Provide the system status as a JSON object
     server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request){
         StaticJsonDocument<512> doc;
-        doc["state"] = systemStateToString(currentState);
-        doc["status"] = systemStateToString(currentState); // Keep for backward compatibility
+        doc["state"] = systemStateToString(g_systemState.currentState);
+        doc["status"] = systemStateToString(g_systemState.currentState); // Keep for backward compatibility
         doc["temperature"] = readEngineTemp();
         doc["pressure"] = readOilPressure();
         doc["battery"] = readBatteryVoltage();
@@ -287,9 +287,9 @@ void setupWebServer() {
         doc["main_power_on"] = digitalRead(MAIN_POWER_PIN);
         doc["glow_plugs_on"] = digitalRead(GLOW_PLUGS_PIN);
         doc["starter_on"] = digitalRead(STARTER_PIN);
-        doc["engine_fault"] = (currentState == ERROR);
-        doc["low_oil_pressure"] = (currentState == LOW_OIL_PRESSURE);
-        doc["high_temperature"] = (currentState == HIGH_TEMPERATURE);
+        doc["engine_fault"] = (g_systemState.currentState == ERROR);
+        doc["low_oil_pressure"] = (g_systemState.currentState == LOW_OIL_PRESSURE);
+        doc["high_temperature"] = (g_systemState.currentState == HIGH_TEMPERATURE);
         doc["low_battery"] = (readBatteryVoltage() < 11.5);
         
         // Add mock data for missing sensors
@@ -300,8 +300,8 @@ void setupWebServer() {
         bool glowPlugsActive = digitalRead(GLOW_PLUGS_PIN);
         doc["glow_active"] = glowPlugsActive;
         
-        if (glowPlugsActive && glowPlugStartTime > 0) {
-            unsigned long elapsed = millis() - glowPlugStartTime;
+        if (glowPlugsActive && g_systemState.glowPlugStartTime > 0) {
+            unsigned long elapsed = millis() - g_systemState.glowPlugStartTime;
             if (elapsed < GLOW_PLUG_DURATION) {
                 unsigned long remaining = (GLOW_PLUG_DURATION - elapsed) / 1000;
                 doc["countdown"] = remaining;
@@ -313,8 +313,8 @@ void setupWebServer() {
         }
         
         // Add key position information
-        doc["key_position"] = keyPosition;
-        doc["start_key_held"] = keyStartHeld;
+        doc["key_position"] = g_systemState.keyPosition;
+        doc["start_key_held"] = g_systemState.keyStartHeld;
         
         // Add WiFi status information
         doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);

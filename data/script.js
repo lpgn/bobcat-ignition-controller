@@ -1,8 +1,6 @@
 // Bobcat 743 Dashboard Control Script
-let currentKeyPosition = 0; // 0=OFF, 1=ON, 2=GLOW, 3=START
+// All state is now managed by the backend - this is a stateless client
 let pollingInterval;
-let isCranking = false;
-let startKeyHeld = false;
 const POLLING_INTERVAL = 1000; // 1 second
 
 // Initialize dashboard when page loads
@@ -100,72 +98,22 @@ function setKeyPosition(position) {
         return;
     }
     
-    // NO local logic - just send command to backend
-    // Backend will decide if it's valid and handle all state transitions
+    // Simply send command to backend - no local state management
     sendCommand('key_position', { position: position });
-    
-    // Update status immediately to reflect backend changes
-    setTimeout(updateStatus, 100);
 }
 
 function holdStartPosition() {
-    if (currentKeyPosition < 2) {
-        showAlert('Turn key to GLOW position first');
-        return;
-    }
+    console.log('START key held - sending command to backend');
     
-    if (startKeyHeld) return; // Already holding
-    
-    console.log('START key held - cranking engine');
-    startKeyHeld = true;
-    isCranking = true;
-    
-    // Visual feedback - highlight START button
-    const startButton = document.querySelector('[data-position="3"]');
-    if (startButton) {
-        startButton.classList.add('active', 'cranking');
-    }
-    
-    // Send start command
+    // Simply send start command - backend will handle all validation and logic
     sendCommand('key_start_hold', { held: true });
-    
-    // Update status display
-    const statusScreen = document.querySelector('.main-status');
-    if (statusScreen) {
-        statusScreen.textContent = 'CRANKING ENGINE';
-        statusScreen.className = 'main-status status-starting';
-    }
 }
 
 function releaseStartPosition() {
-    if (!startKeyHeld) return; // Not currently holding
+    console.log('START key released - sending command to backend');
     
-    console.log('START key released - returning to ON position');
-    startKeyHeld = false;
-    isCranking = false;
-    
-    // Visual feedback - remove START highlight, return to GLOW position
-    const startButton = document.querySelector('[data-position="3"]');
-    const glowButton = document.querySelector('[data-position="2"]');
-    
-    if (startButton) {
-        startButton.classList.remove('active', 'cranking');
-    }
-    
-    if (glowButton) {
-        glowButton.classList.add('active');
-    }
-    
-    // Return to GLOW position (realistic key behavior)
-    currentKeyPosition = 2;
-    
-    // Send command to stop cranking
+    // Simply send release command - backend will handle state transition
     sendCommand('key_start_hold', { held: false });
-    
-    // Update status after a brief delay
-    setTimeout(() => {
-        updateStatus();
-    }, 500);
 }
 
 function sendCommand(action, data = {}) {
@@ -196,8 +144,7 @@ function sendCommand(action, data = {}) {
             console.error('Command failed:', data.message);
             showAlert('Command failed: ' + data.message);
         }
-        // Update status immediately after command to get latest state
-        setTimeout(updateStatus, 100);
+        // Status updates are handled by regular polling
     })
     .catch(error => {
         console.error('Error sending command:', error);
@@ -245,22 +192,9 @@ function showCommandFeedback(action) {
 
 function emergencyStop() {
     console.log('EMERGENCY STOP ACTIVATED!');
+    
+    // Simply send emergency stop command - backend handles everything
     sendCommand('emergency_stop');
-    
-    // Reset key to OFF position
-    setKeyPosition(0);
-    startKeyHeld = false;
-    isCranking = false;
-    
-    // Flash emergency state
-    const statusScreen = document.querySelector('.main-status');
-    statusScreen.textContent = 'EMERGENCY STOP!';
-    statusScreen.className = 'main-status status-alert';
-    
-    // Flash warning lights
-    document.querySelectorAll('.light.red').forEach(light => {
-        light.classList.add('active');
-    });
 }
 
 function updateStatus() {
@@ -300,10 +234,7 @@ function updateDashboard(status) {
 }
 
 function updateKeyPosition(backendKeyPosition) {
-    // Update our local tracking to match backend
-    currentKeyPosition = backendKeyPosition;
-    
-    // Update visual key switch to match backend state
+    // Update visual key switch to match backend state (backend is authoritative)
     document.querySelectorAll('.key-position').forEach(btn => {
         btn.classList.remove('active');
     });

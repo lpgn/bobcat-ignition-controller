@@ -24,8 +24,8 @@ void setup() {
   Serial.println("Bobcat Ignition Controller Starting...");
   
   initializePins();
-  currentState = OFF;  // Start in OFF state like a real ignition
-  keyPosition = 0;     // Key starts in OFF position
+  g_systemState.currentState = OFF;  // Start in OFF state like a real ignition
+  g_systemState.keyPosition = 0;     // Key starts in OFF position
   
   setupWebServer(); // Initialize the web server
 
@@ -38,12 +38,12 @@ void loop() {
   runIgnitionSequence();
   
   // Only check engine vitals when running
-  if (currentState == RUNNING) { 
+  if (g_systemState.currentState == RUNNING) { 
     checkEngineVitals();
   } 
   
   // Always run safety checks except during start cranking
-  if (currentState != START) {
+  if (g_systemState.currentState != START) {
     checkSafetyInputs();
   }
   

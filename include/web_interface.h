@@ -7,6 +7,7 @@
 #define WEB_INTERFACE_H
 
 #include <ESPAsyncWebServer.h>
+#include "system_state.h"  // For g_systemState access
 
 // Function to initialize and configure the web server
 void setupWebServer();

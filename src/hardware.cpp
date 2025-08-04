@@ -5,6 +5,7 @@
 
 #include "hardware.h"
 #include "config.h"
+#include "system_state.h"
 
 void initializePins() {
   Serial.println("Initializing GPIO pins...");
@@ -66,33 +67,33 @@ void controlLights(bool enable) {
 // Virtual button functions for web interface - Tesla-style fly-by-wire control
 void virtualPowerOnButton() {
     // Set key position to ON
-    if (keyPosition == 0) {
-        keyPosition = 1;
+    if (g_systemState.keyPosition == 0) {
+        g_systemState.keyPosition = 1;
         Serial.println("Web Interface: POWER ON button pressed");
     }
 }
 
 void virtualPowerOffButton() {
     // Set key position to OFF
-    keyPosition = 0;
+    g_systemState.keyPosition = 0;
     Serial.println("Web Interface: POWER OFF button pressed");
 }
 
 void virtualStartButton() {
     // Legacy start button - simulate turning key to GLOW position then START
-    if (keyPosition < 2) {
-        keyPosition = 2; // Move to GLOW position first
+    if (g_systemState.keyPosition < 2) {
+        g_systemState.keyPosition = 2; // Move to GLOW position first
         Serial.println("Web Interface: START button pressed - moving to GLOW position");
     } else {
-        keyStartHeld = true;
-        keyPosition = 3;
-        startHoldTime = millis();
+        g_systemState.keyStartHeld = true;
+        g_systemState.keyPosition = 3;
+        g_systemState.startHoldTime = millis();
         Serial.println("Web Interface: START button pressed - cranking");
     }
 }
 
 void virtualLightsButton() {
-    lightsTogglePressed = true;
+    g_systemState.lightsTogglePressed = true;
     Serial.println("Web Interface: Lights toggle pressed");
 }
 

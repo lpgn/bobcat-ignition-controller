@@ -6,6 +6,7 @@
 #include "safety.h"
 #include "config.h"
 #include "hardware.h"
+#include "system_state.h"
 
 void checkSafetyInputs() {
   // Read analog sensors
@@ -18,7 +19,7 @@ void checkSafetyInputs() {
   float batteryVolts = (batteryVoltage * 3.3 / 4095.0) * (12.0 / 3.3); // Adjust divider ratio as needed
   
   // Check for low battery voltage
-  if (batteryVolts < 10.5 && currentState != OFF) {
+  if (batteryVolts < 10.5 && g_systemState.currentState != OFF) {
     handleError("Low battery voltage");
     return;
   }
@@ -30,7 +31,7 @@ void checkSafetyInputs() {
 }
 
 void checkEngineVitals() {
-  if (currentState != RUNNING) {
+  if (g_systemState.currentState != RUNNING) {
     return; // Only check vitals when the engine is supposed to be running
   }
 
@@ -43,13 +44,13 @@ void checkEngineVitals() {
 
   // Check for high temperature
   if (engineTemp > MAX_COOLANT_TEMP) {
-    currentState = HIGH_TEMPERATURE;
+    g_systemState.currentState = HIGH_TEMPERATURE;
     handleError("Engine temperature too high!");
   }
 
   // Check for low oil pressure
   if (oilPressure < MIN_OIL_PRESSURE) {
-    currentState = LOW_OIL_PRESSURE;
+    g_systemState.currentState = LOW_OIL_PRESSURE;
     handleError("Oil pressure too low!");
   }
 }
@@ -69,11 +70,11 @@ void overrideStart() {
     controlMainPower(true);
     
     // Set state and start cranking
-    currentState = START;
-    ignitionStartTime = millis();
-    keyStartHeld = true;
-    keyPosition = 3;
-    startHoldTime = millis();
+    g_systemState.currentState = START;
+    g_systemState.ignitionStartTime = millis();
+    g_systemState.keyStartHeld = true;
+    g_systemState.keyPosition = 3;
+    g_systemState.startHoldTime = millis();
     controlStarter(true);
     
     Serial.println("OVERRIDE: Starter engaged");
