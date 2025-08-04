@@ -54,6 +54,34 @@ void setupWebServer() {
 
     // Define the routes for the web server
 
+    // Captive portal - redirect all requests to our main page
+    server.onNotFound([](AsyncWebServerRequest *request){
+        Serial.print("Captive portal redirect for: ");
+        Serial.println(request->url());
+        request->redirect("http://192.168.4.1/");
+    });
+
+    // Handle captive portal detection requests
+    server.on("/generate_204", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->redirect("http://192.168.4.1/");
+    });
+    
+    server.on("/connecttest.txt", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->redirect("http://192.168.4.1/");
+    });
+    
+    server.on("/check_network_status.txt", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->redirect("http://192.168.4.1/");
+    });
+    
+    server.on("/library/test/success.html", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->redirect("http://192.168.4.1/");
+    });
+    
+    server.on("/hotspot-detect.html", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->redirect("http://192.168.4.1/");
+    });
+
     // Serve the main HTML page
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         request->send(LittleFS, "/index.html", "text/html");
@@ -134,6 +162,14 @@ void setupWebServer() {
             // Execute the requested action
             if (action == "start") {
                 virtualStartButton();
+            } else if (action == "stop_crank") {
+                // Stop cranking - turn off starter relay
+                digitalWrite(STARTER_PIN, LOW);
+                Serial.println("Starter relay OFF - cranking stopped");
+                // Return to appropriate state based on current state
+                if (currentState == STARTING) {
+                    currentState = POWER_ON; // Return to power on state
+                }
             } else if (action == "power_on") {
                 virtualPowerOnButton();
             } else if (action == "shutdown") {

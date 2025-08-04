@@ -1,6 +1,7 @@
 // Bobcat 743 Dashboard Control Script
 let currentKeyPosition = 'off';
 let pollingInterval;
+let isCranking = false;
 const POLLING_INTERVAL = 1000; // 1 second
 
 // Initialize dashboard when page loads
@@ -17,9 +18,46 @@ function initializeDashboard() {
     const keyPositions = document.querySelectorAll('.key-position');
     console.log('Found', keyPositions.length, 'key position buttons');
     keyPositions.forEach(button => {
-        button.addEventListener('click', function() {
-            setKeyPosition(this.dataset.position);
-        });
+        const position = button.dataset.position;
+        
+        if (position === 'start') {
+            // START position: crank while held, return to ON when released
+            button.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                startCranking();
+            });
+            
+            button.addEventListener('mouseup', function(e) {
+                e.preventDefault();
+                stopCranking();
+            });
+            
+            button.addEventListener('mouseleave', function(e) {
+                e.preventDefault();
+                stopCranking();
+            });
+            
+            // Touch events for mobile
+            button.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                startCranking();
+            });
+            
+            button.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                stopCranking();
+            });
+            
+            button.addEventListener('touchcancel', function(e) {
+                e.preventDefault();
+                stopCranking();
+            });
+        } else {
+            // OFF and ON positions: toggle states
+            button.addEventListener('click', function() {
+                setKeyPosition(this.dataset.position);
+            });
+        }
     });
     
     // Set up auxiliary button event listeners
@@ -101,6 +139,59 @@ function setKeyPosition(position) {
     if (command) {
         sendCommand(command);
     }
+}
+
+function startCranking() {
+    if (isCranking) return; // Prevent multiple starts
+    
+    console.log('Starting engine crank (key held in START position)');
+    isCranking = true;
+    
+    // Visual feedback - highlight START button
+    const startButton = document.querySelector('[data-position="start"]');
+    if (startButton) {
+        startButton.classList.add('active');
+    }
+    
+    // Send start command
+    sendCommand('start');
+    
+    // Update status display
+    const statusScreen = document.querySelector('.main-status');
+    if (statusScreen) {
+        statusScreen.textContent = 'CRANKING ENGINE';
+        statusScreen.className = 'main-status status-starting';
+    }
+}
+
+function stopCranking() {
+    if (!isCranking) return; // Not currently cranking
+    
+    console.log('Stopping engine crank (key released from START position)');
+    isCranking = false;
+    
+    // Visual feedback - remove START highlight, show ON as active
+    const startButton = document.querySelector('[data-position="start"]');
+    const onButton = document.querySelector('[data-position="on"]');
+    
+    if (startButton) {
+        startButton.classList.remove('active');
+    }
+    
+    if (onButton) {
+        onButton.classList.add('active');
+    }
+    
+    // Update current position to ON
+    currentKeyPosition = 'on';
+    
+    // Send command to stop cranking and return to ON state
+    sendCommand('stop_crank');
+    
+    // Update status after a brief delay
+    setTimeout(() => {
+        updateStatus();
+    }, 500);
 }
 
 function sendCommand(action) {

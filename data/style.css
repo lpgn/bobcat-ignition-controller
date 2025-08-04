@@ -137,6 +137,24 @@ body {
 .key-position.start {
     background: #2196F3;
     color: white;
+    position: relative;
+}
+
+.key-position.start::after {
+    content: "HOLD";
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7em;
+    opacity: 0.8;
+}
+
+.key-position.start:active,
+.key-position.start.active {
+    background: #1976D2;
+    box-shadow: inset 0 0 15px rgba(255,255,255,0.4);
+    transform: scale(0.95);
 }
 
 .key-position:hover {
