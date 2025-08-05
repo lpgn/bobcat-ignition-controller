@@ -19,6 +19,7 @@
 #include "system_state.h"
 #include "web_interface.h"
 #include "settings.h"
+#include <ElegantOTA.h>
 
 void setup() {
   Serial.begin(115200);
@@ -40,6 +41,9 @@ void setup() {
 }
 
 void loop() {
+  // ElegantOTA loop function
+  ElegantOTA.loop();
+  
   // Main ignition key sequence control
   runIgnitionSequence();
   

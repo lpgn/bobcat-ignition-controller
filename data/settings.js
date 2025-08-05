@@ -202,7 +202,9 @@ class SettingsManager {
     }
 
     async initiateOTA() {
-        this.showStatus('OTA firmware update feature is not implemented yet.', 'info');
+        // Open ElegantOTA interface in new tab
+        window.open('/update', '_blank');
+        this.showStatus('Opening OTA update interface...', 'info');
     }
 
     showStatus(message, type) {

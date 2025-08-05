@@ -13,6 +13,7 @@
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
+#include <ElegantOTA.h>
 
 // WiFi credentials for the Access Point
 const char* ssid = "Bobcat-Control";
@@ -466,10 +467,10 @@ void setupWebServer() {
         }
     );
 
-    // OTA Update endpoint - simple response
+    // OTA Update endpoint - redirect to ElegantOTA
     server.on("/api/ota-update", HTTP_POST, [](AsyncWebServerRequest *request){
-        Serial.println("OTA update requested - not implemented yet");
-        request->send(501, "application/json", "{\"success\":false,\"message\":\"OTA update not implemented\"}");
+        Serial.println("OTA update requested - ElegantOTA available at /update");
+        request->send(200, "application/json", "{\"success\":true,\"message\":\"OTA interface available at /update\"}");
     });
 
     // Factory Reset endpoint
@@ -486,6 +487,9 @@ void setupWebServer() {
             Serial.println("Factory reset failed");
         }
     });
+
+    // Initialize ElegantOTA
+    ElegantOTA.begin(&server);
 
     // Start the server
     server.begin();
