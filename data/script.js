@@ -28,6 +28,10 @@ class IgnitionController {
         this.voltageGauge = document.querySelector('.voltage-gauge');
         this.fuelGauge = document.querySelector('.fuel-gauge');
         
+        // Work lights button
+        this.workLightsBtn = document.querySelector('[data-action="toggle_lights"]');
+        this.workLightsActive = false;
+        
         // State management - using your original working logic
         this.currentState = 'off';
         this.currentAngle = -30; // Start at OFF position (11 o'clock)
@@ -56,6 +60,8 @@ class IgnitionController {
         this.setupEventListeners();
         this.updateDisplay();
         this.updateKeyPosition();
+        // Initialize the lighting effect (default to dark/off state)
+        this.updateCenterLighting();
     }
     
     setupEventListeners() {
@@ -328,7 +334,52 @@ class IgnitionController {
     
     toggleWorkLights() {
         console.log('WORK LIGHTS TOGGLE');
+        this.workLightsActive = !this.workLightsActive;
+        
+        // Update visual state immediately for responsive feel
+        this.updateWorkLightsVisual();
+        
+        // Send command to backend
         this.sendCommand('lights');
+    }
+
+    updateWorkLightsVisual() {
+        const workLightsBtn = document.querySelector('[data-action="toggle_lights"]');
+        if (workLightsBtn) {
+            if (this.workLightsActive) {
+                workLightsBtn.classList.add('active');
+            } else {
+                workLightsBtn.classList.remove('active');
+            }
+        }
+        
+        // Update center lighting effect
+        this.updateCenterLighting();
+    }
+
+    updateCenterLighting() {
+        const center = document.querySelector('.bezel');
+        const lightButton = document.querySelector('[data-action="toggle_lights"]');
+        
+        if (center && lightButton) {
+            if (this.workLightsActive) {
+                // Darken the main circle (easier on eyes at night)
+                center.style.setProperty('--center-brightness', '0.6');
+                center.style.setProperty('--center-shadow', '0 0 40px rgba(0, 0, 0, 0.7)');
+                
+                // Light up only the bevel (border) around the light button - subtle glow
+                lightButton.style.setProperty('--button-border-glow', '0 0 8px rgba(255, 255, 100, 0.6)');
+                lightButton.style.setProperty('--button-border-color', '#ffdd00');
+            } else {
+                // Normal lighting when lights are off
+                center.style.setProperty('--center-brightness', '1.0');
+                center.style.setProperty('--center-shadow', '0 0 20px rgba(0, 0, 0, 0.4)');
+                
+                // Remove glow from light button border
+                lightButton.style.setProperty('--button-border-glow', 'none');
+                lightButton.style.setProperty('--button-border-color', '#555');
+            }
+        }
     }
     
     // Backend sync method

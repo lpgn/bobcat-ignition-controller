@@ -50,16 +50,41 @@ body {
     text-align: center;
 }
 
-.header h1 {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-    color: var(--bobcat-orange);
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+.logo-section {
+    margin-bottom: 15px;
 }
 
-.header p {
+.bobcat-logo {
+    height: 150px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.title-section {
+    margin-bottom: 15px;
+}
+
+.header h1 {
+    font-size: 3rem;
+    margin: 0;
+    color: var(--bobcat-orange);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    line-height: 1;
+}
+
+.status-indicator {
+    margin: 0;
+}
+
+.master-status {
     font-size: 1.1rem;
-    color: #bdc3c7;
+    font-weight: bold;
+    color: var(--text-color);
+    padding: 5px 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* Ignition Assembly */
@@ -78,11 +103,14 @@ body {
     border: 4px solid #3a4b5c;
     box-shadow: 
         inset 0 0 20px rgba(0, 0, 0, 0.5),
-        0 10px 30px rgba(0, 0, 0, 0.4);
+        0 10px 30px rgba(0, 0, 0, 0.4),
+        var(--center-shadow, 0 0 20px rgba(0, 0, 0, 0.4));
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
+    filter: brightness(var(--center-brightness, 1.0));
+    transition: filter 0.4s ease, box-shadow 0.4s ease;
 }
 
 .face {
@@ -312,18 +340,6 @@ body {
 }
 
 /* Center dot */
-.center-dot {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 8px;
-    height: 8px;
-    background: #34495e;
-    border-radius: 50%;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
 /* Modern Gauge Container */
 .gauge-container {
     position: absolute;
@@ -512,16 +528,19 @@ body {
 }
 
 .emergency-btn {
-    background: linear-gradient(145deg, #f44336, #d32f2f);
+    background: linear-gradient(145deg, #ff4444, #cc2222);
     color: white;
-    border: none;
-    border-radius: 50%;
-    width: 100px;
-    height: 100px;
-    font-size: 0.7rem;
+    border: 2px solid #990000;
+    border-radius: 8px;
+    width: 80px;
+    height: 50px;
+    font-size: 0.8rem;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.4),
+        inset 0 2px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.2);
     transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
@@ -532,7 +551,7 @@ body {
     line-height: 1.1;
 }
 
-/* Work Lights Button */
+/* Work Lights Button - Toggle Switch Style */
 .light-section {
     display: flex;
     justify-content: center;
@@ -540,51 +559,65 @@ body {
 }
 
 .light-btn {
-    background: linear-gradient(145deg, #ffaa00, #e69500);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 100px;
-    height: 100px;
-    font-size: 0.7rem;
+    background: linear-gradient(145deg, #666, #444);
+    color: #ccc;
+    border: 2px solid var(--button-border-color, #555);
+    border-radius: 8px;
+    width: 80px;
+    height: 50px;
+    font-size: 0.8rem;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
+    box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.4),
+        inset 0 2px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.3),
+        var(--button-border-glow, none);
+    transition: all 0.4s ease;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    line-height: 1.1;
+    letter-spacing: 0.5px;
 }
 
 .light-btn.active {
-    background: linear-gradient(145deg, #ffdd00, #ffcc00);
-    box-shadow: 
-        0 4px 8px rgba(0, 0, 0, 0.3),
-        0 0 20px rgba(255, 221, 0, 0.4);
+    /* Keep the button face dark - only the border should glow */
+    background: linear-gradient(145deg, #666, #444) !important;
+    color: #ccc !important;
+    /* The border glow is handled by JavaScript via CSS custom properties */
 }
 
 .emergency-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 
+        0 6px 12px rgba(0, 0, 0, 0.5),
+        inset 0 2px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.2);
 }
 
 .emergency-btn:active {
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.4),
+        inset 0 2px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.3);
 }
 
 .light-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 
+        0 6px 12px rgba(0, 0, 0, 0.5),
+        inset 0 2px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.3);
 }
 
 .light-btn:active {
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.4),
+        inset 0 2px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.4);
 }
 
 @keyframes glow-pulse {
@@ -595,6 +628,44 @@ body {
 @keyframes start-pulse {
     0% { opacity: 0.7; }
     100% { opacity: 1; }
+}
+
+@keyframes light-glow {
+    0% { 
+        box-shadow: 
+            0 4px 8px rgba(0, 0, 0, 0.4),
+            0 0 20px rgba(255, 255, 0, 0.6),
+            0 0 30px rgba(255, 255, 0, 0.3),
+            inset 0 2px 0 rgba(255, 255, 255, 0.6),
+            inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+    }
+    100% { 
+        box-shadow: 
+            0 4px 8px rgba(0, 0, 0, 0.4),
+            0 0 30px rgba(255, 255, 0, 0.9),
+            0 0 50px rgba(255, 255, 0, 0.5),
+            inset 0 2px 0 rgba(255, 255, 255, 0.8),
+            inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+    }
+}
+
+@keyframes bright-glow {
+    0% { 
+        box-shadow: 
+            0 4px 8px rgba(0, 0, 0, 0.4),
+            0 0 15px rgba(255, 221, 0, 0.6),
+            0 0 25px rgba(255, 221, 0, 0.3),
+            inset 0 2px 0 rgba(255, 255, 255, 0.4),
+            inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+    }
+    100% { 
+        box-shadow: 
+            0 4px 8px rgba(0, 0, 0, 0.4),
+            0 0 25px rgba(255, 221, 0, 0.9),
+            0 0 40px rgba(255, 221, 0, 0.6),
+            inset 0 2px 0 rgba(255, 255, 255, 0.6),
+            inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+    }
 }
 
 /* Instructions */
@@ -636,8 +707,17 @@ body {
         padding: 15px;
     }
     
+    .bobcat-logo {
+        height: 120px;
+    }
+    
     .header h1 {
-        font-size: 2rem;
+        font-size: 2.5rem;
+    }
+    
+    .master-status {
+        font-size: 1rem;
+        padding: 4px 12px;
     }
     
     .bezel {
@@ -696,6 +776,20 @@ body {
 }
 
 @media (max-width: 480px) {
+    .bobcat-logo {
+        height: 100px;
+    }
+    
+    .header h1 {
+        font-size: 2rem;
+        text-align: center;
+    }
+    
+    .master-status {
+        font-size: 0.9rem;
+        padding: 3px 10px;
+    }
+    
     .bezel {
         width: 200px;
         height: 200px;
@@ -718,5 +812,52 @@ body {
     .key-shaft {
         width: 5px;
         height: 70px;
+    }
+}
+
+/* Footer Styles */
+.footer {
+    margin-top: 40px;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tech-info span {
+    font-size: 0.9rem;
+    color: #888;
+    text-align: center;
+}
+
+.settings-info {
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.settings-info span {
+    font-size: 1rem;
+    color: var(--bobcat-orange);
+    text-decoration: none;
+}
+
+.settings-info:hover span {
+    color: #ff8533;
+}
+
+@media (max-width: 480px) {
+    .footer {
+        margin-top: 30px;
+        padding: 15px 0;
+    }
+    
+    .tech-info span {
+        font-size: 0.8rem;
+    }
+    
+    .settings-info span {
+        font-size: 0.9rem;
     }
 }
