@@ -466,17 +466,10 @@ void setupWebServer() {
         }
     );
 
-    // OTA Update endpoint
+    // OTA Update endpoint - simple response
     server.on("/api/ota-update", HTTP_POST, [](AsyncWebServerRequest *request){
-        Serial.println("OTA update requested");
-        request->send(200, "text/plain", "OTA update initiated");
-        
-        // TODO: Implement actual OTA update logic
-        // This would typically:
-        // 1. Download firmware from update server
-        // 2. Verify checksum
-        // 3. Apply update
-        // 4. Restart
+        Serial.println("OTA update requested - not implemented yet");
+        request->send(501, "application/json", "{\"success\":false,\"message\":\"OTA update not implemented\"}");
     });
 
     // Factory Reset endpoint

@@ -202,74 +202,7 @@ class SettingsManager {
     }
 
     async initiateOTA() {
-        if (!confirm('Start OTA firmware update? Device will restart during update.')) {
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/ota-update', {
-                method: 'POST'
-            });
-
-            if (response.ok) {
-                this.showStatus('OTA update initiated. Device will restart and update...', 'success');
-                
-                // Show update progress
-                this.showOTAProgress();
-            } else {
-                this.showStatus('Failed to start OTA update', 'error');
-            }
-        } catch (error) {
-            console.error('Error starting OTA update:', error);
-            this.showStatus('Network error starting OTA update', 'error');
-        }
-    }
-
-    showOTAProgress() {
-        const statusDiv = document.getElementById('statusMessage');
-        statusDiv.className = 'status-message success';
-        statusDiv.style.display = 'block';
-        
-        let dots = 0;
-        const interval = setInterval(() => {
-            dots = (dots + 1) % 4;
-            statusDiv.textContent = 'OTA update in progress' + '.'.repeat(dots);
-        }, 500);
-
-        // Check update status
-        this.checkOTAStatus(interval);
-    }
-
-    async checkOTAStatus(interval) {
-        let attempts = 0;
-        const maxAttempts = 60; // 5 minutes
-
-        const checkStatus = async () => {
-            attempts++;
-            
-            try {
-                const response = await fetch('/api/status');
-                if (response.ok) {
-                    clearInterval(interval);
-                    this.showStatus('OTA update completed successfully!', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 2000);
-                    return;
-                }
-            } catch (error) {
-                // Expected during update
-            }
-
-            if (attempts >= maxAttempts) {
-                clearInterval(interval);
-                this.showStatus('OTA update timeout. Please check device manually.', 'error');
-            } else {
-                setTimeout(checkStatus, 5000);
-            }
-        };
-
-        setTimeout(checkStatus, 10000); // Start checking after 10 seconds
+        this.showStatus('OTA firmware update feature is not implemented yet.', 'info');
     }
 
     showStatus(message, type) {
