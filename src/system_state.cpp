@@ -8,6 +8,7 @@
 #include "config.h"
 #include "hardware.h"
 #include "safety.h"
+#include "settings.h"
 
 // Global system state instance
 SystemState_t g_systemState = {};

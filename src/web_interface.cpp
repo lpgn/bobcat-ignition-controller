@@ -8,6 +8,7 @@
 #include "hardware.h"
 #include "system_state.h"
 #include "safety.h"
+#include "settings.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
@@ -347,6 +348,150 @@ void setupWebServer() {
         String jsonResponse;
         serializeJson(doc, jsonResponse);
         request->send(200, "application/json", jsonResponse);
+    });
+
+    // Settings page endpoint
+    server.on("/settings.html", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(LittleFS, "/settings.html", "text/html");
+    });
+
+    server.on("/settings.js", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(LittleFS, "/settings.js", "text/javascript");
+    });
+
+    // Settings API - Get current settings
+    server.on("/api/settings", HTTP_GET, [](AsyncWebServerRequest *request){
+        StaticJsonDocument<1024> doc;
+        
+        const BobcatSettings& settings = g_settingsManager.getSettings();
+        
+        // Engine Parameters (convert milliseconds to seconds for UI)
+        doc["glowDuration"] = settings.glowPlugDuration / 1000;
+        doc["crankingTimeout"] = settings.crankingTimeout / 1000;
+        doc["cooldownDuration"] = settings.cooldownDuration / 1000;
+        
+        // Alarm Thresholds
+        doc["maxTemp"] = settings.maxCoolantTemp;
+        doc["minOilPressure"] = settings.minOilPressure;
+        doc["minVoltage"] = settings.minBatteryVoltage;
+        doc["maxVoltage"] = settings.maxBatteryVoltage;
+        
+        // WiFi Configuration (don't send password for security)
+        doc["wifiSSID"] = settings.wifiSSID;
+        
+        // Sensor Calibration
+        doc["tempOffset"] = settings.tempSensorOffset;
+        doc["pressureScale"] = settings.pressureScale;
+        doc["fuelEmpty"] = settings.fuelLevelEmpty;
+        doc["fuelFull"] = settings.fuelLevelFull;
+        
+        String jsonResponse;
+        serializeJson(doc, jsonResponse);
+        request->send(200, "application/json", jsonResponse);
+    });
+
+    // Settings API - Save settings
+    server.on("/api/settings", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,
+        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+            StaticJsonDocument<1024> doc;
+            DeserializationError error = deserializeJson(doc, data);
+            
+            if (error) {
+                request->send(400, "text/plain", "Invalid JSON");
+                return;
+            }
+            
+            bool allUpdatesSuccessful = true;
+            String errorMessage = "";
+            
+            // Update Engine Parameters
+            if (doc.containsKey("glowDuration") && doc.containsKey("crankingTimeout") && doc.containsKey("cooldownDuration")) {
+                if (!g_settingsManager.updateEngineSettings(
+                    doc["glowDuration"].as<uint32_t>(),
+                    doc["crankingTimeout"].as<uint32_t>(),
+                    doc["cooldownDuration"].as<uint32_t>())) {
+                    allUpdatesSuccessful = false;
+                    errorMessage += "Invalid engine settings. ";
+                }
+            }
+            
+            // Update Alarm Thresholds
+            if (doc.containsKey("maxTemp") && doc.containsKey("minOilPressure") && 
+                doc.containsKey("minVoltage") && doc.containsKey("maxVoltage")) {
+                if (!g_settingsManager.updateAlarmThresholds(
+                    doc["maxTemp"].as<int16_t>(),
+                    doc["minOilPressure"].as<int16_t>(),
+                    doc["minVoltage"].as<float>(),
+                    doc["maxVoltage"].as<float>())) {
+                    allUpdatesSuccessful = false;
+                    errorMessage += "Invalid alarm thresholds. ";
+                }
+            }
+            
+            // Update WiFi Settings
+            if (doc.containsKey("wifiSSID")) {
+                const char* ssid = doc["wifiSSID"].as<const char*>();
+                const char* password = doc.containsKey("wifiPassword") ? doc["wifiPassword"].as<const char*>() : "";
+                
+                if (!g_settingsManager.updateWifiSettings(ssid, password)) {
+                    allUpdatesSuccessful = false;
+                    errorMessage += "Invalid WiFi settings. ";
+                }
+            }
+            
+            // Update Sensor Calibration
+            if (doc.containsKey("tempOffset") && doc.containsKey("pressureScale") && 
+                doc.containsKey("fuelEmpty") && doc.containsKey("fuelFull")) {
+                if (!g_settingsManager.updateSensorCalibration(
+                    doc["tempOffset"].as<float>(),
+                    doc["pressureScale"].as<float>(),
+                    doc["fuelEmpty"].as<uint16_t>(),
+                    doc["fuelFull"].as<uint16_t>())) {
+                    allUpdatesSuccessful = false;
+                    errorMessage += "Invalid sensor calibration. ";
+                }
+            }
+            
+            if (allUpdatesSuccessful) {
+                // Save settings to persistent storage
+                if (g_settingsManager.saveSettings()) {
+                    Serial.println("Settings updated and saved successfully");
+                    request->send(200, "text/plain", "Settings saved successfully! Restart required for some changes to take effect.");
+                } else {
+                    request->send(500, "text/plain", "Settings updated but failed to save to storage");
+                }
+            } else {
+                request->send(400, "text/plain", errorMessage.c_str());
+            }
+        }
+    );
+
+    // OTA Update endpoint
+    server.on("/api/ota-update", HTTP_POST, [](AsyncWebServerRequest *request){
+        Serial.println("OTA update requested");
+        request->send(200, "text/plain", "OTA update initiated");
+        
+        // TODO: Implement actual OTA update logic
+        // This would typically:
+        // 1. Download firmware from update server
+        // 2. Verify checksum
+        // 3. Apply update
+        // 4. Restart
+    });
+
+    // Factory Reset endpoint
+    server.on("/api/factory-reset", HTTP_POST, [](AsyncWebServerRequest *request){
+        Serial.println("Factory reset requested via web interface");
+        request->send(200, "text/plain", "Factory reset initiated");
+        
+        // Perform factory reset
+        if (g_settingsManager.performFactoryReset()) {
+            Serial.println("Factory reset completed - restarting device");
+            delay(1000);
+            ESP.restart();
+        } else {
+            Serial.println("Factory reset failed");
+        }
     });
 
     // Start the server

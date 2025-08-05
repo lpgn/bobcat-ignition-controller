@@ -837,14 +837,16 @@ body {
     transition: color 0.3s ease;
 }
 
-.settings-info span {
+.settings-link {
     font-size: 1rem;
     color: var(--bobcat-orange);
     text-decoration: none;
+    transition: color 0.3s ease;
 }
 
-.settings-info:hover span {
+.settings-link:hover {
     color: #ff8533;
+    text-decoration: underline;
 }
 
 @media (max-width: 480px) {

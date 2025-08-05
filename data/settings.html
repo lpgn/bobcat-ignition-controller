@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bobcat 743 - Settings</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .settings-container {
+            max-width: 900px;
+            margin: 10px auto;
+            background: var(--bg-gradient);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .settings-section {
+            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .settings-section h3 {
+            color: var(--text-color);
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+            text-align: center;
+        }
+        
+        .setting-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 18px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-label {
+            color: var(--text-color);
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        
+        .setting-input {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #555;
+            border-radius: 8px;
+            color: var(--text-color);
+            padding: 10px 12px;
+            width: 100px;
+            text-align: center;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .setting-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
+            background: rgba(0, 0, 0, 0.6);
+        }
+        
+        .setting-unit {
+            color: #aaa;
+            font-size: 0.95rem;
+            font-weight: 500;
+            min-width: 40px;
+        }
+        
+        .wifi-section .setting-input {
+            width: 180px;
+        }
+        
+        .password-input {
+            width: 180px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .settings-btn {
+            background: linear-gradient(145deg, #4a90e2, #357abd);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .settings-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .settings-btn.danger {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+        }
+        
+        .settings-btn.success {
+            background: linear-gradient(145deg, #27ae60, #229954);
+        }
+        
+        .ota-section {
+            text-align: center;
+        }
+        
+        .ota-btn {
+            background: linear-gradient(145deg, #f39c12, #e67e22);
+            font-size: 1.1rem;
+            padding: 15px 30px;
+        }
+        
+        .back-link {
+            display: inline-block;
+            color: var(--accent-color);
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .status-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            display: none;
+        }
+        
+        .status-message.success {
+            background: rgba(39, 174, 96, 0.2);
+            border: 1px solid #27ae60;
+            color: #27ae60;
+        }
+        
+        .status-message.error {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+        }
+        
+        
+        @media (max-width: 768px) {
+            .settings-container {
+                margin: 5px;
+                padding: 15px;
+                border-radius: 12px;
+            }
+            
+            .settings-section {
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .settings-section h3 {
+                font-size: 1.1rem;
+                margin-bottom: 15px;
+            }
+            
+            .setting-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                text-align: center;
+                padding: 15px 0;
+            }
+            
+            .setting-label {
+                font-size: 0.95rem;
+                margin-bottom: 5px;
+            }
+            
+            .setting-input, .wifi-section .setting-input, .password-input {
+                width: 100%;
+                max-width: 280px;
+                margin: 0 auto;
+                font-size: 1.1rem;
+                padding: 12px;
+            }
+            
+            .setting-unit {
+                font-size: 1rem;
+                margin-top: 5px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .settings-btn {
+                width: 100%;
+                max-width: 280px;
+                padding: 15px;
+                font-size: 1.1rem;
+            }
+            
+            .back-link {
+                font-size: 1.1rem;
+                margin-bottom: 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header-content {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .bobcat-logo {
+                height: 60px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .settings-container {
+                margin: 2px;
+                padding: 12px;
+            }
+            
+            .settings-section {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <img src="logo.png" alt="Bobcat Logo" class="bobcat-logo">
+                <div class="header-text">
+                    <h1>743</h1>
+                    <div class="master-status">SETTINGS</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="settings-container">
+            <a href="/" class="back-link">← Back to Main Control</a>
+            
+            <div id="statusMessage" class="status-message"></div>
+
+            <!-- Engine Parameters -->
+            <div class="settings-section">
+                <h3>⚙️ Engine Parameters</h3>
+                <div class="setting-row">
+                    <span class="setting-label">Glow Plug Duration</span>
+                    <input type="number" id="glowDuration" class="setting-input" min="5" max="60" value="20">
+                    <span class="setting-unit">seconds</span>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Maximum Cranking Time</span>
+                    <input type="number" id="crankingTimeout" class="setting-input" min="5" max="30" value="10">
+                    <span class="setting-unit">seconds</span>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Post-Shutdown Cooldown</span>
+                    <input type="number" id="cooldownDuration" class="setting-input" min="60" max="300" value="120">
+                    <span class="setting-unit">seconds</span>
+                </div>
+            </div>
+
+            <!-- Alarm Thresholds -->
+            <div class="settings-section">
+                <h3>🚨 Alarm Thresholds</h3>
+                <div class="setting-row">
+                    <span class="setting-label">Maximum Coolant Temperature</span>
+                    <input type="number" id="maxTemp" class="setting-input" min="80" max="120" value="104">
+                    <span class="setting-unit">°C</span>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Minimum Oil Pressure</span>
+                    <input type="number" id="minOilPressure" class="setting-input" min="30" max="150" value="69">
+                    <span class="setting-unit">kPa</span>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Minimum Battery Voltage</span>
+                    <input type="number" id="minVoltage" class="setting-input" min="10" max="13" step="0.1" value="11.0">
+                    <span class="setting-unit">V</span>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Maximum Battery Voltage</span>
+                    <input type="number" id="maxVoltage" class="setting-input" min="14" max="16" step="0.1" value="15.0">
+                    <span class="setting-unit">V</span>
+                </div>
+            </div>
+
+            <!-- WiFi Configuration -->
+            <div class="settings-section wifi-section">
+                <h3>📶 WiFi Configuration</h3>
+                <div class="setting-row">
+                    <span class="setting-label">Access Point Name (SSID)</span>
+                    <input type="text" id="wifiSSID" class="setting-input" placeholder="Bobcat-743" maxlength="32">
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Access Point Password</span>
+                    <input type="password" id="wifiPassword" class="setting-input password-input" placeholder="Enter new password" maxlength="64">
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Show Password</span>
+                    <input type="checkbox" id="showPassword" onchange="togglePasswordVisibility()">
+                </div>
+            </div>
+
+            <!-- Sensor Calibration -->
+            <div class="settings-section">
+                <h3>🔧 Sensor Calibration</h3>
+                <div class="setting-row">
+                    <span class="setting-label">Temperature Sensor Offset</span>
+                    <input type="number" id="tempOffset" class="setting-input" min="-50" max="50" step="0.1" value="-40.0">
+                    <span class="setting-unit">°C</span>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Oil Pressure Scale</span>
+                    <input type="number" id="pressureScale" class="setting-input" min="0.1" max="1.0" step="0.01" value="0.17">
+                    <span class="setting-unit">kPa/unit</span>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Fuel Empty Level</span>
+                    <input type="number" id="fuelEmpty" class="setting-input" min="0" max="1000" value="200">
+                    <span class="setting-unit">ADC</span>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Fuel Full Level</span>
+                    <input type="number" id="fuelFull" class="setting-input" min="2000" max="4095" value="3800">
+                    <span class="setting-unit">ADC</span>
+                </div>
+            </div>
+
+            <!-- OTA Firmware Update -->
+            <div class="settings-section ota-section">
+                <h3>🔄 Firmware Update</h3>
+                <p style="color: #aaa; margin-bottom: 20px;">
+                    Update firmware over-the-air. Device will restart after update.
+                </p>
+                <button class="settings-btn ota-btn" onclick="initiateOTA()">
+                    🚀 Start OTA Update
+                </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="settings-btn success" onclick="saveSettings()">
+                    💾 Save Settings
+                </button>
+                <button class="settings-btn" onclick="loadDefaults()">
+                    🔄 Load Defaults
+                </button>
+                <button class="settings-btn danger" onclick="resetSystem()">
+                    ⚠️ Factory Reset
+                </button>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="model-info">
+                <span>Model: 743B</span>
+                <span>Engine: Perkins 3008</span>
+            </div>
+            <div class="settings-info">
+                <span>Settings v1.0</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+</html>

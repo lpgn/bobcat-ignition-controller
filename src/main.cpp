@@ -18,10 +18,16 @@
 #include "safety.h"
 #include "system_state.h"
 #include "web_interface.h"
+#include "settings.h"
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Bobcat Ignition Controller Starting...");
+  
+  // Initialize settings manager first
+  if (!g_settingsManager.begin()) {
+    Serial.println("WARNING: Settings manager failed to initialize, using defaults");
+  }
   
   initializePins();
   g_systemState.currentState = OFF;  // Start in OFF state like a real ignition
