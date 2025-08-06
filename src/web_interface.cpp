@@ -443,6 +443,32 @@ void setupWebServer() {
             }
         }
         
+        if (request->hasParam("fuel_empty", true)) {
+            String value = request->getParam("fuel_empty", true)->value();
+            int newEmpty = value.toInt();
+            if (newEmpty >= 0 && newEmpty <= 4095) {
+                Preferences prefs;
+                prefs.begin("calibration", false);
+                prefs.putInt("fuel_empty", newEmpty);
+                prefs.end();
+                updatedConstants += "Fuel empty: " + String(newEmpty) + " ";
+                updated = true;
+            }
+        }
+        
+        if (request->hasParam("fuel_full", true)) {
+            String value = request->getParam("fuel_full", true)->value();
+            int newFull = value.toInt();
+            if (newFull >= 0 && newFull <= 4095) {
+                Preferences prefs;
+                prefs.begin("calibration", false);
+                prefs.putInt("fuel_full", newFull);
+                prefs.end();
+                updatedConstants += "Fuel full: " + String(newFull) + " ";
+                updated = true;
+            }
+        }
+        
         if (updated) {
             // Reload calibration constants immediately to apply changes
             loadCalibrationConstants();

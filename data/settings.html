@@ -413,7 +413,8 @@
                                 <td style="padding: 8px; text-align: center; color: #3498db;" id="fuelRaw">--</td>
                                 <td style="padding: 8px; text-align: center; color: #2ecc71;" id="fuelCalc">-- %</td>
                                 <td style="padding: 8px; text-align: center;">
-                                    <span style="font-size: 0.8rem; color: #aaa;">Empty/Full in settings above</span>
+                                    <input type="number" id="actualFuelLevel" class="setting-input" step="1" min="0" max="100" style="width: 80px; font-size: 0.8rem;" placeholder="75">
+                                    <br><span style="font-size: 0.7rem; color: #aaa;">Actual %</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -427,13 +428,13 @@
                         <strong>Step 1:</strong> Measure the actual value with your multimeter or known reference.
                     </p>
                     <p style="color: #aaa; font-size: 0.9rem; margin: 5px 0;">
-                        <strong>Step 2:</strong> Enter the real measurement in the "Actual" field for each sensor.
+                        <strong>Step 2:</strong> Enter the real measurement in the "Actual" field for each sensor (Voltage, Temperature, Pressure, or Fuel Level).
                     </p>
                     <p style="color: #aaa; font-size: 0.9rem; margin: 5px 0;">
-                        <strong>Step 3:</strong> Click "Auto-Calibrate" - the system will calculate the correction factors automatically.
+                        <strong>Step 3:</strong> Click "Auto-Calibrate" - the system will calculate the correction factors automatically for all entered values.
                     </p>
                     <p style="color: #e74c3c; font-size: 0.8rem; margin: 10px 0 0 0;">
-                        <strong>Note:</strong> Device restart required after calibration to apply changes.
+                        <strong>Note:</strong> Changes are applied immediately - no restart required!
                     </p>
                 </div>
                 

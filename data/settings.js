@@ -415,8 +415,9 @@ function autoCalibrate() {
         const actualVoltage = parseFloat(document.getElementById('actualVoltage').value);
         const actualTemp = parseFloat(document.getElementById('actualTemp').value);
         const actualPressure = parseFloat(document.getElementById('actualPressure').value);
+        const actualFuelLevel = parseFloat(document.getElementById('actualFuelLevel').value);
         
-        if (!actualVoltage && !actualTemp && !actualPressure) {
+        if (!actualVoltage && !actualTemp && !actualPressure && !actualFuelLevel) {
             window.settingsManager.showStatus('Please enter at least one actual measurement value', 'error');
             return;
         }
@@ -435,19 +436,49 @@ function autoCalibrate() {
         
         // Temperature calibration
         if (actualTemp && data.temperature_raw) {
-            // Assume linear relationship: new_scale = (actual_temp - offset) / raw_adc
-            const tempOffset = -40.0; // Current offset from config
+            // For pull-up configuration: V = 3.3V × (R_sensor ÷ (10kΩ + R_sensor))
+            // We need to calculate new scale factor based on actual temperature
+            // Assuming NTC with known behavior, calculate new scale
+            const tempOffset = data.temp_offset || -40.0; // Use current offset
             const newScale = (actualTemp - tempOffset) / data.temperature_raw;
             calibrationData.append('temp_scale', newScale.toFixed(6));
             calibrationsApplied.push(`Temperature: ${newScale.toFixed(6)} (${actualTemp}°C)`);
         }
         
-        // Pressure calibration
+        // Pressure calibration  
         if (actualPressure && data.pressure_raw) {
             // new_scale = actual_pressure / raw_adc
             const newScale = actualPressure / data.pressure_raw;
             calibrationData.append('pressure_scale', newScale.toFixed(6));
             calibrationsApplied.push(`Pressure: ${newScale.toFixed(6)} (${actualPressure}kPa)`);
+        }
+        
+        // Fuel level calibration - two-point calibration
+        if (actualFuelLevel !== undefined && data.fuel_raw) {
+            if (actualFuelLevel <= 10) {
+                // This is empty/low reading - set as fuel_empty
+                calibrationData.append('fuel_empty', data.fuel_raw.toString());
+                calibrationsApplied.push(`Fuel Empty: ${data.fuel_raw} ADC (${actualFuelLevel}%)`);
+            } else if (actualFuelLevel >= 90) {
+                // This is full/high reading - set as fuel_full  
+                calibrationData.append('fuel_full', data.fuel_raw.toString());
+                calibrationsApplied.push(`Fuel Full: ${data.fuel_raw} ADC (${actualFuelLevel}%)`);
+            } else {
+                // Mid-range - interpolate between current empty/full values
+                const currentEmpty = data.fuel_empty || 200;
+                const currentFull = data.fuel_full || 3800;
+                
+                // Linear interpolation to adjust scale
+                const targetADC = currentEmpty + (actualFuelLevel / 100.0) * (currentFull - currentEmpty);
+                const scaleFactor = targetADC / data.fuel_raw;
+                
+                const newEmpty = Math.round(currentEmpty * scaleFactor);
+                const newFull = Math.round(currentFull * scaleFactor);
+                
+                calibrationData.append('fuel_empty', newEmpty.toString());
+                calibrationData.append('fuel_full', newFull.toString());
+                calibrationsApplied.push(`Fuel Scale: Empty=${newEmpty}, Full=${newFull} ADC (${actualFuelLevel}%)`);
+            }
         }
         
         if (calibrationsApplied.length === 0) {
@@ -456,7 +487,7 @@ function autoCalibrate() {
         }
         
         // Confirm before applying
-        const confirmMessage = `Apply these calibrations?\n\n${calibrationsApplied.join('\n')}\n\nDevice restart required.`;
+        const confirmMessage = `Apply these calibrations?\n\n${calibrationsApplied.join('\n')}\n\nChanges applied immediately.`;
         if (!confirm(confirmMessage)) {
             return;
         }
@@ -468,13 +499,19 @@ function autoCalibrate() {
         })
         .then(response => response.json())
         .then(result => {
-            if (result.status === 'received') {
-                window.settingsManager.showStatus(`Auto-calibration applied: ${calibrationsApplied.join(', ')}. Restart required.`, 'success');
+            if (result.status === 'success') {
+                window.settingsManager.showStatus(`Auto-calibration applied: ${calibrationsApplied.join(', ')}. Applied immediately.`, 'success');
                 
                 // Clear input fields
                 document.getElementById('actualVoltage').value = '';
                 document.getElementById('actualTemp').value = '';
                 document.getElementById('actualPressure').value = '';
+                if (document.getElementById('actualFuelLevel')) {
+                    document.getElementById('actualFuelLevel').value = '';
+                }
+                
+                // Refresh sensor data to show new calibrated values
+                setTimeout(refreshSensorData, 1000);
             } else {
                 window.settingsManager.showStatus(result.message || 'Auto-calibration failed', 'error');
             }

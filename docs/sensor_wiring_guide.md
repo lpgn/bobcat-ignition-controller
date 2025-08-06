@@ -34,21 +34,24 @@
 
 ## Sensor Wiring Details
 
-### 1. Coolant Temperature Sensor (GPIO34)
-**Sensor Type**: NTC Thermistor (typical automotive type)
+### 1. Coolant Temperature Sensor (GPIO39)
+**Sensor Type**: Single-wire NTC Thermistor (typical automotive type)
 
 ```
-Wiring:
-Sensor Pin 1 ──── 3.3V (ESP32)
-Sensor Pin 2 ──┬─ GPIO34 (ESP32)
-                └─ 10kΩ Resistor ──── GND
+Wiring (Single-Wire Engine Sensor):
+3.3V ──── 10kΩ Resistor ──┬──── GPIO39 (ESP32)
+                          │
+Sensor Wire ──────────────┘
+Sensor Body (threaded) ──── Engine Block ──── GND (ESP32)
 
-Circuit Type: Voltage divider with pull-down resistor
+Circuit Type: Pull-up voltage divider
 Voltage Range: 0-3.3V (varies with temperature)
+Cold = Higher voltage, Hot = Lower voltage
 ```
 
 **Required Components:**
-- 10kΩ resistor (pull-down)
+- 10kΩ resistor (pull-up to 3.3V)
+- Ground connection from ESP32 to engine block/vehicle ground
 - Optional: 0.1µF capacitor across sensor for noise filtering
 
 ### 2. Oil Pressure Sensor (GPIO35)
