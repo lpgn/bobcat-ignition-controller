@@ -14,6 +14,7 @@
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <ElegantOTA.h>
+#include <Preferences.h>
 
 // WiFi credentials for the Access Point
 const char* ssid = "Bobcat-Control";
@@ -203,6 +204,9 @@ void setupWebServer() {
             Serial.print("Web command received: ");
             Serial.println(action);
             
+            // Update activity timer for any web command
+            updateActivityTimer();
+            
             bool success = true;
             String message = "Command executed";
             
@@ -257,6 +261,29 @@ void setupWebServer() {
                 // Legacy support
                 virtualPowerOffButton();
                 message = "Legacy shutdown command";
+            } else if (action == "sleep_now") {
+                // Immediate sleep command
+                if (checkSleepConditions(true)) { // Pass true for manual sleep
+                    message = "Entering sleep mode immediately";
+                    Serial.println("Manual sleep command received");
+                    // Send response first, then sleep
+                    StaticJsonDocument<256> response;
+                    response["success"] = true;
+                    response["message"] = message;
+                    String jsonResponse;
+                    serializeJson(response, jsonResponse);
+                    request->send(200, "application/json", jsonResponse);
+                    delay(100); // Give time for response to send
+                    enterDeepSleep();
+                    return; // Won't reach here
+                } else {
+                    success = false;
+                    message = "Cannot sleep - unsafe conditions (engine running or system active)";
+                }
+            } else if (action == "toggle_sleep_mode") {
+                // Toggle sleep mode enable/disable
+                g_systemState.sleepModeEnabled = !g_systemState.sleepModeEnabled;
+                message = g_systemState.sleepModeEnabled ? "Sleep mode enabled" : "Sleep mode disabled";
             } else {
                 success = false;
                 message = "Unknown action: " + action;
@@ -318,6 +345,13 @@ void setupWebServer() {
         doc["key_position"] = g_systemState.keyPosition;
         doc["start_key_held"] = g_systemState.keyStartHeld;
         
+        // Add power management information
+        doc["sleep_mode_enabled"] = g_systemState.sleepModeEnabled;
+        unsigned long timeSinceActivity = millis() - g_systemState.lastActivityTime;
+        doc["time_since_activity"] = timeSinceActivity / 1000; // Convert to seconds
+        doc["sleep_eligible"] = checkSleepConditions();
+        doc["time_until_sleep"] = max(0UL, (SLEEP_TIMEOUT - timeSinceActivity) / 1000); // Seconds until sleep
+        
         // Add WiFi status information
         doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
         if (WiFi.status() == WL_CONNECTED) {
@@ -329,6 +363,96 @@ void setupWebServer() {
 
         String jsonResponse;
         serializeJson(doc, jsonResponse);
+        request->send(200, "application/json", jsonResponse);
+    });
+
+    // Raw sensor data endpoint for calibration
+    server.on("/api/raw-sensors", HTTP_GET, [](AsyncWebServerRequest *request){
+        StaticJsonDocument<512> doc;
+        
+        // Read raw ADC values (0-4095)
+        doc["battery_raw"] = analogRead(BATTERY_VOLTAGE_PIN);
+        doc["temperature_raw"] = analogRead(ENGINE_TEMP_PIN);
+        doc["pressure_raw"] = analogRead(OIL_PRESSURE_PIN);
+        doc["fuel_raw"] = analogRead(FUEL_LEVEL_PIN);
+        
+        // Include current calibration constants
+        doc["battery_divider"] = BATTERY_VOLTAGE_DIVIDER;
+        doc["temp_offset"] = TEMP_SENSOR_OFFSET;
+        doc["temp_scale"] = TEMP_SENSOR_SCALE;
+        doc["pressure_offset"] = OIL_PRESSURE_OFFSET;
+        doc["pressure_scale"] = OIL_PRESSURE_SCALE;
+        doc["fuel_empty"] = FUEL_LEVEL_EMPTY;
+        doc["fuel_full"] = FUEL_LEVEL_FULL;
+        
+        // Include calculated values for comparison
+        doc["battery_calculated"] = readBatteryVoltage();
+        doc["temperature_calculated"] = readEngineTemp();
+        doc["pressure_calculated"] = readOilPressure();
+        doc["fuel_calculated"] = readFuelLevel();
+        
+        String jsonResponse;
+        serializeJson(doc, jsonResponse);
+        request->send(200, "application/json", jsonResponse);
+    });
+
+    // Update calibration constants endpoint
+    server.on("/api/calibration", HTTP_POST, [](AsyncWebServerRequest *request){
+        StaticJsonDocument<512> responseDoc;
+        bool updated = false;
+        String updatedConstants = "";
+        
+        // Handle form-encoded data
+        if (request->hasParam("battery_divider", true)) {
+            String value = request->getParam("battery_divider", true)->value();
+            float newDivider = value.toFloat();
+            if (newDivider > 0.0001 && newDivider < 1.0) { // Much wider range
+                // Store in preferences for next restart
+                Preferences prefs;
+                prefs.begin("calibration", false);
+                prefs.putFloat("battery_div", newDivider);
+                prefs.end();
+                updatedConstants += "Battery divider: " + String(newDivider, 6) + " ";
+                updated = true;
+            }
+        }
+        
+        if (request->hasParam("temp_scale", true)) {
+            String value = request->getParam("temp_scale", true)->value();
+            float newScale = value.toFloat();
+            if (newScale > 0.001 && newScale < 10.0) { // Much wider range
+                Preferences prefs;
+                prefs.begin("calibration", false);
+                prefs.putFloat("temp_scale", newScale);
+                prefs.end();
+                updatedConstants += "Temp scale: " + String(newScale, 6) + " ";
+                updated = true;
+            }
+        }
+        
+        if (request->hasParam("pressure_scale", true)) {
+            String value = request->getParam("pressure_scale", true)->value();
+            float newScale = value.toFloat();
+            if (newScale > 0.001 && newScale < 10.0) { // Much wider range
+                Preferences prefs;
+                prefs.begin("calibration", false);
+                prefs.putFloat("pressure_scale", newScale);
+                prefs.end();
+                updatedConstants += "Pressure scale: " + String(newScale, 6) + " ";
+                updated = true;
+            }
+        }
+        
+        if (updated) {
+            responseDoc["status"] = "success";
+            responseDoc["message"] = "Calibration updated: " + updatedConstants + "Restart required to apply.";
+        } else {
+            responseDoc["status"] = "error";
+            responseDoc["message"] = "No valid calibration parameters provided or values out of range";
+        }
+        
+        String jsonResponse;
+        serializeJson(responseDoc, jsonResponse);
         request->send(200, "application/json", jsonResponse);
     });
 

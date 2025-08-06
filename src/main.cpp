@@ -25,12 +25,22 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Bobcat Ignition Controller Starting...");
   
+  // Check if this is a wake-up from deep sleep
+  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+  if (wakeup_reason != ESP_SLEEP_WAKEUP_UNDEFINED) {
+    handleWakeUp();
+  } else {
+    Serial.println("Cold boot - initializing normally...");
+  }
+  
   // Initialize settings manager first
   if (!g_settingsManager.begin()) {
     Serial.println("WARNING: Settings manager failed to initialize, using defaults");
   }
   
   initializePins();
+  initializeSleepMode(); // Initialize deep sleep functionality
+  
   g_systemState.currentState = OFF;  // Start in OFF state like a real ignition
   g_systemState.keyPosition = 0;     // Key starts in OFF position
   
@@ -38,11 +48,33 @@ void setup() {
 
   Serial.println("System initialized - Key is in OFF position");
   Serial.println("Turn key to ON, then GLOW PLUG, then hold START to crank engine");
+  Serial.println("System will auto-sleep after 30 minutes of inactivity");
 }
 
 void loop() {
   // ElegantOTA loop function
   ElegantOTA.loop();
+  
+  // Don't allow automatic sleep for the first 2 minutes after boot
+  // This gives time to connect and configure the system
+  unsigned long currentTime = millis();
+  const unsigned long BOOT_GRACE_PERIOD = 120000; // 2 minutes
+  
+  if (currentTime < BOOT_GRACE_PERIOD) {
+    // During grace period, just update activity timer to keep system awake
+    g_systemState.lastActivityTime = currentTime;
+  } else {
+    // After grace period, check for sleep conditions and enter sleep if appropriate
+    if (checkSleepConditions()) {
+      unsigned long timeSinceActivity = currentTime - g_systemState.lastActivityTime;
+      
+      if (timeSinceActivity >= SLEEP_TIMEOUT) {
+        Serial.println("Sleep timeout reached - entering deep sleep mode");
+        enterDeepSleep();
+        // Code will not reach here as ESP32 will sleep
+      }
+    }
+  }
   
   // Main ignition key sequence control
   runIgnitionSequence();

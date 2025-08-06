@@ -19,10 +19,10 @@ const int LIGHTS_PIN = 5;             // GPIO5 - Both Front and Back Lights Rela
 // ============================================================================
 // ANALOG INPUT PINS - Engine Sensors (Physical sequence from header left to right)
 // ============================================================================
-extern const int ENGINE_TEMP_PIN;     // ADC1_CH3 (GPIO39) - Coolant Temperature (4th pin top row)
-extern const int OIL_PRESSURE_PIN;    // ADC1_CH7 (GPIO35) - Oil Pressure Sensor (5th pin top row)
-extern const int BATTERY_VOLTAGE_PIN; // ADC1_CH0 (GPIO36) - Battery Voltage (4th pin bottom row)
-extern const int FUEL_LEVEL_PIN;      // ADC1_CH6 (GPIO34) - Fuel Tank Level (5th pin bottom row)
+extern const int ENGINE_TEMP_PIN;     // ADC1_CH3 (GPIO39) - Coolant Temperature (5th pin bottom row) - MOVED
+extern const int OIL_PRESSURE_PIN;    // ADC1_CH6 (GPIO34) - Oil Pressure Sensor (4th pin top row) - MOVED to GPIO34
+extern const int BATTERY_VOLTAGE_PIN; // ADC1_CH0 (GPIO36) - Battery Voltage (4th pin bottom row) - MOVED to GPIO36
+extern const int FUEL_LEVEL_PIN;      // ADC1_CH7 (GPIO35) - Fuel Tank Level (5th pin top row) - MOVED
 
 // ============================================================================
 // DIGITAL INPUT PINS - Status Feedback (Physical sequence from header)
@@ -30,7 +30,20 @@ extern const int FUEL_LEVEL_PIN;      // ADC1_CH6 (GPIO34) - Fuel Tank Level (5t
 extern const int ALTERNATOR_CHARGE_PIN;    // GPIO22 - Alternator Charge Indicator (1st pin top row)
 extern const int ENGINE_RUN_FEEDBACK_PIN;  // GPIO26 - Engine Running Feedback (2nd pin top row)
 
-// ============================================================================// DIESEL ENGINE TIMING CONSTANTS
+// ============================================================================
+// POWER MANAGEMENT PINS
+// ============================================================================
+extern const int WAKE_UP_BUTTON_PIN;       // GPIO0 (BOOT button) - Wake up from deep sleep
+extern const int SLEEP_ENABLE_PIN;         // GPIO12 - Enable deep sleep mode (optional external control)
+
+// ============================================================================
+// POWER MANAGEMENT CONSTANTS
+// ============================================================================
+extern const unsigned long SLEEP_TIMEOUT;         // Time before auto-sleep (milliseconds)
+extern const unsigned long ACTIVITY_TIMEOUT;      // Inactivity timeout for sleep (milliseconds)
+
+// ============================================================================
+// DIESEL ENGINE TIMING CONSTANTS
 // ============================================================================
 extern const unsigned long GLOW_PLUG_DURATION;    // Glow plug preheat time
 extern const unsigned long IGNITION_TIMEOUT;      // Max cranking time
@@ -41,7 +54,8 @@ extern const float TEMP_SENSOR_OFFSET;       // Temperature sensor offset (°C)
 extern const float TEMP_SENSOR_SCALE;        // Temperature sensor scale factor
 extern const float OIL_PRESSURE_OFFSET;      // Oil pressure sensor offset (kPa)
 extern const float OIL_PRESSURE_SCALE;       // Oil pressure sensor scale factor
-extern const float BATTERY_VOLTAGE_DIVIDER;  // Voltage divider ratio
+// Battery Voltage Divider (for 12V/24V systems)
+extern const float BATTERY_VOLTAGE_DIVIDER; // Corrected for 22kΩ/10kΩ divider
 extern const float FUEL_LEVEL_EMPTY;         // ADC value for empty tank
 extern const float FUEL_LEVEL_FULL;          // ADC value for full tank
 

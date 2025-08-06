@@ -14,6 +14,7 @@
 // HARDWARE INITIALIZATION
 // ============================================================================
 void initializePins();
+void loadCalibrationConstants();  // Load calibration from preferences
 
 // ============================================================================
 // RELAY CONTROL FUNCTIONS - Diesel Engine Control
@@ -45,9 +46,22 @@ float readFuelLevel();         // Fuel level (%)
 // ============================================================================
 bool readAlternatorCharge();     // Alternator charging status
 bool readEngineRunFeedback();   // Engine running feedback
+// ============================================================================
 // SAFETY CHECK FUNCTIONS
 // ============================================================================
 bool checkEngineSafetyConditions();  // Check all safety interlocks
 bool isEngineRunning();              // Detect if engine is actually running
 void performSafetyShutdown();        // Safe emergency shutdown sequence
+
+// ============================================================================
+// POWER MANAGEMENT FUNCTIONS
+// ============================================================================
+void initializeSleepMode();          // Initialize deep sleep configuration
+void enterDeepSleep();               // Enter deep sleep mode
+void prepareForSleep();              // Prepare system for sleep (save state, turn off relays)
+bool checkSleepConditions();         // Check if it's safe to enter sleep (automatic)
+bool checkSleepConditions(bool manualSleep); // Check sleep conditions with manual override
+void handleWakeUp();                 // Handle wake-up from deep sleep
+void updateActivityTimer();          // Update last activity timestamp
+
 #endif // HARDWARE_H

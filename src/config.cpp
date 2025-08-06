@@ -1,11 +1,5 @@
 /*
- * C// ============================================================================
-// ANALOG INPUT PINS - Engine Sensors (Physical sequence from header)
-// ============================================================================
-const int ENGINE_TEMP_PIN = 39;       // ADC1_CH3 - Coolant Temperature Sensor (4th pin top row)
-const int OIL_PRESSURE_PIN = 35;      // ADC1_CH7 - Oil Pressure Sensor (5th pin top row)
-const int BATTERY_VOLTAGE_PIN = 36;   // ADC1_CH0 - Battery Voltage (4th pin bottom row)
-const int FUEL_LEVEL_PIN = 34;        // ADC1_CH6 - Fuel Level Sensor (5th pin bottom row)ation Implementation for Bobcat Ignition Controller
+ * Configuration Implementation for Bobcat Ignition Controller
  * Defines all constants and global variables for Diesel Engine Control
  */
 
@@ -14,10 +8,10 @@ const int FUEL_LEVEL_PIN = 34;        // ADC1_CH6 - Fuel Level Sensor (5th pin b
 // ============================================================================
 // ANALOG INPUT PINS - Engine Sensors (ADC1 channels) - Sequential assignment
 // ============================================================================
-const int ENGINE_TEMP_PIN = 34;       // ADC1_CH6 - Coolant Temperature Sensor
-const int OIL_PRESSURE_PIN = 35;      // ADC1_CH7 - Oil Pressure Sensor (0-5V)
-const int BATTERY_VOLTAGE_PIN = 36;   // ADC1_CH0 - Battery Voltage (via divider)
-const int FUEL_LEVEL_PIN = 39;        // ADC1_CH3 - Fuel Level Sensor (0-5V)
+const int ENGINE_TEMP_PIN = 39;       // ADC1_CH3 - Coolant Temperature Sensor - MOVED
+const int OIL_PRESSURE_PIN = 34;      // ADC1_CH6 - Oil Pressure Sensor (0-5V) - MOVED to GPIO34
+const int BATTERY_VOLTAGE_PIN = 36;   // ADC1_CH0 - Battery Voltage (via divider) - MOVED to GPIO36
+const int FUEL_LEVEL_PIN = 35;        // ADC1_CH7 - Fuel Level Sensor (0-5V) - MOVED
 
 // ============================================================================
 // DIGITAL INPUT PINS - Status Feedback (Physical sequence from header)
@@ -26,11 +20,23 @@ const int ALTERNATOR_CHARGE_PIN = 22;     // GPIO22 - Alternator Charge Indicato
 const int ENGINE_RUN_FEEDBACK_PIN = 26;   // GPIO26 - Engine Running Feedback (2nd pin top row)
 
 // ============================================================================
+// POWER MANAGEMENT PINS
+// ============================================================================
+const int WAKE_UP_BUTTON_PIN = 0;         // GPIO0 (BOOT button) - Wake up from deep sleep
+const int SLEEP_ENABLE_PIN = 12;          // GPIO12 - Enable deep sleep mode (optional external control)
+
+// ============================================================================
 // DIESEL ENGINE TIMING CONSTANTS (in milliseconds)
 // ============================================================================
 const unsigned long GLOW_PLUG_DURATION = 20000;   // 20 seconds glow plug preheat
 const unsigned long IGNITION_TIMEOUT = 10000;     // 10 seconds max cranking
 const unsigned long COOLDOWN_DURATION = 120000;   // 2 minutes post-shutdown cooldown
+
+// ============================================================================
+// POWER MANAGEMENT CONSTANTS (in milliseconds)
+// ============================================================================
+const unsigned long SLEEP_TIMEOUT = 1800000;      // 30 minutes before auto-sleep
+const unsigned long ACTIVITY_TIMEOUT = 300000;    // 5 minutes of inactivity before sleep eligibility
 
 
 // SENSOR CALIBRATION CONSTANTS - Only for sensors we're using
@@ -45,7 +51,10 @@ const float OIL_PRESSURE_OFFSET = 0.0;       // Pressure sensor offset
 const float OIL_PRESSURE_SCALE = 0.1682;     // 689 kPa / 4095 ADC = 0.1682 kPa/unit
 
 // Battery Voltage Divider (for 12V/24V systems)
-const float BATTERY_VOLTAGE_DIVIDER = 0.0111; // (3.3V / 4095) * divider ratio
+// Based on real measurements: 13.13V battery → 3.66V divider output
+// Actual ratio: 3.66/13.13 = 0.2787
+// Scaling: (3.3V/4095) / 0.2787 = 0.002892
+const float BATTERY_VOLTAGE_DIVIDER = 0.002892; // Calibrated for actual divider ratio
 
 // Fuel Level Sensor Calibration
 const float FUEL_LEVEL_EMPTY = 200.0;        // ADC reading for empty tank

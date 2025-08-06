@@ -6,9 +6,18 @@
 #include "hardware.h"
 #include "config.h"
 #include "system_state.h"
+#include <Preferences.h>
+
+// Runtime calibration constants (loaded from preferences)
+float runtime_battery_divider = BATTERY_VOLTAGE_DIVIDER;
+float runtime_temp_scale = TEMP_SENSOR_SCALE;
+float runtime_pressure_scale = OIL_PRESSURE_SCALE;
 
 void initializePins() {
   Serial.println("Initializing GPIO pins...");
+  
+  // Load calibration constants from preferences
+  loadCalibrationConstants();
   
   // Initialize output pins for relays
   pinMode(MAIN_POWER_PIN, OUTPUT);
@@ -36,6 +45,23 @@ void initializePins() {
   
   Serial.println("All relays initialized to OFF state");
   Serial.println("GPIO initialization complete");
+}
+
+void loadCalibrationConstants() {
+  Preferences prefs;
+  prefs.begin("calibration", true); // Open in read-only mode
+  
+  // Load constants with defaults from config
+  runtime_battery_divider = prefs.getFloat("battery_div", BATTERY_VOLTAGE_DIVIDER);
+  runtime_temp_scale = prefs.getFloat("temp_scale", TEMP_SENSOR_SCALE);
+  runtime_pressure_scale = prefs.getFloat("pressure_scale", OIL_PRESSURE_SCALE);
+  
+  prefs.end();
+  
+  Serial.println("Calibration constants loaded:");
+  Serial.print("  Battery divider: "); Serial.println(runtime_battery_divider, 6);
+  Serial.print("  Temperature scale: "); Serial.println(runtime_temp_scale, 6);
+  Serial.print("  Pressure scale: "); Serial.println(runtime_pressure_scale, 6);
 }
 
 void controlMainPower(bool enable) {
@@ -102,17 +128,17 @@ void virtualLightsButton() {
 // Sensor reading functions with proper calibration
 float readEngineTemp() {
   int rawValue = analogRead(ENGINE_TEMP_PIN);
-  return (rawValue * TEMP_SENSOR_SCALE) + TEMP_SENSOR_OFFSET;
+  return (rawValue * runtime_temp_scale) + TEMP_SENSOR_OFFSET;
 }
 
 float readOilPressure() {
   int rawValue = analogRead(OIL_PRESSURE_PIN);
-  return (rawValue * OIL_PRESSURE_SCALE) + OIL_PRESSURE_OFFSET;
+  return (rawValue * runtime_pressure_scale) + OIL_PRESSURE_OFFSET;
 }
 
 float readBatteryVoltage() {
   int rawValue = analogRead(BATTERY_VOLTAGE_PIN);
-  return rawValue * BATTERY_VOLTAGE_DIVIDER;
+  return rawValue * runtime_battery_divider;
 }
 
 float readFuelLevel() {
@@ -128,7 +154,13 @@ bool readAlternatorCharge() {
 }
 
 bool readEngineRunFeedback() {
-  return digitalRead(ENGINE_RUN_FEEDBACK_PIN) == HIGH;
+  // When no sensor is connected, floating pin can read HIGH
+  // For development/testing with no sensors: assume engine is OFF
+  // TODO: Remove this override when sensors are connected
+  return false; // Override: assume engine OFF when no sensors connected
+  
+  // Original logic (uncomment when sensors are connected):
+  // return digitalRead(ENGINE_RUN_FEEDBACK_PIN) == HIGH;
 }
 
 // Safety check functions (basic stubs, expand as needed)
@@ -147,4 +179,132 @@ void performSafetyShutdown() {
   controlGlowPlugs(false);
   controlStarter(false);
   Serial.println("Safety shutdown performed!");
+}
+
+// ============================================================================
+// POWER MANAGEMENT FUNCTIONS
+// ============================================================================
+
+void initializeSleepMode() {
+  Serial.println("Initializing deep sleep mode...");
+  
+  // Configure wake-up button
+  pinMode(WAKE_UP_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(SLEEP_ENABLE_PIN, INPUT_PULLUP);
+  
+  // Configure wake-up sources
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0); // Wake on button press (LOW)
+  
+  // Initialize sleep-related state
+  g_systemState.lastActivityTime = millis();
+  g_systemState.sleepModeEnabled = true;
+  g_systemState.wakeUpPending = false;
+  g_systemState.sleepTimer = millis();
+  
+  Serial.println("Deep sleep mode initialized - Wake up button: GPIO0");
+}
+
+void enterDeepSleep() {
+  Serial.println("Preparing for deep sleep...");
+  
+  // Prepare system for sleep
+  prepareForSleep();
+  
+  // Print wake-up information
+  Serial.println("Entering deep sleep mode...");
+  Serial.println("Wake up by pressing the BOOT button (GPIO0)");
+  Serial.flush(); // Ensure all serial output is sent
+  
+  // Enter deep sleep
+  esp_deep_sleep_start();
+}
+
+void prepareForSleep() {
+  Serial.println("Preparing system for sleep...");
+  
+  // Turn off all relays to save power
+  controlMainPower(false);
+  controlGlowPlugs(false);
+  controlStarter(false);
+  controlLights(false);
+  
+  // Save current state (could save to RTC memory if needed)
+  // For now, we'll just reset to OFF state on wake-up
+  g_systemState.keyPosition = 0; // OFF
+  g_systemState.currentState = OFF;
+  
+  Serial.println("System prepared for sleep - all relays OFF");
+}
+
+bool checkSleepConditions() {
+  return checkSleepConditions(false); // Default to automatic sleep check
+}
+
+bool checkSleepConditions(bool manualSleep) {
+  // Don't sleep if engine is running
+  if (isEngineRunning()) {
+    return false;
+  }
+  
+  // Don't sleep if system is in critical state
+  if (g_systemState.currentState == ERROR || 
+      g_systemState.currentState == HIGH_TEMPERATURE ||
+      g_systemState.currentState == LOW_OIL_PRESSURE) {
+    return false;
+  }
+  
+  // Don't sleep if key is not in OFF position
+  if (g_systemState.keyPosition != 0) {
+    return false;
+  }
+  
+  // Don't sleep if sleep mode is disabled
+  if (!g_systemState.sleepModeEnabled) {
+    return false;
+  }
+  
+  // For manual sleep, skip the activity timeout check
+  if (manualSleep) {
+    return true;
+  }
+  
+  // For automatic sleep, check if enough time has passed since last activity
+  unsigned long currentTime = millis();
+  unsigned long timeSinceActivity = currentTime - g_systemState.lastActivityTime;
+  
+  return (timeSinceActivity >= ACTIVITY_TIMEOUT);
+}
+
+void handleWakeUp() {
+  Serial.println("=== WAKE UP FROM DEEP SLEEP ===");
+  
+  // Check wake-up reason
+  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+  
+  switch(wakeup_reason) {
+    case ESP_SLEEP_WAKEUP_EXT0:
+      Serial.println("Woke up by external signal (button press)");
+      break;
+    case ESP_SLEEP_WAKEUP_TIMER:
+      Serial.println("Woke up by timer");
+      break;
+    default:
+      Serial.println("Woke up for unknown reason");
+      break;
+  }
+  
+  // Reset system state after wake-up
+  g_systemState.keyPosition = 0; // OFF
+  g_systemState.currentState = OFF;
+  g_systemState.wakeUpPending = false;
+  g_systemState.lastActivityTime = millis();
+  
+  // Reinitialize hardware
+  initializePins();
+  
+  Serial.println("System ready after wake-up");
+}
+
+void updateActivityTimer() {
+  g_systemState.lastActivityTime = millis();
 }

@@ -33,6 +33,12 @@ typedef struct {
     float batteryVoltage;
     float fuelLevel;
 
+    // Power management
+    unsigned long lastActivityTime;    // Last time there was user activity
+    bool sleepModeEnabled;            // Whether sleep mode is enabled
+    bool wakeUpPending;               // Wake up from sleep pending
+    unsigned long sleepTimer;         // Timer for sleep timeout
+
     // Add other state variables as needed
 } SystemState_t;
 

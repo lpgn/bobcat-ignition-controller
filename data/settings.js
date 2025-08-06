@@ -244,7 +244,287 @@ function initiateOTA() {
     window.settingsManager.initiateOTA();
 }
 
+// Power management functions
+function toggleSleepMode() {
+    fetch('/control', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: 'toggle_sleep_mode' })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.settingsManager.showStatus(data.message, 'success');
+            updatePowerStatus(); // Refresh power status
+        } else {
+            window.settingsManager.showStatus('Failed to toggle sleep mode: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error toggling sleep mode:', error);
+        window.settingsManager.showStatus('Network error toggling sleep mode', 'error');
+    });
+}
+
+function sleepNow() {
+    if (!confirm('Put system to sleep now? You will need to press the BOOT button to wake it up.')) {
+        return;
+    }
+    
+    fetch('/control', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: 'sleep_now' })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.settingsManager.showStatus('System entering sleep mode...', 'success');
+        } else {
+            window.settingsManager.showStatus('Cannot sleep: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error entering sleep mode:', error);
+        window.settingsManager.showStatus('Network error entering sleep mode', 'error');
+    });
+}
+
+function updatePowerStatus() {
+    fetch('/status')
+    .then(response => response.json())
+    .then(data => {
+        // Update sleep mode status
+        const sleepStatus = document.getElementById('sleepStatus');
+        if (sleepStatus) {
+            sleepStatus.textContent = `Sleep mode: ${data.sleep_mode_enabled ? 'Enabled' : 'Disabled'}`;
+            sleepStatus.style.color = data.sleep_mode_enabled ? '#2ecc71' : '#e74c3c';
+        }
+        
+        // Update activity time
+        const activityTime = document.getElementById('activityTime');
+        if (activityTime && data.time_since_activity !== undefined) {
+            const minutes = Math.floor(data.time_since_activity / 60);
+            const seconds = data.time_since_activity % 60;
+            activityTime.textContent = `Time since activity: ${minutes}m ${seconds}s`;
+            
+            if (data.time_until_sleep !== undefined && data.time_until_sleep > 0) {
+                const sleepMinutes = Math.floor(data.time_until_sleep / 60);
+                const sleepSeconds = data.time_until_sleep % 60;
+                activityTime.textContent += ` (sleep in: ${sleepMinutes}m ${sleepSeconds}s)`;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error updating power status:', error);
+    });
+}
+
 // Initialize settings manager when page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.settingsManager = new SettingsManager();
+    
+    // Update power status every 5 seconds
+    updatePowerStatus();
+    setInterval(updatePowerStatus, 5000);
+    
+    // Start auto-refresh for sensor data
+    refreshSensorData();
+    window.sensorRefreshInterval = setInterval(refreshSensorData, 2000);
 });
+
+// Raw sensor data functions
+let autoRefreshEnabled = true;
+let sensorRefreshInterval = null;
+
+function toggleAutoRefresh() {
+    const checkbox = document.getElementById('autoRefresh');
+    autoRefreshEnabled = checkbox.checked;
+    
+    if (autoRefreshEnabled) {
+        if (sensorRefreshInterval) clearInterval(sensorRefreshInterval);
+        sensorRefreshInterval = setInterval(refreshSensorData, 2000);
+        refreshSensorData(); // Immediate refresh
+    } else {
+        if (sensorRefreshInterval) {
+            clearInterval(sensorRefreshInterval);
+            sensorRefreshInterval = null;
+        }
+    }
+}
+
+function refreshSensorData() {
+    if (!autoRefreshEnabled) return;
+    
+    fetch('/api/raw-sensors')
+    .then(response => response.json())
+    .then(data => {
+        // Update raw ADC readings
+        document.getElementById('batteryRaw').textContent = data.battery_raw || '--';
+        document.getElementById('tempRaw').textContent = data.temperature_raw || '--';
+        document.getElementById('pressureRaw').textContent = data.pressure_raw || '--';
+        document.getElementById('fuelRaw').textContent = data.fuel_raw || '--';
+        
+        // Update calculated values
+        document.getElementById('batteryCalc').textContent = (data.battery_calculated || 0).toFixed(2) + ' V';
+        document.getElementById('tempCalc').textContent = (data.temperature_calculated || 0).toFixed(1) + ' °C';
+        document.getElementById('pressureCalc').textContent = (data.pressure_calculated || 0).toFixed(1) + ' kPa';
+        document.getElementById('fuelCalc').textContent = (data.fuel_calculated || 0).toFixed(1) + ' %';
+        
+        // Update calibration input placeholders/values
+        if (data.battery_divider) {
+            const batteryDividerDisplay = document.getElementById('batteryDividerDisplay');
+            if (batteryDividerDisplay) {
+                batteryDividerDisplay.textContent = data.battery_divider.toFixed(6);
+            }
+        }
+        if (data.temp_scale) {
+            const tempScaleDisplay = document.getElementById('tempScaleDisplay');
+            if (tempScaleDisplay) {
+                tempScaleDisplay.textContent = data.temp_scale.toFixed(4);
+            }
+        }
+        if (data.pressure_scale) {
+            const pressureScaleDisplay = document.getElementById('pressureScaleDisplay');
+            if (pressureScaleDisplay) {
+                pressureScaleDisplay.textContent = data.pressure_scale.toFixed(4);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error refreshing sensor data:', error);
+        // Show error in table
+        const cells = ['batteryRaw', 'tempRaw', 'pressureRaw', 'fuelRaw', 
+                      'batteryCalc', 'tempCalc', 'pressureCalc', 'fuelCalc'];
+        cells.forEach(cellId => {
+            const element = document.getElementById(cellId);
+            if (element) element.textContent = 'Error';
+        });
+    });
+}
+
+function autoCalibrate() {
+    // Get current raw sensor readings
+    fetch('/api/raw-sensors')
+    .then(response => response.json())
+    .then(data => {
+        const actualVoltage = parseFloat(document.getElementById('actualVoltage').value);
+        const actualTemp = parseFloat(document.getElementById('actualTemp').value);
+        const actualPressure = parseFloat(document.getElementById('actualPressure').value);
+        
+        if (!actualVoltage && !actualTemp && !actualPressure) {
+            window.settingsManager.showStatus('Please enter at least one actual measurement value', 'error');
+            return;
+        }
+        
+        // Calculate new calibration constants
+        const calibrationData = new FormData();
+        let calibrationsApplied = [];
+        
+        // Battery voltage calibration
+        if (actualVoltage && data.battery_raw) {
+            // New divider = (ADC / 4095 * 3.3) / actual_voltage
+            const newDivider = (data.battery_raw / 4095.0 * 3.3) / actualVoltage;
+            calibrationData.append('battery_divider', newDivider.toFixed(6));
+            calibrationsApplied.push(`Battery: ${newDivider.toFixed(6)} (${actualVoltage}V)`);
+        }
+        
+        // Temperature calibration
+        if (actualTemp && data.temperature_raw) {
+            // Assume linear relationship: new_scale = (actual_temp - offset) / raw_adc
+            const tempOffset = -40.0; // Current offset from config
+            const newScale = (actualTemp - tempOffset) / data.temperature_raw;
+            calibrationData.append('temp_scale', newScale.toFixed(6));
+            calibrationsApplied.push(`Temperature: ${newScale.toFixed(6)} (${actualTemp}°C)`);
+        }
+        
+        // Pressure calibration
+        if (actualPressure && data.pressure_raw) {
+            // new_scale = actual_pressure / raw_adc
+            const newScale = actualPressure / data.pressure_raw;
+            calibrationData.append('pressure_scale', newScale.toFixed(6));
+            calibrationsApplied.push(`Pressure: ${newScale.toFixed(6)} (${actualPressure}kPa)`);
+        }
+        
+        if (calibrationsApplied.length === 0) {
+            window.settingsManager.showStatus('No valid calibrations to apply', 'error');
+            return;
+        }
+        
+        // Confirm before applying
+        const confirmMessage = `Apply these calibrations?\n\n${calibrationsApplied.join('\n')}\n\nDevice restart required.`;
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        // Send calibration data
+        fetch('/api/calibration', {
+            method: 'POST',
+            body: calibrationData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.status === 'received') {
+                window.settingsManager.showStatus(`Auto-calibration applied: ${calibrationsApplied.join(', ')}. Restart required.`, 'success');
+                
+                // Clear input fields
+                document.getElementById('actualVoltage').value = '';
+                document.getElementById('actualTemp').value = '';
+                document.getElementById('actualPressure').value = '';
+            } else {
+                window.settingsManager.showStatus(result.message || 'Auto-calibration failed', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error applying auto-calibration:', error);
+            window.settingsManager.showStatus('Network error during auto-calibration', 'error');
+        });
+    })
+    .catch(error => {
+        console.error('Error getting sensor data for calibration:', error);
+        window.settingsManager.showStatus('Could not read sensor data for calibration', 'error');
+    });
+}
+
+function applyCalibration() {
+    if (!confirm('Apply new calibration constants? This will require a device restart to take effect.')) {
+        return;
+    }
+    
+    // Collect calibration data
+    const calibrationData = new FormData();
+    
+    const batteryDivider = document.getElementById('batteryDivider').value;
+    const tempScale = document.getElementById('tempScale').value;
+    const pressureScale = document.getElementById('pressureScaleNew').value;
+    
+    if (batteryDivider) calibrationData.append('battery_divider', batteryDivider);
+    if (tempScale) calibrationData.append('temp_scale', tempScale);
+    if (pressureScale) calibrationData.append('pressure_scale', pressureScale);
+    
+    if (calibrationData.entries().next().done) {
+        window.settingsManager.showStatus('No calibration values entered', 'error');
+        return;
+    }
+    
+    fetch('/api/calibration', {
+        method: 'POST',
+        body: calibrationData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'received') {
+            window.settingsManager.showStatus(data.message, 'success');
+        } else {
+            window.settingsManager.showStatus(data.message || 'Calibration update failed', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error applying calibration:', error);
+        window.settingsManager.showStatus('Network error applying calibration', 'error');
+    });
+}

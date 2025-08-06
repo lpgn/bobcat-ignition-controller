@@ -119,6 +119,10 @@
             background: linear-gradient(145deg, #27ae60, #229954);
         }
         
+        .settings-btn.warning {
+            background: linear-gradient(145deg, #f39c12, #e67e22);
+        }
+        
         .ota-section {
             text-align: center;
         }
@@ -351,6 +355,96 @@
                 </div>
             </div>
 
+            <!-- Raw Sensor Data -->
+            <div class="settings-section">
+                <h3>📊 Raw Sensor Data & Calibration</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">
+                    Live ADC readings (0-4095) and calculated values. Use these to adjust calibration constants.
+                </p>
+                
+                <!-- Auto-refresh toggle -->
+                <div class="setting-row">
+                    <span class="setting-label">Auto Refresh</span>
+                    <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh()">
+                    <button class="settings-btn" onclick="refreshSensorData()" style="padding: 5px 10px; font-size: 0.9rem;">🔄 Refresh</button>
+                </div>
+                
+                <!-- Sensor readings table -->
+                <div style="overflow-x: auto; margin: 15px 0;">
+                    <table style="width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <thead>
+                            <tr style="background: rgba(0,0,0,0.4);">
+                                <th style="padding: 10px; text-align: left; color: var(--text-color); border-bottom: 1px solid #555;">Sensor</th>
+                                <th style="padding: 10px; text-align: center; color: var(--text-color); border-bottom: 1px solid #555;">Raw ADC</th>
+                                <th style="padding: 10px; text-align: center; color: var(--text-color); border-bottom: 1px solid #555;">Calculated</th>
+                                <th style="padding: 10px; text-align: center; color: var(--text-color); border-bottom: 1px solid #555;">Calibration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sensorDataTable">
+                            <tr>
+                                <td style="padding: 8px; color: var(--text-color);">Battery Voltage</td>
+                                <td style="padding: 8px; text-align: center; color: #3498db;" id="batteryRaw">--</td>
+                                <td style="padding: 8px; text-align: center; color: #2ecc71;" id="batteryCalc">-- V</td>
+                                <td style="padding: 8px; text-align: center;">
+                                    <input type="number" id="actualVoltage" class="setting-input" step="0.01" style="width: 80px; font-size: 0.8rem;" placeholder="13.11">
+                                    <br><span style="font-size: 0.7rem; color: #aaa;">Actual V</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; color: var(--text-color);">Engine Temperature</td>
+                                <td style="padding: 8px; text-align: center; color: #3498db;" id="tempRaw">--</td>
+                                <td style="padding: 8px; text-align: center; color: #2ecc71;" id="tempCalc">-- °C</td>
+                                <td style="padding: 8px; text-align: center;">
+                                    <input type="number" id="actualTemp" class="setting-input" step="0.1" style="width: 80px; font-size: 0.8rem;" placeholder="85.0">
+                                    <br><span style="font-size: 0.7rem; color: #aaa;">Actual °C</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; color: var(--text-color);">Oil Pressure</td>
+                                <td style="padding: 8px; text-align: center; color: #3498db;" id="pressureRaw">--</td>
+                                <td style="padding: 8px; text-align: center; color: #2ecc71;" id="pressureCalc">-- kPa</td>
+                                <td style="padding: 8px; text-align: center;">
+                                    <input type="number" id="actualPressure" class="setting-input" step="1" style="width: 80px; font-size: 0.8rem;" placeholder="345">
+                                    <br><span style="font-size: 0.7rem; color: #aaa;">Actual kPa</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; color: var(--text-color);">Fuel Level</td>
+                                <td style="padding: 8px; text-align: center; color: #3498db;" id="fuelRaw">--</td>
+                                <td style="padding: 8px; text-align: center; color: #2ecc71;" id="fuelCalc">-- %</td>
+                                <td style="padding: 8px; text-align: center;">
+                                    <span style="font-size: 0.8rem; color: #aaa;">Empty/Full in settings above</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Calibration notes -->
+                <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                    <h4 style="color: #ffc107; margin: 0 0 10px 0;">📝 Quick Calibration Guide</h4>
+                    <p style="color: #aaa; font-size: 0.9rem; margin: 5px 0;">
+                        <strong>Step 1:</strong> Measure the actual value with your multimeter or known reference.
+                    </p>
+                    <p style="color: #aaa; font-size: 0.9rem; margin: 5px 0;">
+                        <strong>Step 2:</strong> Enter the real measurement in the "Actual" field for each sensor.
+                    </p>
+                    <p style="color: #aaa; font-size: 0.9rem; margin: 5px 0;">
+                        <strong>Step 3:</strong> Click "Auto-Calibrate" - the system will calculate the correction factors automatically.
+                    </p>
+                    <p style="color: #e74c3c; font-size: 0.8rem; margin: 10px 0 0 0;">
+                        <strong>Note:</strong> Device restart required after calibration to apply changes.
+                    </p>
+                </div>
+                
+                <!-- Apply calibration button -->
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="settings-btn warning" onclick="autoCalibrate()" style="background: linear-gradient(145deg, #2ecc71, #27ae60);">
+                        🎯 Auto-Calibrate from Actual Values
+                    </button>
+                </div>
+            </div>
+
             <!-- OTA Firmware Update -->
             <div class="settings-section ota-section">
                 <h3>🔄 Firmware Update</h3>
@@ -360,6 +454,28 @@
                 <button class="settings-btn ota-btn" onclick="initiateOTA()">
                     🚀 Start OTA Update
                 </button>
+            </div>
+
+            <!-- Power Management -->
+            <div class="settings-section power-section">
+                <h3>🔋 Power Management</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">
+                    Deep sleep mode saves battery power when system is inactive.
+                </p>
+                <div style="margin-bottom: 15px;">
+                    <span id="sleepStatus" style="color: #2ecc71;">Sleep mode: Enabled</span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <span id="activityTime" style="color: #aaa;">Time since activity: --</span>
+                </div>
+                <div class="power-buttons" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button class="settings-btn" onclick="toggleSleepMode()">
+                        🔄 Toggle Sleep Mode
+                    </button>
+                    <button class="settings-btn warning" onclick="sleepNow()">
+                        😴 Sleep Now
+                    </button>
+                </div>
             </div>
 
             <!-- Action Buttons -->
