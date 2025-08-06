@@ -86,8 +86,9 @@
 
 **Voltage Calculation:**
 - Vout = Vin × (R2 ÷ (R1 + R2))
-- Vout = 12V × (10kΩ ÷ 32kΩ) = 3.75V
-- **Note**: For safer operation, use 33kΩ + 10kΩ for 2.8V output
+- Vout = 12V × (10kΩ ÷ 32kΩ) = 3.75V ⚠️ **EXCEEDS ESP32 3.3V LIMIT!**
+- **ISSUE**: This divider saturates the ADC (always reads 4095)
+- **RECOMMENDED**: Use 33kΩ + 10kΩ for 2.8V output or 47kΩ + 12kΩ for 2.4V output
 
 ---
 

@@ -93,7 +93,9 @@ Input Range: 9-15V → Output Range: 0.9-1.5V
 
 **Voltage Divider Calculation:**
 - Vout = Vin × (10kΩ ÷ (22kΩ + 10kΩ)) = Vin × 0.3125
-- 12V input → 3.75V output (slight overvoltage - use 33kΩ + 10kΩ for safer 2.8V)
+- 12V input → 3.75V output ⚠️ **EXCEEDS ESP32 3.3V LIMIT!**
+- **ISSUE**: Current 22kΩ+10kΩ divider saturates ADC (reads 4095 constantly)
+- **RECOMMENDED**: Use 33kΩ + 10kΩ for 2.8V output or 47kΩ + 12kΩ for 2.4V output
 
 ### 4. Fuel Level Sensor (GPIO39)
 **Sensor Type**: Variable resistance fuel sender (10-180Ω typical)

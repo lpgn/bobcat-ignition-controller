@@ -51,10 +51,10 @@ const float OIL_PRESSURE_OFFSET = 0.0;       // Pressure sensor offset
 const float OIL_PRESSURE_SCALE = 0.1682;     // 689 kPa / 4095 ADC = 0.1682 kPa/unit
 
 // Battery Voltage Divider (for 12V/24V systems)
-// Based on real measurements: 13.13V battery → 3.66V divider output
-// Actual ratio: 3.66/13.13 = 0.2787
-// Scaling: (3.3V/4095) / 0.2787 = 0.002892
-const float BATTERY_VOLTAGE_DIVIDER = 0.002892; // Calibrated for actual divider ratio
+// TODO: Recalculate after physical voltage divider is corrected
+// Current 22kΩ/10kΩ divider outputs 3.75V for 12V input (exceeds ESP32 3.3V limit)
+// Recommended: 33kΩ/10kΩ for 2.8V output or 47kΩ/12kΩ for 2.4V output
+const float BATTERY_VOLTAGE_DIVIDER = 1.0; // Placeholder - will be calibrated after hardware fix
 
 // Fuel Level Sensor Calibration
 const float FUEL_LEVEL_EMPTY = 200.0;        // ADC reading for empty tank
