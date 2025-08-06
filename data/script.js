@@ -62,6 +62,8 @@ class IgnitionController {
         this.updateKeyPosition();
         // Initialize the lighting effect (default to dark/off state)
         this.updateCenterLighting();
+        // Initialize gauges to proper starting position
+        this.initializeGauges();
     }
     
     setupEventListeners() {
@@ -400,6 +402,28 @@ class IgnitionController {
         this.updateGauges(status);
     }
     
+    initializeGauges() {
+        // Set all needles to proper starting position (-90 degrees = leftmost)
+        const startAngle = -90;
+        if (this.pressureNeedle) this.pressureNeedle.style.transform = `translateX(-50%) rotate(${startAngle}deg)`;
+        if (this.tempNeedle) this.tempNeedle.style.transform = `translateX(-50%) rotate(${startAngle}deg)`;
+        if (this.voltageNeedle) this.voltageNeedle.style.transform = `translateX(-50%) rotate(${startAngle}deg)`;
+        if (this.fuelNeedle) this.fuelNeedle.style.transform = `translateX(-50%) rotate(${startAngle}deg)`;
+        
+        // Set initial value displays
+        if (this.pressureValue) this.pressureValue.textContent = '0.0 BAR';
+        if (this.tempValue) this.tempValue.textContent = '20°C';
+        if (this.voltageValue) this.voltageValue.textContent = '0.0V';
+        if (this.fuelValue) this.fuelValue.textContent = '0%';
+        
+        // Set gauges as inactive initially
+        [this.pressureGauge, this.tempGauge, this.voltageGauge, this.fuelGauge].forEach(gauge => {
+            if (gauge) {
+                gauge.classList.remove('active');
+            }
+        });
+    }
+
     updateGauges(status) {
         // Use backend sensor data or simulate based on state
         let pressure, temperature, voltage, fuel;
@@ -459,10 +483,10 @@ class IgnitionController {
         const voltageAngle = Math.min(Math.max(((voltage - 8) / 8) * 180 - 90, -90), 90);
         const fuelAngle = Math.min(Math.max((fuel / 100) * 180 - 90, -90), 90);
         
-        if (this.pressureNeedle) this.pressureNeedle.style.transform = `translate(-50%, -50%) rotate(${pressureAngle}deg)`;
-        if (this.tempNeedle) this.tempNeedle.style.transform = `translate(-50%, -50%) rotate(${tempAngle}deg)`;
-        if (this.voltageNeedle) this.voltageNeedle.style.transform = `translate(-50%, -50%) rotate(${voltageAngle}deg)`;
-        if (this.fuelNeedle) this.fuelNeedle.style.transform = `translate(-50%, -50%) rotate(${fuelAngle}deg)`;
+        if (this.pressureNeedle) this.pressureNeedle.style.transform = `translateX(-50%) rotate(${pressureAngle}deg)`;
+        if (this.tempNeedle) this.tempNeedle.style.transform = `translateX(-50%) rotate(${tempAngle}deg)`;
+        if (this.voltageNeedle) this.voltageNeedle.style.transform = `translateX(-50%) rotate(${voltageAngle}deg)`;
+        if (this.fuelNeedle) this.fuelNeedle.style.transform = `translateX(-50%) rotate(${fuelAngle}deg)`;
         
         // Update value displays
         if (this.pressureValue) this.pressureValue.textContent = `${pressure.toFixed(1)} BAR`;

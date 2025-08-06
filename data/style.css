@@ -354,8 +354,8 @@ body {
 
 .gauge {
     position: relative;
-    width: 60px;
-    height: 40px;
+    width: 70px;
+    height: 50px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -388,11 +388,11 @@ body {
 
 .gauge-arc {
     position: relative;
-    width: 50px;
-    height: 25px;
+    width: 60px;
+    height: 35px;
     border: 3px solid #555;
     border-bottom: none;
-    border-radius: 50px 50px 0 0;
+    border-radius: 60px 60px 0 0;
     background: linear-gradient(90deg, #1a1a1a, #2a2a2a);
     overflow: visible;
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
@@ -400,10 +400,10 @@ body {
 
 .gauge-needle {
     position: absolute;
-    bottom: 0;
+    bottom: -2px;
     left: 50%;
-    width: 3px;
-    height: 20px;
+    width: 2px;
+    height: 28px;
     background: var(--key-color);
     transform-origin: bottom center;
     transform: translateX(-50%) rotate(-90deg);
@@ -432,7 +432,7 @@ body {
 .pressure-gauge .gauge-needle {
     background: #4caf50;
     box-shadow: 0 0 6px rgba(76, 175, 80, 0.8);
-    width: 3px;
+    width: 2px;
 }
 
 .pressure-gauge .gauge-value {
@@ -443,7 +443,7 @@ body {
 .temp-gauge .gauge-needle {
     background: #ff9800;
     box-shadow: 0 0 6px rgba(255, 152, 0, 0.8);
-    width: 3px;
+    width: 2px;
 }
 
 .temp-gauge .gauge-value {
@@ -454,7 +454,7 @@ body {
 .voltage-gauge .gauge-needle {
     background: #2196f3;
     box-shadow: 0 0 6px rgba(33, 150, 243, 0.8);
-    width: 3px;
+    width: 2px;
 }
 
 .voltage-gauge .gauge-value {
@@ -465,7 +465,7 @@ body {
 .fuel-gauge .gauge-needle {
     background: #9c27b0;
     box-shadow: 0 0 6px rgba(156, 39, 176, 0.8);
-    width: 3px;
+    width: 2px;
 }
 
 .fuel-gauge .gauge-value {
@@ -754,8 +754,8 @@ body {
     }
     
     .gauge {
-        width: 45px;
-        height: 35px;
+        width: 55px;
+        height: 45px;
     }
     
     .gauge-container {
@@ -764,13 +764,13 @@ body {
     }
     
     .gauge-arc {
-        width: 40px;
-        height: 20px;
+        width: 50px;
+        height: 30px;
         border-width: 2px;
     }
     
     .gauge-needle {
-        height: 16px;
+        height: 22px;
         width: 2px;
     }
     
