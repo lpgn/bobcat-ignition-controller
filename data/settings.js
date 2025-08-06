@@ -427,8 +427,8 @@ function autoCalibrate() {
         
         // Battery voltage calibration
         if (actualVoltage && data.battery_raw) {
-            // New divider = (ADC / 4095 * 3.3) / actual_voltage
-            const newDivider = (data.battery_raw / 4095.0 * 3.3) / actualVoltage;
+            // New divider = actual_voltage / raw_adc_reading
+            const newDivider = actualVoltage / data.battery_raw;
             calibrationData.append('battery_divider', newDivider.toFixed(6));
             calibrationsApplied.push(`Battery: ${newDivider.toFixed(6)} (${actualVoltage}V)`);
         }

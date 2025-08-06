@@ -444,8 +444,10 @@ void setupWebServer() {
         }
         
         if (updated) {
+            // Reload calibration constants immediately to apply changes
+            loadCalibrationConstants();
             responseDoc["status"] = "success";
-            responseDoc["message"] = "Calibration updated: " + updatedConstants + "Restart required to apply.";
+            responseDoc["message"] = "Calibration updated: " + updatedConstants + "Applied immediately.";
         } else {
             responseDoc["status"] = "error";
             responseDoc["message"] = "No valid calibration parameters provided or values out of range";
