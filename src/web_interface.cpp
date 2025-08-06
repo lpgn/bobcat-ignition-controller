@@ -368,13 +368,33 @@ void setupWebServer() {
 
     // Raw sensor data endpoint for calibration
     server.on("/api/raw-sensors", HTTP_GET, [](AsyncWebServerRequest *request){
-        StaticJsonDocument<512> doc;
+        StaticJsonDocument<768> doc;
         
         // Read raw ADC values (0-4095)
-        doc["battery_raw"] = analogRead(BATTERY_VOLTAGE_PIN);
-        doc["temperature_raw"] = analogRead(ENGINE_TEMP_PIN);
-        doc["pressure_raw"] = analogRead(OIL_PRESSURE_PIN);
-        doc["fuel_raw"] = analogRead(FUEL_LEVEL_PIN);
+        int batteryRaw = analogRead(BATTERY_VOLTAGE_PIN);
+        int temperatureRaw = analogRead(ENGINE_TEMP_PIN);
+        int pressureRaw = analogRead(OIL_PRESSURE_PIN);
+        int fuelRaw = analogRead(FUEL_LEVEL_PIN);
+        
+        doc["battery_raw"] = batteryRaw;
+        doc["temperature_raw"] = temperatureRaw;
+        doc["pressure_raw"] = pressureRaw;
+        doc["fuel_raw"] = fuelRaw;
+        
+        // Sensor diagnostics
+        doc["battery_status"] = (batteryRaw > 100 && batteryRaw < 4000) ? "OK" : "CHECK";
+        doc["temperature_status"] = (temperatureRaw > 10 && temperatureRaw < 4000) ? "OK" : "CHECK";
+        doc["pressure_status"] = (pressureRaw < 4000) ? "OK" : "BROKEN";
+        doc["fuel_status"] = (fuelRaw > 10 && fuelRaw < 4090) ? "OK" : "CHECK";
+        
+        // Detailed diagnostics for pressure sensor
+        if (pressureRaw > 4000) {
+            doc["pressure_diagnostic"] = "SENSOR DISCONNECTED/BROKEN - Reading mega ohms";
+        } else if (pressureRaw < 10) {
+            doc["pressure_diagnostic"] = "SENSOR SHORT CIRCUIT - Very low resistance";
+        } else {
+            doc["pressure_diagnostic"] = "Normal operation";
+        }
         
         // Include current calibration constants
         doc["battery_divider"] = BATTERY_VOLTAGE_DIVIDER;

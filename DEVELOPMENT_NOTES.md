@@ -59,6 +59,42 @@ C:\.platformio\penv\Scripts\platformio.exe run --target clean
 - Test sleep/wake cycle with real hardware
 - Validate all safety systems with connected sensors
 
+## Automated OTA Update Scripts
+
+**Status**: ✅ Available and Ready to Use
+
+Multiple automated scripts are now available to streamline the OTA update process:
+
+### Quick Start Options
+
+**Option 1: Fully Automated (Node.js/Playwright)**
+```powershell
+npm install
+npm run ota-update
+```
+
+**Option 2: Semi-Automated (PowerShell)**
+```powershell
+.\ota_update.ps1
+# or double-click: ota_update.bat
+```
+
+### Available Scripts
+- `ota_update_script.js` - Fully automated browser-driven updates
+- `ota_update.ps1` - PowerShell script with guided manual steps
+- `ota_update.bat` - Simple Windows batch wrapper
+- `package.json` - npm scripts and dependencies
+- `OTA_README.md` - Comprehensive documentation
+
+### What the Scripts Do
+1. Compile firmware using correct PlatformIO path
+2. Upload firmware via ElegantOTA web interface
+3. Compile filesystem (web interface files)
+4. Upload filesystem via ElegantOTA web interface
+5. Verify device restart and functionality
+
+See `OTA_README.md` for detailed usage instructions and troubleshooting.
+
 ## OTA Update Workflow
 
 **Status**: ✅ Tested and Verified Working

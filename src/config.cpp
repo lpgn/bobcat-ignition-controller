@@ -43,8 +43,8 @@ const unsigned long ACTIVITY_TIMEOUT = 300000;    // 5 minutes of inactivity bef
 
 // ============================================================================
 // Coolant Temperature Sensor (typical NTC thermistor)
-const float TEMP_SENSOR_OFFSET = -40.0;      // Offset for temperature calculation
-const float TEMP_SENSOR_SCALE = 0.1953;      // Scale factor (°C per ADC unit)
+const float TEMP_SENSOR_OFFSET = -40.0;      // Offset for temperature calculation (legacy, not used in new formula)
+const float TEMP_SENSOR_SCALE = 0.040;       // Scale factor for inverted NTC formula (°C per ADC unit)
 
 // Oil Pressure Sensor (0-5V = 0-689 kPa typical, ~0-6.9 bar)
 const float OIL_PRESSURE_OFFSET = 0.0;       // Pressure sensor offset

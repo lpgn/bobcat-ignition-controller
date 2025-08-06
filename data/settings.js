@@ -357,17 +357,56 @@ function toggleAutoRefresh() {
     }
 }
 
+function updateSensorStatus(elementId, rawValue, status) {
+    const element = document.getElementById(elementId);
+    
+    // Reset styles
+    element.style.color = '';
+    element.style.fontWeight = '';
+    
+    // Apply status-based styling
+    if (status === 'BROKEN') {
+        element.style.color = '#ff6b6b';
+        element.style.fontWeight = 'bold';
+        element.parentElement.title = 'Sensor appears to be disconnected or broken';
+    } else if (status === 'CHECK') {
+        element.style.color = '#ffa500';
+        element.parentElement.title = 'Sensor reading may be incorrect - check connections';
+    } else {
+        element.style.color = '#2ecc71';
+        element.parentElement.title = 'Sensor operating normally';
+    }
+}
+
 function refreshSensorData() {
     if (!autoRefreshEnabled) return;
     
     fetch('/api/raw-sensors')
     .then(response => response.json())
     .then(data => {
-        // Update raw ADC readings
+        // Update raw ADC readings with status indicators
         document.getElementById('batteryRaw').textContent = data.battery_raw || '--';
         document.getElementById('tempRaw').textContent = data.temperature_raw || '--';
         document.getElementById('pressureRaw').textContent = data.pressure_raw || '--';
         document.getElementById('fuelRaw').textContent = data.fuel_raw || '--';
+        
+        // Add status indicators for broken sensors
+        updateSensorStatus('batteryRaw', data.battery_raw, data.battery_status);
+        updateSensorStatus('tempRaw', data.temperature_raw, data.temperature_status);
+        updateSensorStatus('pressureRaw', data.pressure_raw, data.pressure_status);
+        updateSensorStatus('fuelRaw', data.fuel_raw, data.fuel_status);
+        
+        // Show pressure sensor diagnostic if available
+        if (data.pressure_diagnostic) {
+            const pressureCell = document.getElementById('pressureRaw').parentElement;
+            pressureCell.title = data.pressure_diagnostic;
+            
+            // Add warning icon for broken pressure sensor
+            if (data.pressure_status === 'BROKEN') {
+                document.getElementById('pressureRaw').textContent += ' ⚠️';
+                document.getElementById('pressureRaw').style.color = '#ff6b6b';
+            }
+        }
         
         // Update calculated values
         document.getElementById('batteryCalc').textContent = (data.battery_calculated || 0).toFixed(2) + ' V';
@@ -436,11 +475,11 @@ function autoCalibrate() {
         
         // Temperature calibration
         if (actualTemp && data.temperature_raw) {
-            // For pull-up configuration: V = 3.3V × (R_sensor ÷ (10kΩ + R_sensor))
-            // We need to calculate new scale factor based on actual temperature
-            // Assuming NTC with known behavior, calculate new scale
-            const tempOffset = data.temp_offset || -40.0; // Use current offset
-            const newScale = (actualTemp - tempOffset) / data.temperature_raw;
+            // For pull-up configuration with NTC: Lower ADC = Higher Temperature
+            // Formula: Temp = Base_temp - (ADC * scale)
+            // Rearrange: scale = (Base_temp - actual_temp) / ADC
+            const baseTemp = 150.0; // Maximum temperature reference point
+            const newScale = (baseTemp - actualTemp) / data.temperature_raw;
             calibrationData.append('temp_scale', newScale.toFixed(6));
             calibrationsApplied.push(`Temperature: ${newScale.toFixed(6)} (${actualTemp}°C)`);
         }

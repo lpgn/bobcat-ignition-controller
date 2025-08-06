@@ -13,6 +13,12 @@ float runtime_battery_divider = BATTERY_VOLTAGE_DIVIDER;
 float runtime_temp_scale = TEMP_SENSOR_SCALE;
 float runtime_pressure_scale = OIL_PRESSURE_SCALE;
 
+// Temperature sensor moving average filter
+#define TEMP_FILTER_SIZE 10
+float tempReadings[TEMP_FILTER_SIZE];
+int tempIndex = 0;
+bool tempFilterInitialized = false;
+
 void initializePins() {
   Serial.println("Initializing GPIO pins...");
   
@@ -128,11 +134,54 @@ void virtualLightsButton() {
 // Sensor reading functions with proper calibration
 float readEngineTemp() {
   int rawValue = analogRead(ENGINE_TEMP_PIN);
-  return (rawValue * runtime_temp_scale) + TEMP_SENSOR_OFFSET;
+  // For pull-up configuration with NTC thermistor:
+  // Lower ADC = Higher Temperature (sensor gets lower resistance when hot)
+  // Formula: Temp = Base_temp - (ADC * scale_factor)
+  // This makes lower ADC values produce higher temperatures
+  float instantTemp = 150.0 - (rawValue * runtime_temp_scale);
+  
+  // Initialize the filter array if not already done
+  if (!tempFilterInitialized) {
+    for (int i = 0; i < TEMP_FILTER_SIZE; i++) {
+      tempReadings[i] = instantTemp;
+    }
+    tempFilterInitialized = true;
+  }
+  
+  // Add the new reading to the circular buffer
+  tempReadings[tempIndex] = instantTemp;
+  tempIndex = (tempIndex + 1) % TEMP_FILTER_SIZE;
+  
+  // Calculate the moving average
+  float sum = 0;
+  for (int i = 0; i < TEMP_FILTER_SIZE; i++) {
+    sum += tempReadings[i];
+  }
+  
+  return sum / TEMP_FILTER_SIZE;
 }
 
 float readOilPressure() {
   int rawValue = analogRead(OIL_PRESSURE_PIN);
+  
+  // Check for broken/disconnected sensor
+  // If ADC reads very high (near 4095), sensor is likely broken/disconnected
+  if (rawValue > 4000) {
+    // Sensor appears to be broken - return a safe default value
+    // Log this condition for diagnostics
+    static unsigned long lastWarning = 0;
+    if (millis() - lastWarning > 10000) { // Warn every 10 seconds
+      Serial.println("WARNING: Oil pressure sensor appears disconnected/broken (ADC > 4000)");
+      Serial.print("Raw ADC reading: "); Serial.println(rawValue);
+      lastWarning = millis();
+    }
+    
+    // Return a neutral pressure value to avoid false alarms
+    // This prevents the system from triggering low oil pressure warnings
+    // when the sensor is simply broken
+    return 100.0; // kPa - safe middle value
+  }
+  
   return (rawValue * runtime_pressure_scale) + OIL_PRESSURE_OFFSET;
 }
 

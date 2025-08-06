@@ -50,22 +50,22 @@ body {
     text-align: center;
 }
 
-.logo-section {
+.logo-title-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
     margin-bottom: 15px;
 }
 
 .bobcat-logo {
-    height: 150px;
+    height: 80px;
     width: auto;
     max-width: 100%;
     object-fit: contain;
 }
 
-.title-section {
-    margin-bottom: 15px;
-}
-
-.header h1 {
+.logo-title-section h1 {
     font-size: 3rem;
     margin: 0;
     color: var(--bobcat-orange);
@@ -340,16 +340,14 @@ body {
 }
 
 /* Center dot */
-/* Modern Gauge Container */
+/* Modern Gauge Container - positioned below the key */
 .gauge-container {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
     display: flex;
-    gap: 20px;
-    align-items: flex-end;
-    z-index: 5;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+    padding: 0 20px;
+    flex-wrap: wrap;
 }
 
 .gauge {
@@ -368,22 +366,12 @@ body {
     opacity: 1;
 }
 
-/* Pressure gauge positioned higher and to the right (outside circle border) */
-.pressure-gauge {
-    margin-bottom: 40px;
-    margin-left: 2px;
-}
-
-/* Temperature and voltage gauges slightly higher (inside circle) */
+/* Remove individual gauge positioning since they're now in a flex container */
+.pressure-gauge,
 .temp-gauge,
-.voltage-gauge {
-    margin-bottom: 3px;
-}
-
-/* Fuel gauge positioned higher and to the left (outside circle border) */
+.voltage-gauge,
 .fuel-gauge {
-    margin-bottom: 40px;
-    margin-right: 2px;
+    margin: 0;
 }
 
 .gauge-arc {
@@ -716,11 +704,15 @@ body {
         padding: 15px;
     }
     
-    .bobcat-logo {
-        height: 120px;
+    .logo-title-section {
+        gap: 15px;
     }
     
-    .header h1 {
+    .bobcat-logo {
+        height: 60px;
+    }
+    
+    .logo-title-section h1 {
         font-size: 2.5rem;
     }
     
@@ -729,28 +721,36 @@ body {
         padding: 4px 12px;
     }
     
+    /* Make the key assembly much larger on mobile - almost full width */
     .bezel {
-        width: 250px;
-        height: 250px;
+        width: 90vw;
+        max-width: 350px;
+        height: 90vw;
+        max-height: 350px;
     }
     
     .face {
-        width: 200px;
-        height: 200px;
+        width: calc(90vw - 50px);
+        max-width: 300px;
+        height: calc(90vw - 50px);
+        max-height: 300px;
     }
     
     .key-container {
-        width: 160px;
-        height: 160px;
+        width: calc(90vw - 100px);
+        max-width: 250px;
+        height: calc(90vw - 100px);
+        max-height: 250px;
     }
     
     .key-shaft {
-        width: 6px;
-        height: 90px;
+        width: 8px;
+        height: calc(90vw - 150px);
+        max-height: 120px;
     }
     
     .position-label {
-        font-size: 12px;
+        font-size: 14px;
     }
     
     .gauge {
@@ -760,7 +760,7 @@ body {
     
     .gauge-container {
         gap: 15px;
-        bottom: 5px;
+        margin-top: 20px;
     }
     
     .gauge-arc {
@@ -788,13 +788,20 @@ body {
 }
 
 @media (max-width: 480px) {
-    .bobcat-logo {
-        height: 100px;
+    .container {
+        padding: 10px;
     }
     
-    .header h1 {
+    .logo-title-section {
+        gap: 10px;
+    }
+    
+    .bobcat-logo {
+        height: 50px;
+    }
+    
+    .logo-title-section h1 {
         font-size: 2rem;
-        text-align: center;
     }
     
     .master-status {
@@ -802,28 +809,65 @@ body {
         padding: 3px 10px;
     }
     
+    /* Even larger on very small screens */
     .bezel {
-        width: 200px;
-        height: 200px;
+        width: 95vw;
+        max-width: 320px;
+        height: 95vw;
+        max-height: 320px;
     }
     
     .face {
-        width: 160px;
-        height: 160px;
+        width: calc(95vw - 50px);
+        max-width: 270px;
+        height: calc(95vw - 50px);
+        max-height: 270px;
     }
     
     .key-container {
-        width: 120px;
-        height: 120px;
+        width: calc(95vw - 100px);
+        max-width: 220px;
+        height: calc(95vw - 100px);
+        max-height: 220px;
+    }
+    
+    .key-shaft {
+        width: 8px;
+        height: calc(95vw - 150px);
+        max-height: 110px;
     }
     
     .position-label {
         font-size: 12px;
     }
     
-    .key-shaft {
-        width: 5px;
-        height: 70px;
+    .gauge {
+        width: 50px;
+        height: 40px;
+    }
+    
+    .gauge-container {
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .gauge-arc {
+        width: 45px;
+        height: 25px;
+        border-width: 2px;
+    }
+    
+    .gauge-needle {
+        height: 18px;
+        width: 2px;
+    }
+    
+    .gauge-label {
+        font-size: 5px;
+    }
+    
+    .gauge-value {
+        font-size: 6px;
     }
 }
 
