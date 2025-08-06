@@ -79,23 +79,23 @@ Input Range: 0-5V → Output Range: 0-3.0V (safe for ESP32)
 
 ```
 Wiring:
-12V Battery+ ─┬─ 22kΩ Resistor ──── GPIO36 (ESP32)
+12V Battery+ ─┬─ 56kΩ Resistor ──── GPIO36 (ESP32)  ← USING AVAILABLE
               └─ 10kΩ Resistor ──── GND
 
 Circuit Type: Voltage divider (12V to 3.3V conversion)
-Input Range: 9-15V → Output Range: 0.9-1.5V
+Input Range: 9-15V → Output Range: 1.4-2.3V
 ```
 
 **Required Components:**
-- 22kΩ resistor (series, high voltage side)
+- 56kΩ resistor (series, high voltage side) ← **USING AVAILABLE RESISTOR**
 - 10kΩ resistor (pull-down, low voltage side)
 - Optional: 0.1µF capacitor for filtering
 
 **Voltage Divider Calculation:**
-- Vout = Vin × (10kΩ ÷ (22kΩ + 10kΩ)) = Vin × 0.3125
-- 12V input → 3.75V output ⚠️ **EXCEEDS ESP32 3.3V LIMIT!**
-- **ISSUE**: Current 22kΩ+10kΩ divider saturates ADC (reads 4095 constantly)
-- **RECOMMENDED**: Use 33kΩ + 10kΩ for 2.8V output or 47kΩ + 12kΩ for 2.4V output
+- Vout = Vin × (10kΩ ÷ (56kΩ + 10kΩ)) = Vin × 0.1515
+- 12V input → 1.82V output ✅ **PERFECT FOR ESP32**
+- 15V max → 2.27V (excellent safety margin)
+- **RESULT**: ADC readings will be ~2100-2800 range (optimal resolution and precision)
 
 ### 4. Fuel Level Sensor (GPIO39)
 **Sensor Type**: Variable resistance fuel sender (10-180Ω typical)

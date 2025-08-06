@@ -61,7 +61,7 @@
     └────┬────┘
          │
          │
-         │ 22kΩ
+         │ 56kΩ ← USING AVAILABLE RESISTOR
     ┌────[R1]────┬─────┐ GPIO36 (ESP32)
     │            │     │
     │            │     │
@@ -80,15 +80,15 @@
 ```
 
 **Component Values:**
-- R1: 22kΩ (High-side series resistor)
+- R1: 56kΩ (High-side series resistor) ← **USING AVAILABLE RESISTOR**
 - R2: 10kΩ (Pull-down resistor)
 - C1: 0.1µF ceramic capacitor (optional)
 
 **Voltage Calculation:**
 - Vout = Vin × (R2 ÷ (R1 + R2))
-- Vout = 12V × (10kΩ ÷ 32kΩ) = 3.75V ⚠️ **EXCEEDS ESP32 3.3V LIMIT!**
-- **ISSUE**: This divider saturates the ADC (always reads 4095)
-- **RECOMMENDED**: Use 33kΩ + 10kΩ for 2.8V output or 47kΩ + 12kΩ for 2.4V output
+- Vout = 12V × (10kΩ ÷ 66kΩ) = **1.82V** ✅ **PERFECT FOR ESP32**
+- 15V max → 2.27V (excellent safety margin)
+- **RESULT**: ADC readings will be ~2100-2800 range (optimal resolution)
 
 ---
 

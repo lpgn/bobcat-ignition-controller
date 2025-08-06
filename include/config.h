@@ -55,7 +55,7 @@ extern const float TEMP_SENSOR_SCALE;        // Temperature sensor scale factor
 extern const float OIL_PRESSURE_OFFSET;      // Oil pressure sensor offset (kPa)
 extern const float OIL_PRESSURE_SCALE;       // Oil pressure sensor scale factor
 // Battery Voltage Divider (for 12V/24V systems)
-extern const float BATTERY_VOLTAGE_DIVIDER; // TODO: Recalibrate after voltage divider hardware fix
+extern const float BATTERY_VOLTAGE_DIVIDER; // Calibrated for 56kΩ/10kΩ divider
 extern const float FUEL_LEVEL_EMPTY;         // ADC value for empty tank
 extern const float FUEL_LEVEL_FULL;          // ADC value for full tank
 
