@@ -29,13 +29,27 @@ This is an **ESP32-based ignition controller** for old Bobcat equipment (specifi
 cd /path/to/bobcat-ignition-controller
 
 # 2. Build firmware (requires internet on first run)
-pio run
+C:\.platformio\penv\Scripts\platformio.exe run
 
-# 3. Optional: Upload to hardware (requires connected ESP32)
-pio run --target upload
+# 3. Upload firmware via serial (development)
+C:\.platformio\penv\Scripts\platformio.exe run --target upload --upload-port COM8
 
-# 4. Optional: Monitor serial output
-pio device monitor --baud 115200
+# 4. Build filesystem 
+C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
+
+# 5. Upload filesystem via serial (development)
+C:\.platformio\penv\Scripts\platformio.exe run --target uploadfs --upload-port COM8
+
+# 6. Clean build (required when adding new files to data/)
+C:\.platformio\penv\Scripts\platformio.exe run --target clean
+
+# 7. Monitor serial output
+C:\.platformio\penv\Scripts\platformio.exe device monitor --port COM8
+
+# 8. Other useful targets
+C:\.platformio\penv\Scripts\platformio.exe run --target erase      # Erase flash
+C:\.platformio\penv\Scripts\platformio.exe run --target size       # Program size analysis
+C:\.platformio\penv\Scripts\platformio.exe run --target uploadfsota # Upload filesystem OTA
 ```
 
 ### Build Process Details
@@ -71,6 +85,69 @@ pio device monitor --baud 115200
 2. **Serial monitor**: Check for startup messages if hardware available
 3. **Web interface**: Verify web files in `/data/` are valid HTML/CSS/JS
 4. **Code review**: Manual review for GPIO pin conflicts and timing issues
+
+### OTA Deployment Workflow - Use Playwright MCP
+**CRITICAL**: Always use Playwright MCP for OTA deployments instead of manual browser interaction.
+
+### Development Workflow Options
+
+**Option 1: Serial Upload (Faster Development)**
+```bash
+# Firmware changes
+C:\.platformio\penv\Scripts\platformio.exe run
+C:\.platformio\penv\Scripts\platformio.exe run --target upload --upload-port COM8
+
+# Filesystem changes  
+C:\.platformio\penv\Scripts\platformio.exe run --target clean   # if adding new files
+C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
+C:\.platformio\penv\Scripts\platformio.exe run --target uploadfs --upload-port COM8
+```
+
+**Option 2: OTA Upload (Production/Field Updates)**
+
+**Firmware Update Process:**
+```bash
+# 1. Build firmware
+C:\.platformio\penv\Scripts\platformio.exe run
+
+# 2. Use Playwright MCP to navigate to OTA page
+mcp_playwright_browser_navigate: http://192.168.1.128/update
+
+# 3. Select "Firmware" mode
+mcp_playwright_browser_select_option: OTA Mode -> "Firmware"
+
+# 4. Upload firmware
+mcp_playwright_browser_file_upload: .pio/build/esp32dev/firmware.bin
+
+# 5. Wait for completion
+mcp_playwright_browser_wait_for: "Update Successful"
+```
+
+**Filesystem Update Process:**
+```bash
+# 1. Clean and rebuild filesystem (required after adding new files)
+C:\.platformio\penv\Scripts\platformio.exe run --target clean
+C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
+
+# 2. Use Playwright MCP to navigate to OTA page
+mcp_playwright_browser_navigate: http://192.168.1.128/update
+
+# 3. Select "LittleFS / SPIFFS" mode
+mcp_playwright_browser_select_option: OTA Mode -> "LittleFS / SPIFFS"
+
+# 4. Upload filesystem
+mcp_playwright_browser_file_upload: .pio/build/esp32dev/littlefs.bin
+
+# 5. Wait for completion
+mcp_playwright_browser_wait_for: "Update Successful"
+```
+
+**⚠️ IMPORTANT**: 
+- ESP32 takes 30-60 seconds to restart after filesystem updates
+- Always run `C:\.platformio\penv\Scripts\platformio.exe run --target clean && C:\.platformio\penv\Scripts\platformio.exe run --target buildfs` when adding new files to `/data/`
+- **Playwright Visibility**: Run Playwright in **NON-HEADLESS MODE** so user can see browser actions
+- **Never use headless mode** - user must see what Playwright is doing for debugging and verification
+- **Serial vs OTA**: Use serial upload for development (faster), OTA for field updates
 
 ## Project Architecture & Layout
 
@@ -197,6 +274,28 @@ The system operates as a real ignition key with these states:
 - **Power Consumption**: System must operate on 12V automotive power
 - **Temperature Range**: -40°C to +85°C automotive environment
 - **EMI Immunity**: Must work in high-EMI automotive environment
+
+## Common Development Issues & Solutions
+
+### Settings & Calibration Issues
+- **Settings not applied**: Check if `loadCalibrationConstants()` is called after settings changes
+- **Calibration sync**: Runtime calibration variables in `hardware.cpp` are loaded from SettingsManager
+- **Persistence**: All settings are stored in ESP32 NVS (non-volatile storage) and survive reboots
+- **Global access**: Use `g_settingsManager` (declared in `settings.cpp`, extern in `settings.h`)
+
+### Build & Upload Issues  
+- **Build failures**: Use full platformio.exe path, check platformio.ini for dependencies
+- **Web changes not visible**: Run `buildfs` + upload via ElegantOTA web interface
+- **Firmware upload**: NEVER use serial upload for production - always use ElegantOTA web interface at `/update`
+- **Serial connection failed**: Ignore serial upload errors for production - use OTA workflow instead
+
+### Development Preferences
+- **UI Style**: Mobile-first, professional, robust CSS with proper gauge layout
+- **Code Quality**: Clean, well-documented, proper error handling
+- **Deployment**: Always test builds and provide deployment commands
+- **Branding**: Include Fab Farm logo attribution - developed by Fab Farm team
+- **Architecture**: RESTful API endpoints in `web_interface.cpp` for all operations
+- **Safety System**: Multiple safety checks prevent unsafe engine operations
 
 ## Emergency Actions & Safety Notes
 
