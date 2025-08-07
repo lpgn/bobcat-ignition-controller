@@ -3,6 +3,17 @@
 .vscode/
 lib_deps_external/
 
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.npm
+.yarn-integrity
+.pnp
+.pnp.js
+
 # Compiled Object files
 *.o
 *.obj
@@ -49,6 +60,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+.copilot.json
 
 # Backup files
 *.bak
