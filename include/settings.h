@@ -27,10 +27,11 @@ struct BobcatSettings {
     char wifiPassword[65];          // WiFi password (max 64 chars + null)
     
     // Sensor Calibration
-    float tempSensorOffset;         // Temperature sensor offset °C (default: -40.0)
+    float tempSensorOffset;         // Temperature sensor offset °C (default: -40.0, UNUSED)
     float pressureScale;            // Oil pressure scale kPa/unit (default: 0.1682)
     uint16_t fuelLevelEmpty;        // Fuel empty ADC value (default: 200)
     uint16_t fuelLevelFull;         // Fuel full ADC value (default: 3800)
+    uint8_t fuelLevelLowThreshold;  // Low fuel warning threshold % (default: 15)
     
     // System metadata
     uint32_t settingsVersion;       // Settings format version for future upgrades
@@ -65,12 +66,13 @@ public:
     float getPressureScale() const { return currentSettings.pressureScale; }
     uint16_t getFuelLevelEmpty() const { return currentSettings.fuelLevelEmpty; }
     uint16_t getFuelLevelFull() const { return currentSettings.fuelLevelFull; }
+    uint8_t getFuelLevelLowThreshold() const { return currentSettings.fuelLevelLowThreshold; }
     
     // Setters for updating settings
     bool updateEngineSettings(uint32_t glowDuration, uint32_t crankTimeout, uint32_t cooldown);
     bool updateAlarmThresholds(int16_t maxTemp, int16_t minPressure, float minVolt, float maxVolt);
     bool updateWifiSettings(const char* ssid, const char* password);
-    bool updateSensorCalibration(float tempOffset, float pressScale, uint16_t fuelEmpty, uint16_t fuelFull);
+    bool updateSensorCalibration(float tempOffset, float pressScale, uint16_t fuelEmpty, uint16_t fuelFull, uint8_t fuelLowThreshold);
     
     // Validation functions
     bool validateSettings(const BobcatSettings& settings);

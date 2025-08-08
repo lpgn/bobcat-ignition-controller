@@ -10,17 +10,19 @@ This is an **ESP32-based ignition controller** for old Bobcat equipment (specifi
 - **Project Type**: Embedded firmware for ESP32 microcontroller
 - **Hardware**: LILYGO T-Relay ESP32 board with 4-channel relay control
 - **Target**: Bobcat 743 with Kubota V1702-BA diesel engine (naturally aspirated, mechanical injection)
-- **Codebase Size**: ~1,840 lines across 13 C++ files (7 .cpp + 6 .h)
-- **Documentation**: 13 markdown files with extensive hardware and wiring details
 - **Framework**: Arduino Framework with PlatformIO build system
 - **Languages**: C++ (Arduino), HTML/CSS/JavaScript (web interface)
 
 ## Build Instructions & Environment Setup
 
 ### Prerequisites - ALWAYS Required
-1. **PlatformIO CLI** - Install via `pip install platformio`
-2. **Internet connection** - Required for first build to download ESP32 platform and libraries
-3. **USB cable** - For programming ESP32 (if doing actual hardware testing)
+1. **PlatformIO CLI** - Installed and configured on your system
+   - Use `C:\.platformio\penv\Scripts\platformio.exe` for Windows
+   - Ensure `platformio` command is available in your PATH
+   - Use `pio` for Linux
+   - Ensure `pio` command is available in your PATH
+
+2. **USB cable** - For programming ESP32 (if doing actual hardware testing)
 
 ### Build Commands - Essential Only
 
@@ -28,75 +30,29 @@ This is an **ESP32-based ignition controller** for old Bobcat equipment (specifi
 # 1. Build firmware
 C:\.platformio\penv\Scripts\platformio.exe run
 
-# 2. Build filesystem (clean first if adding new files)
-C:\.platformio\penv\Scripts\platformio.exe run --target clean
+# 2. Build filesystem
 C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
 ```
+### Upload Commands - Use Playwright MCP + ElegantOTA
 
-### ESP32 Deployment - Use Playwright MCP + ElegantOTA
-
-**Firmware Update:**
-```bash
-# 1. Build firmware
-C:\.platformio\penv\Scripts\platformio.exe run
-
-# 2. Use Playwright MCP to upload via ElegantOTA
+# 1. Use Playwright MCP to upload via ElegantOTA
 mcp_playwright_browser_navigate: http://192.168.1.128/update
 mcp_playwright_browser_select_option: "Firmware"
 mcp_playwright_browser_file_upload: .pio/build/esp32dev/firmware.bin
 mcp_playwright_browser_wait_for: "Update Successful"
-```
 
-**Filesystem Update:**
-```bash
-# 1. Build filesystem
-C:\.platformio\penv\Scripts\platformio.exe run --target clean
-C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
-
-# 2. Use Playwright MCP to upload via ElegantOTA
-mcp_playwright_browser_navigate: http://192.168.1.128/update
+# 2. Filesystem Update:
 mcp_playwright_browser_select_option: "LittleFS / SPIFFS"
 mcp_playwright_browser_file_upload: .pio/build/esp32dev/littlefs.bin
 mcp_playwright_browser_wait_for: "Update Successful"
-```
-
-### Build Process Details
-- **Platform**: espressif32 (downloads ~300MB on first build)
-- **Board**: esp32dev (ESP32-WROOM-32 compatible)
-- **Framework**: Arduino with LittleFS filesystem
-- **Libraries**: ArduinoJson, ESPAsyncWebServer, AsyncTCP, ElegantOTA (auto-downloaded)
-- **Build time**: 2-5 minutes first time, 30-60 seconds subsequent builds
-
-### Common Build Issues & Solutions
-
-1. **HTTPClientError during build**
-   - **Cause**: No internet connection for platform/library downloads
-   - **Solution**: Ensure internet connectivity and retry `pio run`
-
-2. **Platform installation fails**
-   - **Cause**: PlatformIO cache corruption
-   - **Solution**: `pio platform uninstall espressif32 && pio run`
-
-3. **Library dependency errors**
-   - **Cause**: Version conflicts or incomplete downloads
-   - **Solution**: `pio lib uninstall --all && pio run`
-
-4. **Upload fails**
-   - **Cause**: ESP32 not connected or wrong port
-   - **Solution**: Check hardware connection, try `pio device list`
 
 ### Validation Steps - No Automated Testing Available
-⚠️ **This project has NO unit tests, integration tests, or CI/CD pipeline.**
 
 **Manual validation only:**
 1. **Compile check**: `pio run` must complete without errors
-2. **Serial monitor**: Check for startup messages if hardware available
+2. **Upload check**: Verify firmware and filesystem uploads via Playwright logs
 3. **Web interface**: Verify web files in `/data/` are valid HTML/CSS/JS
-4. **Code review**: Manual review for GPIO pin conflicts and timing issues
 
-**⚠️ IMPORTANT**: 
-- ESP32 takes 30-60 seconds to restart after filesystem updates
-- Always run `C:\.platformio\penv\Scripts\platformio.exe run --target clean && C:\.platformio\penv\Scripts\platformio.exe run --target buildfs` when adding new files to `/data/`
 - **Playwright Visibility**: Run Playwright in **NON-HEADLESS MODE** so user can see browser actions
 - **Never use headless mode** - user must see what Playwright is doing for debugging and verification
 
@@ -133,10 +89,12 @@ mcp_playwright_browser_wait_for: "Update Successful"
 ### Critical Files to Understand Before Making Changes
 
 1. **`include/config.h`** - GPIO pin assignments, timing constants, safety thresholds
-2. **`src/main.cpp`** - Main program flow and state machine
+2. **`src/main.cpp`** - Main program flow and state machine the file must be as clear and concise as possible as all the logic and functionality resides at the other files
 3. **`src/hardware.cpp`** - Direct GPIO control and relay operations
 4. **`src/safety.cpp`** - Safety monitoring and engine protection logic
 5. **`platformio.ini`** - Build configuration and library dependencies
+6.  do not use delay use millis instead as it causes blocking
+7. keep logic out of the web interface files keeping it c++ files as much as possible
 
 ### Hardware Pin Mapping (LILYGO T-Relay Board)
 ```cpp
@@ -191,41 +149,6 @@ The system operates as a real ignition key with these states:
 - Power-on initialization sequences
 - Interrupt handlers or timing-critical code
 
-### Dependencies & External Requirements
-- **Arduino Framework** - ESP32 Arduino Core ~2.0+
-- **AsyncWebServer** - Web interface requires exact version compatibility
-- **ArduinoJson** - Settings serialization/deserialization
-- **ElegantOTA** - Over-the-air firmware updates
-- **LittleFS** - File system for web interface storage
-
-### Hardware Dependencies
-- **ESP32-WROOM-32** - Specific GPIO capabilities required
-- **LILYGO T-Relay** - 4-channel relay board with exact pin mapping
-- **12V automotive power** - Voltage ranges and transient protection
-- **Specific sensors** - NTC thermistor, resistive senders with known curves
-- **Automotive relays** - 10A+ capacity for glow plugs and starter
-
-### Documentation Resources (Read Before Coding)
-- **`docs/hardware_overview.md`** - Complete hardware specifications
-- **`docs/wiring_guide.md`** - Installation and connection details
-- **`docs/gpio_connections.md`** - Pin assignments and interface specs
-- **`docs/system_control_diagram.md`** - State machine and control logic
-- **`docs/board_development.md`** - Detailed pin-by-pin analysis
-- **`README.md`** - Quick overview and basic pin mappings
-
-### Debugging & Troubleshooting
-- **Serial Monitor**: Connect at 115200 baud for detailed logs
-- **Hardware Required**: Real ESP32 board needed for meaningful testing
-- **No Simulation**: Cannot test relay operations without physical hardware
-- **Safety Testing**: All safety features require actual sensors and conditions
-
-### Performance Constraints
-- **Real-time Requirements**: 10ms main loop for responsive control
-- **Memory Limits**: ESP32 has limited RAM, avoid large buffers
-- **Power Consumption**: System must operate on 12V automotive power
-- **Temperature Range**: -40°C to +85°C automotive environment
-- **EMI Immunity**: Must work in high-EMI automotive environment
-
 ## Common Development Issues & Solutions
 
 ### Settings & Calibration Issues
@@ -247,21 +170,6 @@ The system operates as a real ignition key with these states:
 - **Branding**: Include Fab Farm logo attribution - developed by Fab Farm team
 - **Architecture**: RESTful API endpoints in `web_interface.cpp` for all operations
 - **Safety System**: Multiple safety checks prevent unsafe engine operations
-
-## Emergency Actions & Safety Notes
-
-### If Code Changes Cause Issues
-1. **Immediate**: Disconnect battery to ESP32 board
-2. **Hardware**: Manually check all relay positions (should be OFF)
-3. **Recovery**: Flash known-good firmware via `pio run --target upload`
-4. **Testing**: Always test changes on bench before installing in vehicle
-
-### Critical Safety Reminders
-- **High Current Relays**: 40-100A switching capacity - respect current limits
-- **Automotive Voltages**: 12V system with possible 40V transients
-- **Diesel Engine**: Glow plugs draw 60A+ total current during preheat
-- **No Auto-Shutdown**: Engine runs independently once started
-- **Manual Intervention**: All emergency stops require manual action
 
 ---
 

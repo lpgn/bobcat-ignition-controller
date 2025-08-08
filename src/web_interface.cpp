@@ -552,11 +552,8 @@ void setupWebServer() {
         // WiFi Configuration (don't send password for security)
         doc["wifiSSID"] = settings.wifiSSID;
         
-        // Sensor Calibration
-        doc["tempOffset"] = settings.tempSensorOffset;
-        doc["pressureScale"] = settings.pressureScale;
-        doc["fuelEmpty"] = settings.fuelLevelEmpty;
-        doc["fuelFull"] = settings.fuelLevelFull;
+        // Sensor Calibration (only threshold is user-configurable)
+        doc["fuelLevelLowThreshold"] = settings.fuelLevelLowThreshold;
         
         String jsonResponse;
         serializeJson(doc, jsonResponse);
@@ -613,15 +610,17 @@ void setupWebServer() {
             }
             
             // Update Sensor Calibration
-            if (doc.containsKey("tempOffset") && doc.containsKey("pressureScale") && 
-                doc.containsKey("fuelEmpty") && doc.containsKey("fuelFull")) {
+            if (doc.containsKey("fuelLevelLowThreshold")) {
+                // Only fuel threshold is user-configurable, use current calibration values
+                const auto& settings = g_settingsManager.getSettings();
                 if (!g_settingsManager.updateSensorCalibration(
-                    doc["tempOffset"].as<float>(),
-                    doc["pressureScale"].as<float>(),
-                    doc["fuelEmpty"].as<uint16_t>(),
-                    doc["fuelFull"].as<uint16_t>())) {
+                    settings.tempSensorOffset,  // Keep current (unused)
+                    settings.pressureScale,     // Keep current
+                    settings.fuelLevelEmpty,    // Keep current 
+                    settings.fuelLevelFull,     // Keep current
+                    doc["fuelLevelLowThreshold"].as<uint8_t>())) {
                     allUpdatesSuccessful = false;
-                    errorMessage += "Invalid sensor calibration. ";
+                    errorMessage += "Invalid fuel low threshold. ";
                 }
             }
             

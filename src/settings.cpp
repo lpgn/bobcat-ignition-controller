@@ -111,10 +111,11 @@ void SettingsManager::setDefaultSettings() {
     strcpy(currentSettings.wifiPassword, "bobcat123");
     
     // Sensor Calibration
-    currentSettings.tempSensorOffset = -40.0f;     // °C
+    // Note: Temperature uses inverted NTC formula (150 - ADC*scale), no offset needed
     currentSettings.pressureScale = 0.1682f;       // kPa per ADC unit
     currentSettings.fuelLevelEmpty = 200;          // ADC value
     currentSettings.fuelLevelFull = 3800;          // ADC value
+    currentSettings.fuelLevelLowThreshold = 15;    // % for low fuel warning
     
     // System metadata
     currentSettings.settingsVersion = SETTINGS_VERSION;
@@ -242,10 +243,11 @@ bool SettingsManager::updateWifiSettings(const char* ssid, const char* password)
     return true;
 }
 
-bool SettingsManager::updateSensorCalibration(float tempOffset, float pressScale, uint16_t fuelEmpty, uint16_t fuelFull) {
+bool SettingsManager::updateSensorCalibration(float tempOffset, float pressScale, uint16_t fuelEmpty, uint16_t fuelFull, uint8_t fuelLowThreshold) {
     // Validate sensor calibration values
+    // Note: tempOffset is kept for compatibility but not used in current formula
     if (tempOffset < SettingsLimits::MIN_TEMP_OFFSET || tempOffset > SettingsLimits::MAX_TEMP_OFFSET) {
-        Serial.printf("Invalid temperature offset: %.1f (must be %.1f-%.1f°C)\n", 
+        Serial.printf("Invalid temperature offset: %.1f (must be %.1f-%.1f°C) [UNUSED]\n", 
                      tempOffset, SettingsLimits::MIN_TEMP_OFFSET, SettingsLimits::MAX_TEMP_OFFSET);
         return false;
     }
@@ -262,11 +264,16 @@ bool SettingsManager::updateSensorCalibration(float tempOffset, float pressScale
         return false;
     }
     
+    if (fuelLowThreshold > 100) {
+        Serial.printf("Invalid fuel low threshold: %d%% (must be 0-100%%)\n", fuelLowThreshold);
+        return false;
+    }
+    
     // Log changes
-    char oldVal[64], newVal[64];
-    sprintf(oldVal, "TO:%.1f PS:%.3f FE:%d FF:%d", currentSettings.tempSensorOffset, 
-            currentSettings.pressureScale, currentSettings.fuelLevelEmpty, currentSettings.fuelLevelFull);
-    sprintf(newVal, "TO:%.1f PS:%.3f FE:%d FF:%d", tempOffset, pressScale, fuelEmpty, fuelFull);
+    char oldVal[80], newVal[80];
+    sprintf(oldVal, "TO:%.1f PS:%.3f FE:%d FF:%d FL:%d%%", currentSettings.tempSensorOffset, 
+            currentSettings.pressureScale, currentSettings.fuelLevelEmpty, currentSettings.fuelLevelFull, currentSettings.fuelLevelLowThreshold);
+    sprintf(newVal, "TO:%.1f PS:%.3f FE:%d FF:%d FL:%d%%", tempOffset, pressScale, fuelEmpty, fuelFull, fuelLowThreshold);
     logSettingsChange("Sensor Calibration", oldVal, newVal);
     
     // Update settings
@@ -274,6 +281,7 @@ bool SettingsManager::updateSensorCalibration(float tempOffset, float pressScale
     currentSettings.pressureScale = pressScale;
     currentSettings.fuelLevelEmpty = fuelEmpty;
     currentSettings.fuelLevelFull = fuelFull;
+    currentSettings.fuelLevelLowThreshold = fuelLowThreshold;
     
     return true;
 }
