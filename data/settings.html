@@ -415,33 +415,28 @@
                 <table class="compact-table wifi-table">
                     <thead>
                         <tr>
-                            <th>Setting</th>
-                            <th>Value</th>
+                            <th>Name</th>
+                            <th>SSID</th>
+                            <th>Password</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Home Network (SSID)</td>
+                            <td>Home</td>
                             <td><input type="text" id="homeSSID" class="setting-input" placeholder="fabfarm" maxlength="32" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
-                            <td rowspan="2"><span id="homeNetworkStatus">Checking...</span></td>
-                        </tr>
-                        <tr>
-                            <td>Home Network Password</td>
                             <td><input type="password" id="homePassword" class="setting-input password-input" placeholder="Enter password" maxlength="64" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
+                            <td><span id="homeNetworkStatus">Checking...</span></td>
                         </tr>
                         <tr>
-                            <td>Access Point (SSID)</td>
+                            <td>Access Point</td>
                             <td><input type="text" id="wifiSSID" class="setting-input" placeholder="Bobcat-743" maxlength="32" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
-                            <td rowspan="2"><span id="apStatus">Active at 192.168.4.1</span></td>
-                        </tr>
-                        <tr>
-                            <td>Access Point Password</td>
                             <td><input type="password" id="wifiPassword" class="setting-input password-input" placeholder="Enter password" maxlength="64" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
+                            <td><span id="apStatus">Active at 192.168.4.1</span></td>
                         </tr>
                         <tr>
                             <td>Show Passwords</td>
-                            <td colspan="2"><input type="checkbox" id="showPassword" onchange="togglePasswordVisibility()"></td>
+                            <td colspan="3" style="text-align: left; padding-left: 15px;"><input type="checkbox" id="showPassword" onchange="togglePasswordVisibility()"></td>
                         </tr>
                     </tbody>
                 </table>
