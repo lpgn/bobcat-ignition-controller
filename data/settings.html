@@ -302,7 +302,7 @@
 
             <!-- Unified Sensor Configuration -->
             <div class="settings-section">
-                <h3>� Sensor Configuration</h3>
+                <h3>📊 Sensor Configuration</h3>
                 <p style="color: #aaa; margin-bottom: 15px;">
                     All sensor settings in one view - Raw ADC, Calculated Value, Calibration, and Thresholds
                 </p>
@@ -311,7 +311,7 @@
                 
                 <!-- Unified sensor table -->
                 <div style="overflow-x: auto; margin: 15px 0;">
-                    <table style="width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.9rem;">
+                    <table class="sensor-table" style="width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.9rem;">
                         <thead>
                             <tr style="background: rgba(0,0,0,0.4);">
                                 <th style="padding: 8px; text-align: left; color: var(--text-color); border-bottom: 1px solid #555;">Sensor</th>
@@ -325,66 +325,65 @@
                         <tbody id="sensorDataTable">
                             <!-- Battery Voltage Row -->
                             <tr>
-                                <td style="padding: 6px; color: var(--text-color); font-weight: bold;">🔋 Battery Voltage</td>
-                                <td style="padding: 6px; text-align: center; color: #3498db; font-family: monospace;" id="batteryRaw">--</td>
-                                <td style="padding: 6px; text-align: center; color: #2ecc71; font-family: monospace;" id="batteryCalc">-- V</td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <input type="number" id="actualVoltage" class="setting-input" step="0.01" style="width: 70px; font-size: 0.8rem;" placeholder="13.11" onchange="autoSave()" onkeypress="handleEnterKey(event)">
+                                <td style="padding: 6px; color: var(--text-color); font-weight: bold;">🔋</td>
+                                <td class="sensor-value" id="batteryRaw">--</td>
+                                <td class="sensor-value" id="batteryCalc">-- V</td>
+                                <td>
+                                    <input type="number" id="actualVoltage" class="setting-input" step="0.01" placeholder="13.11" onchange="autoSave()" onkeypress="handleEnterKey(event)">
                                 </td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <input type="number" id="minVoltage" class="setting-input" min="10" max="13" step="0.1" value="11.0" style="width: 60px; font-size: 0.8rem;" onchange="autoSave()" onkeypress="handleEnterKey(event)">
+                                <td>
+                                    <input type="number" id="minVoltage" class="setting-input" min="10" max="13" step="0.1" value="11.0" onchange="autoSave()" onkeypress="handleEnterKey(event)">
                                 </td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <input type="number" id="maxVoltage" class="setting-input" min="14" max="16" step="0.1" value="15.0" style="width: 60px; font-size: 0.8rem;" onchange="autoSave()" onkeypress="handleEnterKey(event)">
+                                <td>
+                                    <input type="number" id="maxVoltage" class="setting-input" min="14" max="16" step="0.1" value="15.0" onchange="autoSave()" onkeypress="handleEnterKey(event)">
                                 </td>
                             </tr>
                             
                             <!-- Engine Temperature Row -->
                             <tr>
-                                <td style="padding: 6px; color: var(--text-color); font-weight: bold;">🌡️ Engine Temp</td>
-                                <td style="padding: 6px; text-align: center; color: #3498db; font-family: monospace;" id="tempRaw">--</td>
-                                <td style="padding: 6px; text-align: center; color: #2ecc71; font-family: monospace;" id="tempCalc">-- °C</td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <input type="number" id="actualTemp" class="setting-input" step="0.1" style="width: 70px; font-size: 0.8rem;" placeholder="85.0" onchange="autoSave()" onkeypress="handleEnterKey(event)">
+                                <td style="padding: 6px; color: var(--text-color); font-weight: bold;">🌡️</td>
+                                <td class="sensor-value" id="tempRaw">--</td>
+                                <td class="sensor-value" id="tempCalc">-- °C</td>
+                                <td>
+                                    <input type="number" id="actualTemp" class="setting-input" step="0.1" placeholder="85.0" onchange="autoSave()" onkeypress="handleEnterKey(event)">
                                 </td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <span style="color: #666; font-size: 0.8rem;">N/A</span>
+                                <td class="sensor-value">
+                                    <span style="color: #666;">N/A</span>
                                 </td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <input type="number" id="maxTemp" class="setting-input" min="80" max="120" value="104" style="width: 60px; font-size: 0.8rem;" onchange="autoSave()" onkeypress="handleEnterKey(event)">
+                                <td>
+                                    <input type="number" id="maxTemp" class="setting-input" min="80" max="120" value="104" onchange="autoSave()" onkeypress="handleEnterKey(event)">
                                 </td>
                             </tr>
                             
                             <!-- Oil Pressure Row -->
                             <tr>
-                                <td style="padding: 6px; color: var(--text-color); font-weight: bold;">🛢️ Oil Pressure</td>
-                                <td style="padding: 6px; text-align: center; color: #3498db; font-family: monospace;" id="pressureRaw">--</td>
-                                <td style="padding: 6px; text-align: center; color: #2ecc71; font-family: monospace;" id="pressureCalc">-- kPa</td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <input type="number" id="actualPressure" class="setting-input" step="1" style="width: 70px; font-size: 0.8rem;" placeholder="345" onchange="autoSave()" onkeypress="handleEnterKey(event)">
+                                <td style="padding: 6px; color: var(--text-color); font-weight: bold;">🛢️</td>
+                                <td class="sensor-value" id="pressureRaw">--</td>
+                                <td class="sensor-value" id="pressureCalc">-- kPa</td>
+                                <td>
+                                    <input type="number" id="actualPressure" class="setting-input" step="1" placeholder="345" onchange="autoSave()" onkeypress="handleEnterKey(event)">
                                 </td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <input type="number" id="minOilPressure" class="setting-input" min="30" max="150" value="69" style="width: 60px; font-size: 0.8rem;" onchange="autoSave()" onkeypress="handleEnterKey(event)">
+                                <td>
+                                    <input type="number" id="minOilPressure" class="setting-input" min="30" max="150" value="69" onchange="autoSave()" onkeypress="handleEnterKey(event)">
                                 </td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <span style="color: #666; font-size: 0.8rem;">N/A</span>
+                                <td class="sensor-value">
+                                    <span style="color: #666;">N/A</span>
                                 </td>
                             </tr>
                             
                             <!-- Fuel Level Row -->
                             <tr>
-                                <td style="padding: 6px; color: var(--text-color); font-weight: bold;">⛽ Fuel Level</td>
-                                <td style="padding: 6px; text-align: center; color: #3498db; font-family: monospace;" id="fuelRaw">--</td>
-                                <td style="padding: 6px; text-align: center; color: #2ecc71; font-family: monospace;" id="fuelCalc">-- %</td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <input type="number" id="actualFuelLevel" class="setting-input" step="1" min="0" max="100" style="width: 70px; font-size: 0.8rem;" placeholder="75" onchange="autoSave()" onkeypress="handleEnterKey(event)">
+                                <td style="padding: 6px; color: var(--text-color); font-weight: bold;">⛽</td>
+                                <td class="sensor-value" id="fuelRaw">--</td>
+                                <td class="sensor-value" id="fuelCalc">-- %</td>
+                                <td>
+                                    <input type="number" id="actualFuelLevel" class="setting-input" step="1" min="0" max="100" placeholder="75" onchange="autoSave()" onkeypress="handleEnterKey(event)">
                                 </td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <input type="number" id="fuelLowThreshold" class="setting-input" min="0" max="50" value="15" style="width: 60px; font-size: 0.8rem;" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                    <span style="color: #666; font-size: 0.7rem;">%</span>
+                                <td>
+                                    <input type="number" id="fuelLowThreshold" class="setting-input" min="0" max="50" value="15" onchange="autoSave()" onkeypress="handleEnterKey(event)">
                                 </td>
-                                <td style="padding: 6px; text-align: center;">
-                                    <span style="color: #666; font-size: 0.8rem;">N/A</span>
+                                <td class="sensor-value">
+                                    <span style="color: #666;">N/A</span>
                                 </td>
                             </tr>
                         </tbody>

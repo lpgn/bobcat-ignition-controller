@@ -935,6 +935,39 @@ body {
     text-decoration: underline;
 }
 
+/* Sensor Configuration Table */
+.sensor-table th, .sensor-table td {
+    padding: 6px 4px; /* Reduced padding */
+    text-align: center;
+    vertical-align: middle;
+    border-bottom: 1px solid #444;
+}
+
+.sensor-table td:first-child {
+    text-align: left;
+    font-weight: bold;
+}
+
+.sensor-table .setting-input {
+    width: 65px; /* Reduced width */
+    font-size: 0.85rem; /* Slightly smaller font */
+    padding: 4px;
+    text-align: center;
+}
+
+.sensor-table .sensor-value {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #3498db;
+}
+
+.sensor-table #batteryCalc,
+.sensor-table #tempCalc,
+.sensor-table #pressureCalc,
+.sensor-table #fuelCalc {
+    color: #2ecc71;
+}
+
 @media (max-width: 480px) {
     .footer {
         margin-top: 30px;
