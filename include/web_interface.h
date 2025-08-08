@@ -18,5 +18,13 @@ void virtualPowerOnButton();
 void virtualPowerOffButton();
 void virtualLightsButton();
 void overrideStart();
+void handleSetSetting(AsyncWebServerRequest *request);
+
+/**
+ * @brief Handles requests for system status.
+ * 
+ * @param request The HTTP request.
+ */
+void handleStatus(AsyncWebServerRequest *request);
 
 #endif // WEB_INTERFACE_H

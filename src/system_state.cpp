@@ -256,3 +256,17 @@ void runIgnitionSequence() {
   lastState = g_systemState.currentState;
   lastKeyPosition = g_systemState.keyPosition;
 }
+
+const char* systemStateToString(int state) {
+    switch (state) {
+        case 0: return "OFF";
+        case 1: return "ON";
+        case 2: return "GLOW_PLUG";
+        case 3: return "START";
+        case 4: return "RUNNING";
+        case 5: return "LOW_OIL_PRESSURE";
+        case 6: return "HIGH_TEMPERATURE";
+        case 7: return "ERROR";
+        default: return "UNKNOWN";
+    }
+}

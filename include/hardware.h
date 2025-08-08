@@ -11,6 +11,15 @@
 #include "system_state.h"  // For g_systemState access
 
 // ============================================================================
+// RUNTIME CALIBRATION VARIABLES - Loaded from preferences
+// ============================================================================
+extern float runtime_battery_divider;
+extern float runtime_temp_scale;
+extern float runtime_pressure_scale;
+extern int runtime_fuel_empty;
+extern int runtime_fuel_full;
+
+// ============================================================================
 // HARDWARE INITIALIZATION
 // ============================================================================
 void initializePins();

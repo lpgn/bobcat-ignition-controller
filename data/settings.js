@@ -239,7 +239,50 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start auto-refresh for sensor data
     refreshSensorData();
     window.sensorRefreshInterval = setInterval(refreshSensorData, 2000);
+
+    // Initial load
+    loadAllSettings();
+    updateWiFiStatus(); // Initial check
+
+    // Set up a timer to periodically update WiFi status
+    setInterval(updateWiFiStatus, 5000); // Update every 5 seconds
 });
+
+function updateWiFiStatus() {
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            const homeStatusEl = document.getElementById('homeNetworkStatus');
+            if (data.homeNetworkStatus !== "Not Connected") {
+                homeStatusEl.textContent = `Connected (${data.homeNetworkStatus})`;
+                homeStatusEl.style.color = '#2ecc71';
+            } else {
+                homeStatusEl.textContent = 'Not Connected';
+                homeStatusEl.style.color = '#e74c3c';
+            }
+
+            const apStatusEl = document.getElementById('apStatus');
+            apStatusEl.textContent = data.apStatus;
+        })
+        .catch(error => {
+            console.error('Error fetching WiFi status:', error);
+            document.getElementById('homeNetworkStatus').textContent = 'Error';
+            document.getElementById('apStatus').textContent = 'Error';
+        });
+}
+
+function loadAllSettings() {
+    fetch('/api/settings')
+        .then(response => response.json())
+        .then(data => {
+            window.settingsManager.settings = data;
+            window.settingsManager.populateForm();
+        })
+        .catch(error => {
+            console.error('Error loading settings:', error);
+            window.settingsManager.setDefaults();
+        });
+}
 
 // Raw sensor data functions
 let autoRefreshEnabled = true;
@@ -324,112 +367,51 @@ function getFieldDisplayName(inputId) {
     return fieldNames[inputId] || inputId;
 }
 
-// Auto-calibrate a single sensor when actual value is entered - FIXED VERSION
+// Auto-calibrate a single sensor when actual value is entered - SIMPLIFIED VERSION
 function autoCalibrateSingle(inputId, actualValue) {
-    // Get current sensor data first
-    fetch('/api/raw-sensors')
+    // Map input IDs to sensor types for C++ endpoint
+    const sensorMap = {
+        'actualVoltage': 'battery',
+        'actualTemp': 'temperature', 
+        'actualPressure': 'pressure',
+        'actualFuelLevel': 'fuel'
+    };
+    
+    const sensorType = sensorMap[inputId];
+    if (!sensorType) {
+        window.settingsManager.showStatus('Unknown sensor type', 'error');
+        return;
+    }
+    
+    // Call C++ endpoint to handle all calibration logic
+    const formData = new FormData();
+    formData.append('sensor', sensorType);
+    formData.append('actual_value', actualValue);
+    
+    fetch('/api/auto-calibrate', {
+        method: 'POST',
+        body: formData
+    })
     .then(response => response.json())
-    .then(sensorData => {
-        const calibrationData = new FormData();
-        let calibrationApplied = false;
-        
-        // Determine which sensor to calibrate based on input ID
-        switch(inputId) {
-            case 'actualVoltage':
-                if (sensorData.battery_raw && actualValue) {
-                    // Battery voltage calibration: new_divider = actual_voltage / raw_adc_value
-                    const newDivider = parseFloat(actualValue) / sensorData.battery_raw;
-                    calibrationData.append('battery_divider', newDivider.toFixed(6));
-                    calibrationApplied = true;
-                }
-                break;
-                
-            case 'actualTemp':
-                if (sensorData.temperature_raw && actualValue) {
-                    // Temperature calibration: scale = (150 - actual_temp) / raw_adc
-                    const baseTemp = 150.0; // Reference temperature for inverted NTC
-                    const newScale = (baseTemp - parseFloat(actualValue)) / sensorData.temperature_raw;
-                    calibrationData.append('temp_scale', newScale.toFixed(6));
-                    calibrationApplied = true;
-                }
-                break;
-                
-            case 'actualPressure':
-                if (sensorData.pressure_raw && actualValue) {
-                    // Pressure calibration: scale = actual_pressure / raw_adc
-                    const newScale = parseFloat(actualValue) / sensorData.pressure_raw;
-                    calibrationData.append('pressure_scale', newScale.toFixed(6));
-                    calibrationApplied = true;
-                }
-                break;
-                
-            case 'actualFuelLevel':
-                if (sensorData.fuel_raw && actualValue) {
-                    const fuelPercent = parseFloat(actualValue);
-                    if (fuelPercent <= 10) {
-                        // Low fuel reading - set as empty
-                        calibrationData.append('fuel_empty', sensorData.fuel_raw.toString());
-                        calibrationApplied = true;
-                    } else if (fuelPercent >= 90) {
-                        // High fuel reading - set as full
-                        calibrationData.append('fuel_full', sensorData.fuel_raw.toString());
-                        calibrationApplied = true;
-                    } else {
-                        // Mid-range - interpolate between current empty/full
-                        const currentEmpty = sensorData.fuel_empty || 200;
-                        const currentFull = sensorData.fuel_full || 3800;
-                        
-                        // Calculate what the ADC should be for this percentage
-                        const expectedADC = currentEmpty + (fuelPercent / 100.0) * (currentFull - currentEmpty);
-                        const scaleFactor = expectedADC / sensorData.fuel_raw;
-                        
-                        // Scale both empty and full proportionally
-                        const newEmpty = Math.round(currentEmpty * scaleFactor);
-                        const newFull = Math.round(currentFull * scaleFactor);
-                        
-                        calibrationData.append('fuel_empty', newEmpty.toString());
-                        calibrationData.append('fuel_full', newFull.toString());
-                        calibrationApplied = true;
-                    }
-                }
-                break;
+    .then(result => {
+        if (result.status === 'success') {
+            window.settingsManager.showStatus(`${getFieldDisplayName(inputId)} calibrated successfully!`, 'success');
+            
+            // Clear the input field
+            document.getElementById(inputId).value = '';
+            
+            // Refresh sensor data to show new calibrated values
+            setTimeout(refreshSensorData, 1000);
+            
+            // Auto-save settings
+            autoSave();
+        } else {
+            window.settingsManager.showStatus(result.message || 'Calibration failed', 'error');
         }
-        
-        if (!calibrationApplied) {
-            window.settingsManager.showStatus('Unable to calibrate - no sensor data available', 'error');
-            return;
-        }
-        
-        // Apply calibration via API
-        fetch('/api/calibration', {
-            method: 'POST',
-            body: calibrationData
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.status === 'success' || result.status === 'received') {
-                window.settingsManager.showStatus(`${getFieldDisplayName(inputId)} calibrated successfully!`, 'success');
-                
-                // Clear the input field
-                document.getElementById(inputId).value = '';
-                
-                // Refresh sensor data to show new calibrated values
-                setTimeout(refreshSensorData, 1000);
-                
-                // Auto-save settings
-                autoSave();
-            } else {
-                window.settingsManager.showStatus(result.message || 'Calibration failed', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error applying calibration:', error);
-            window.settingsManager.showStatus('Network error during calibration', 'error');
-        });
     })
     .catch(error => {
-        console.error('Error getting sensor data:', error);
-        window.settingsManager.showStatus('Could not read sensor data for calibration', 'error');
+        console.error('Error applying calibration:', error);
+        window.settingsManager.showStatus('Network error during calibration', 'error');
     });
 }
 

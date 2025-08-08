@@ -48,4 +48,7 @@ extern SystemState_t g_systemState;
 // State machine functions
 void runIgnitionSequence();
 
+// Helper function to convert system state enum to string
+const char* systemStateToString(int state);
+
 #endif // SYSTEM_STATE_H

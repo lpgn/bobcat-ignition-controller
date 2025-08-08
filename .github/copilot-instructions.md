@@ -35,6 +35,7 @@ C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
 ```
 ### Upload Commands - Use Playwright MCP + ElegantOTA
 
+```bash
 # 1. Use Playwright MCP to upload via ElegantOTA
 mcp_playwright_browser_navigate: http://192.168.1.128/update
 mcp_playwright_browser_select_option: "Firmware"
@@ -45,6 +46,7 @@ mcp_playwright_browser_wait_for: "Update Successful"
 mcp_playwright_browser_select_option: "LittleFS / SPIFFS"
 mcp_playwright_browser_file_upload: .pio/build/esp32dev/littlefs.bin
 mcp_playwright_browser_wait_for: "Update Successful"
+```
 
 ### Validation Steps - No Automated Testing Available
 
@@ -89,12 +91,14 @@ mcp_playwright_browser_wait_for: "Update Successful"
 ### Critical Files to Understand Before Making Changes
 
 1. **`include/config.h`** - GPIO pin assignments, timing constants, safety thresholds
-2. **`src/main.cpp`** - Main program flow and state machine the file must be as clear and concise as possible as all the logic and functionality resides at the other files
+2. **`src/main.cpp`** - Main program flow and state machine (keep this file clear and concise, all logic resides in other files)
 3. **`src/hardware.cpp`** - Direct GPIO control and relay operations
 4. **`src/safety.cpp`** - Safety monitoring and engine protection logic
 5. **`platformio.ini`** - Build configuration and library dependencies
-6.  do not use delay use millis instead as it causes blocking
-7. keep logic out of the web interface files keeping it c++ files as much as possible
+
+### Development Rules
+- **Never use delay()** - Use millis() instead as delay() causes blocking
+- **Keep logic in C++** - Web interface files should only handle UI, all business logic in C++ backend
 
 ### Hardware Pin Mapping (LILYGO T-Relay Board)
 ```cpp
@@ -106,9 +110,9 @@ const int LIGHTS_PIN = 5;         // Work Lights (Relay 4)
 
 // ANALOG SENSOR INPUTS (12-bit ADC)
 const int ENGINE_TEMP_PIN = 39;    // NTC thermistor
-const int OIL_PRESSURE_PIN = 35;   // Resistive sender
+const int OIL_PRESSURE_PIN = 34;   // Resistive sender
 const int BATTERY_VOLTAGE_PIN = 36; // Voltage divider
-const int FUEL_LEVEL_PIN = 34;     // Float sender
+const int FUEL_LEVEL_PIN = 35;     // Float sender
 
 // DIGITAL STATUS INPUTS
 const int ALTERNATOR_CHARGE_PIN = 22;    // Charge indicator
@@ -133,13 +137,30 @@ The system operates as a real ignition key with these states:
 
 ## Development Guidelines for Agents
 
+### **CRITICAL RULE: Logic Location**
+⚠️ **ALL business logic, calculations, calibrations, and data processing MUST be implemented in C++ backend endpoints, NOT in JavaScript frontend.**
+
+**JavaScript should ONLY be used for:**
+- UI interactions and DOM manipulation
+- Form validation (basic only)
+- Making fetch() calls to C++ API endpoints
+- Simple UI state management
+
+**C++ backend MUST handle:**
+- All sensor calibration calculations
+- Settings validation and processing
+- Data transformations and conversions
+- Business logic and state management
+- Safety checks and interlocks
+
 ### What You CAN Safely Modify
-- Web interface files in `/data/` (HTML, CSS, JavaScript)
+- Web interface files in `/data/` (HTML, CSS, JavaScript) - **BUT keep logic in C++**
 - Safety threshold values in `config.h` (within reasonable limits)
 - Timing constants (glow plug duration, timeouts)
-- Sensor calibration values and curves
+- Sensor calibration values and curves - **IN C++ ONLY**
 - Serial debugging messages and status reporting
-- Settings management and EEPROM storage
+- Settings management and EEPROM storage - **Backend logic only**
+- REST API endpoints in `web_interface.cpp` for business logic
 
 ### What You MUST NOT Modify Without Expert Review
 - GPIO pin assignments in `config.h` (hardware-specific)
