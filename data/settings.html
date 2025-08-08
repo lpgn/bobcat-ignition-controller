@@ -283,21 +283,23 @@
             <!-- Engine Parameters -->
             <div class="settings-section">
                 <h3>⚙️ Engine Parameters</h3>
-                <div class="setting-row">
-                    <span class="setting-label">Glow Plug Duration</span>
-                    <input type="number" id="glowDuration" class="setting-input" min="5" max="60" value="20">
-                    <span class="setting-unit">seconds</span>
-                </div>
-                <div class="setting-row">
-                    <span class="setting-label">Maximum Cranking Time</span>
-                    <input type="number" id="crankingTimeout" class="setting-input" min="5" max="30" value="10">
-                    <span class="setting-unit">seconds</span>
-                </div>
-                <div class="setting-row">
-                    <span class="setting-label">Post-Shutdown Cooldown</span>
-                    <input type="number" id="cooldownDuration" class="setting-input" min="60" max="300" value="120">
-                    <span class="setting-unit">seconds</span>
-                </div>
+                <table class="compact-table">
+                    <tr>
+                        <td>Glow Plug Duration</td>
+                        <td><input type="number" id="glowDuration" class="setting-input" min="5" max="60" value="20"></td>
+                        <td>seconds</td>
+                    </tr>
+                    <tr>
+                        <td>Maximum Cranking Time</td>
+                        <td><input type="number" id="crankingTimeout" class="setting-input" min="5" max="30" value="10"></td>
+                        <td>seconds</td>
+                    </tr>
+                    <tr>
+                        <td>Post-Shutdown Cooldown</td>
+                        <td><input type="number" id="cooldownDuration" class="setting-input" min="60" max="300" value="120"></td>
+                        <td>seconds</td>
+                    </tr>
+                </table>
             </div>
 
             <!-- Unified Sensor Configuration -->
@@ -410,47 +412,39 @@
                     The system operates in dual WiFi mode: creates its own access point AND can connect to your home network.
                 </p>
                 
-                <!-- WiFi Station Mode (Connect to existing network) -->
-                <h4 style="color: var(--accent-color); margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 5px;">
-                    🏠 Home Network Connection (Station Mode)
-                </h4>
-                <div class="setting-row">
-                    <span class="setting-label">Home WiFi Network Name</span>
-                    <input type="text" id="homeSSID" class="setting-input" placeholder="fabfarm" maxlength="32" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                </div>
-                <div class="setting-row">
-                    <span class="setting-label">Home WiFi Password</span>
-                    <input type="password" id="homePassword" class="setting-input password-input" placeholder="Enter home network password" maxlength="64" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                </div>
-                
-                <!-- WiFi Access Point Mode (Create hotspot) -->
-                <h4 style="color: var(--accent-color); margin-bottom: 10px; margin-top: 20px; border-bottom: 1px solid #555; padding-bottom: 5px;">
-                    📡 Access Point Settings (Hotspot Mode)
-                </h4>
-                <div class="setting-row">
-                    <span class="setting-label">Hotspot Name (SSID)</span>
-                    <input type="text" id="wifiSSID" class="setting-input" placeholder="Bobcat-743" maxlength="32" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                </div>
-                <div class="setting-row">
-                    <span class="setting-label">Hotspot Password</span>
-                    <input type="password" id="wifiPassword" class="setting-input password-input" placeholder="Enter new hotspot password" maxlength="64" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                </div>
-                
-                <!-- Password visibility toggle -->
-                <div class="setting-row">
-                    <span class="setting-label">Show Passwords</span>
-                    <input type="checkbox" id="showPassword" onchange="togglePasswordVisibility()">
-                </div>
-                
-                <!-- WiFi Status Information -->
-                <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 15px; font-size: 0.85rem;">
-                    <div style="color: #3498db; font-weight: bold; margin-bottom: 5px;">Current WiFi Status:</div>
-                    <div style="color: #aaa; margin-bottom: 3px;">🏠 Home Network: <span id="homeNetworkStatus">Checking...</span></div>
-                    <div style="color: #aaa;">📡 Access Point: <span id="apStatus">Active at 192.168.4.1</span></div>
-                    <div style="margin-top: 8px; font-size: 0.8rem; color: #666;">
-                        💡 Tip: Press Enter after typing to save WiFi settings. Changes take effect after restart.
-                    </div>
-                </div>
+                <table class="compact-table wifi-table">
+                    <thead>
+                        <tr>
+                            <th>Setting</th>
+                            <th>Value</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Home Network (SSID)</td>
+                            <td><input type="text" id="homeSSID" class="setting-input" placeholder="fabfarm" maxlength="32" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
+                            <td rowspan="2"><span id="homeNetworkStatus">Checking...</span></td>
+                        </tr>
+                        <tr>
+                            <td>Home Network Password</td>
+                            <td><input type="password" id="homePassword" class="setting-input password-input" placeholder="Enter password" maxlength="64" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
+                        </tr>
+                        <tr>
+                            <td>Access Point (SSID)</td>
+                            <td><input type="text" id="wifiSSID" class="setting-input" placeholder="Bobcat-743" maxlength="32" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
+                            <td rowspan="2"><span id="apStatus">Active at 192.168.4.1</span></td>
+                        </tr>
+                        <tr>
+                            <td>Access Point Password</td>
+                            <td><input type="password" id="wifiPassword" class="setting-input password-input" placeholder="Enter password" maxlength="64" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
+                        </tr>
+                        <tr>
+                            <td>Show Passwords</td>
+                            <td colspan="2"><input type="checkbox" id="showPassword" onchange="togglePasswordVisibility()"></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <!-- OTA Firmware Update -->

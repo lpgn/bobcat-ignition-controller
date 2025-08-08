@@ -935,6 +935,33 @@ body {
     text-decoration: underline;
 }
 
+/* Compact Table for Settings */
+.compact-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.compact-table td, .compact-table th {
+    padding: 8px 4px;
+    vertical-align: middle;
+    text-align: left;
+}
+
+.compact-table .setting-input {
+    width: 100%;
+    max-width: 150px;
+}
+
+.wifi-table td, .wifi-table th {
+    text-align: center;
+}
+
+.wifi-table td:first-child, .wifi-table th:first-child {
+    text-align: left;
+}
+
+
 /* Sensor Configuration Table */
 .sensor-table th, .sensor-table td {
     padding: 6px 4px; /* Reduced padding */
