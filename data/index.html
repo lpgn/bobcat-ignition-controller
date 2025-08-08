@@ -48,45 +48,46 @@
                         <!-- The ignition key - simple bar design -->
                         <div class="key-container">
                             <div class="key" id="ignitionKey">
+                                <div class="key-base"></div>
                                 <div class="key-shaft"></div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Gauges moved below the key -->
+            <div class="gauge-container">
+                <div class="gauge pressure-gauge">
+                    <div class="gauge-arc">
+                        <div class="gauge-needle" id="pressureNeedle"></div>
+                    </div>
+                    <div class="gauge-label">PRESSURE</div>
+                    <div class="gauge-value" id="pressureValue">0.0 BAR</div>
+                </div>
                 
-                <!-- Gauges moved below the key -->
-                <div class="gauge-container">
-                    <div class="gauge pressure-gauge">
-                        <div class="gauge-arc">
-                            <div class="gauge-needle" id="pressureNeedle"></div>
-                        </div>
-                        <div class="gauge-label">PRESSURE</div>
-                        <div class="gauge-value" id="pressureValue">0.0 BAR</div>
+                <div class="gauge temp-gauge">
+                    <div class="gauge-arc">
+                        <div class="gauge-needle" id="tempNeedle"></div>
                     </div>
-                    
-                    <div class="gauge temp-gauge">
-                        <div class="gauge-arc">
-                            <div class="gauge-needle" id="tempNeedle"></div>
-                        </div>
-                        <div class="gauge-label">TEMP</div>
-                        <div class="gauge-value" id="tempValue">20°C</div>
+                    <div class="gauge-label">TEMP</div>
+                    <div class="gauge-value" id="tempValue">20°C</div>
+                </div>
+                
+                <div class="gauge voltage-gauge">
+                    <div class="gauge-arc">
+                        <div class="gauge-needle" id="voltageNeedle"></div>
                     </div>
-                    
-                    <div class="gauge voltage-gauge">
-                        <div class="gauge-arc">
-                            <div class="gauge-needle" id="voltageNeedle"></div>
-                        </div>
-                        <div class="gauge-label">VOLTS</div>
-                        <div class="gauge-value" id="voltageValue">0.0V</div>
+                    <div class="gauge-label">VOLTS</div>
+                    <div class="gauge-value" id="voltageValue">0.0V</div>
+                </div>
+                
+                <div class="gauge fuel-gauge">
+                    <div class="gauge-arc">
+                        <div class="gauge-needle" id="fuelNeedle"></div>
                     </div>
-                    
-                    <div class="gauge fuel-gauge">
-                        <div class="gauge-arc">
-                            <div class="gauge-needle" id="fuelNeedle"></div>
-                        </div>
-                        <div class="gauge-label">FUEL</div>
-                        <div class="gauge-value" id="fuelValue">75%</div>
-                    </div>
+                    <div class="gauge-label">FUEL</div>
+                    <div class="gauge-value" id="fuelValue">75%</div>
                 </div>
             </div>
 

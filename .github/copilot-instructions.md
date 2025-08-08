@@ -22,34 +22,42 @@ This is an **ESP32-based ignition controller** for old Bobcat equipment (specifi
 2. **Internet connection** - Required for first build to download ESP32 platform and libraries
 3. **USB cable** - For programming ESP32 (if doing actual hardware testing)
 
-### Build Commands - Validated Working Sequence
+### Build Commands - Essential Only
 
 ```bash
-# 1. ALWAYS navigate to project root first
-cd /path/to/bobcat-ignition-controller
-
-# 2. Build firmware (requires internet on first run)
+# 1. Build firmware
 C:\.platformio\penv\Scripts\platformio.exe run
 
-# 3. Upload firmware via serial (development)
-C:\.platformio\penv\Scripts\platformio.exe run --target upload --upload-port COM8
+# 2. Build filesystem (clean first if adding new files)
+C:\.platformio\penv\Scripts\platformio.exe run --target clean
+C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
+```
 
-# 4. Build filesystem 
+### ESP32 Deployment - Use Playwright MCP + ElegantOTA
+
+**Firmware Update:**
+```bash
+# 1. Build firmware
+C:\.platformio\penv\Scripts\platformio.exe run
+
+# 2. Use Playwright MCP to upload via ElegantOTA
+mcp_playwright_browser_navigate: http://192.168.1.128/update
+mcp_playwright_browser_select_option: "Firmware"
+mcp_playwright_browser_file_upload: .pio/build/esp32dev/firmware.bin
+mcp_playwright_browser_wait_for: "Update Successful"
+```
+
+**Filesystem Update:**
+```bash
+# 1. Build filesystem
+C:\.platformio\penv\Scripts\platformio.exe run --target clean
 C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
 
-# 5. Upload filesystem via serial (development)
-C:\.platformio\penv\Scripts\platformio.exe run --target uploadfs --upload-port COM8
-
-# 6. Clean build (required when adding new files to data/)
-C:\.platformio\penv\Scripts\platformio.exe run --target clean
-
-# 7. Monitor serial output
-C:\.platformio\penv\Scripts\platformio.exe device monitor --port COM8
-
-# 8. Other useful targets
-C:\.platformio\penv\Scripts\platformio.exe run --target erase      # Erase flash
-C:\.platformio\penv\Scripts\platformio.exe run --target size       # Program size analysis
-C:\.platformio\penv\Scripts\platformio.exe run --target uploadfsota # Upload filesystem OTA
+# 2. Use Playwright MCP to upload via ElegantOTA
+mcp_playwright_browser_navigate: http://192.168.1.128/update
+mcp_playwright_browser_select_option: "LittleFS / SPIFFS"
+mcp_playwright_browser_file_upload: .pio/build/esp32dev/littlefs.bin
+mcp_playwright_browser_wait_for: "Update Successful"
 ```
 
 ### Build Process Details
@@ -86,68 +94,11 @@ C:\.platformio\penv\Scripts\platformio.exe run --target uploadfsota # Upload fil
 3. **Web interface**: Verify web files in `/data/` are valid HTML/CSS/JS
 4. **Code review**: Manual review for GPIO pin conflicts and timing issues
 
-### OTA Deployment Workflow - Use Playwright MCP
-**CRITICAL**: Always use Playwright MCP for OTA deployments instead of manual browser interaction.
-
-### Development Workflow Options
-
-**Option 1: Serial Upload (Faster Development)**
-```bash
-# Firmware changes
-C:\.platformio\penv\Scripts\platformio.exe run
-C:\.platformio\penv\Scripts\platformio.exe run --target upload --upload-port COM8
-
-# Filesystem changes  
-C:\.platformio\penv\Scripts\platformio.exe run --target clean   # if adding new files
-C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
-C:\.platformio\penv\Scripts\platformio.exe run --target uploadfs --upload-port COM8
-```
-
-**Option 2: OTA Upload (Production/Field Updates)**
-
-**Firmware Update Process:**
-```bash
-# 1. Build firmware
-C:\.platformio\penv\Scripts\platformio.exe run
-
-# 2. Use Playwright MCP to navigate to OTA page
-mcp_playwright_browser_navigate: http://192.168.1.128/update
-
-# 3. Select "Firmware" mode
-mcp_playwright_browser_select_option: OTA Mode -> "Firmware"
-
-# 4. Upload firmware
-mcp_playwright_browser_file_upload: .pio/build/esp32dev/firmware.bin
-
-# 5. Wait for completion
-mcp_playwright_browser_wait_for: "Update Successful"
-```
-
-**Filesystem Update Process:**
-```bash
-# 1. Clean and rebuild filesystem (required after adding new files)
-C:\.platformio\penv\Scripts\platformio.exe run --target clean
-C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
-
-# 2. Use Playwright MCP to navigate to OTA page
-mcp_playwright_browser_navigate: http://192.168.1.128/update
-
-# 3. Select "LittleFS / SPIFFS" mode
-mcp_playwright_browser_select_option: OTA Mode -> "LittleFS / SPIFFS"
-
-# 4. Upload filesystem
-mcp_playwright_browser_file_upload: .pio/build/esp32dev/littlefs.bin
-
-# 5. Wait for completion
-mcp_playwright_browser_wait_for: "Update Successful"
-```
-
 **⚠️ IMPORTANT**: 
 - ESP32 takes 30-60 seconds to restart after filesystem updates
 - Always run `C:\.platformio\penv\Scripts\platformio.exe run --target clean && C:\.platformio\penv\Scripts\platformio.exe run --target buildfs` when adding new files to `/data/`
 - **Playwright Visibility**: Run Playwright in **NON-HEADLESS MODE** so user can see browser actions
 - **Never use headless mode** - user must see what Playwright is doing for debugging and verification
-- **Serial vs OTA**: Use serial upload for development (faster), OTA for field updates
 
 ## Project Architecture & Layout
 
