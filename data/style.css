@@ -527,6 +527,11 @@ body {
     color: #bdc3c7;
 }
 
+.warn-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
 /* Control Buttons Row */
 .control-buttons {
     display: flex;
@@ -998,6 +1003,13 @@ body {
     font-family: monospace;
     font-size: 0.9rem;
     color: #3498db;
+}
+
+.sensor-abbr {
+    font-size: 0.75rem;
+    color: #aaa;
+    margin-left: 4px;
+    letter-spacing: 0.3px;
 }
 
 .sensor-table #batteryCalc,

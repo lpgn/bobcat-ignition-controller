@@ -62,7 +62,7 @@
                     <div class="gauge-arc">
                         <div class="gauge-needle" id="pressureNeedle"></div>
                     </div>
-                    <div class="gauge-label">PRESSURE</div>
+                    <div class="gauge-label">OIL <span class="sensor-abbr">OIL</span></div>
                     <div class="gauge-value" id="pressureValue">0.0 BAR</div>
                 </div>
                 
@@ -70,7 +70,7 @@
                     <div class="gauge-arc">
                         <div class="gauge-needle" id="tempNeedle"></div>
                     </div>
-                    <div class="gauge-label">TEMP</div>
+                    <div class="gauge-label">TEMP <span class="sensor-abbr">TEMP</span></div>
                     <div class="gauge-value" id="tempValue">20°C</div>
                 </div>
                 
@@ -78,7 +78,7 @@
                     <div class="gauge-arc">
                         <div class="gauge-needle" id="voltageNeedle"></div>
                     </div>
-                    <div class="gauge-label">VOLTS</div>
+                    <div class="gauge-label">VOLTS <span class="sensor-abbr">BAT</span></div>
                     <div class="gauge-value" id="voltageValue">0.0V</div>
                 </div>
                 
@@ -86,7 +86,7 @@
                     <div class="gauge-arc">
                         <div class="gauge-needle" id="hydNeedle"></div>
                     </div>
-                    <div class="gauge-label">HYD</div>
+                    <div class="gauge-label">HYD <span class="sensor-abbr">HYD</span></div>
                     <div class="gauge-value" id="hydValue">0 kPa</div>
                 </div>
                 
@@ -94,7 +94,7 @@
                     <div class="gauge-arc">
                         <div class="gauge-needle" id="fuelNeedle"></div>
                     </div>
-                    <div class="gauge-label">FUEL</div>
+                    <div class="gauge-label">FUEL <span class="sensor-abbr">FUEL</span></div>
                     <div class="gauge-value" id="fuelValue">75%</div>
                 </div>
             </div>
@@ -102,31 +102,31 @@
             <!-- Warning Lights -->
             <div class="warning-lights">
                 <div class="warning-row">
-                    <div id="oil-warning" class="warning-light">
+                    <div id="oil-warning" class="warning-light" title="Low Oil Pressure">
                         <div class="light red"></div>
-                        <span>LOW OIL</span>
+                        <span class="warn-icon" aria-label="oil">🛢️</span>
                     </div>
-                    <div id="temp-warning" class="warning-light">
+                    <div id="temp-warning" class="warning-light" title="High Temperature">
                         <div class="light red"></div>
-                        <span>HIGH TEMP</span>
+                        <span class="warn-icon" aria-label="temp">🌡️</span>
                     </div>
-                    <div id="battery-warning" class="warning-light">
+                    <div id="battery-warning" class="warning-light" title="Battery Warning">
                         <div class="light amber"></div>
-                        <span>BATTERY</span>
+                        <span class="warn-icon" aria-label="battery">🔋</span>
                     </div>
                 </div>
                 <div class="warning-row">
-                    <div id="charge-indicator" class="warning-light">
+                    <div id="charge-indicator" class="warning-light" title="Alternator Charging">
                         <div class="light green"></div>
-                        <span>CHARGING</span>
+                        <span class="warn-icon" aria-label="charge">⚡</span>
                     </div>
-                    <div id="engine-run" class="warning-light">
+                    <div id="engine-run" class="warning-light" title="Engine Running">
                         <div class="light green"></div>
-                        <span>ENGINE RUN</span>
+                        <span class="warn-icon" aria-label="engine">🚜</span>
                     </div>
-                    <div id="fuel-warning" class="warning-light">
+                    <div id="fuel-warning" class="warning-light" title="Low Fuel">
                         <div class="light amber"></div>
-                        <span>LOW FUEL</span>
+                        <span class="warn-icon" aria-label="fuel">⛽</span>
                     </div>
                 </div>
             </div>
