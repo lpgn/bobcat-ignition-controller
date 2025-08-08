@@ -23,6 +23,8 @@ extern const int ENGINE_TEMP_PIN;     // ADC1_CH3 (GPIO39) - Coolant Temperature
 extern const int OIL_PRESSURE_PIN;    // ADC1_CH6 (GPIO34) - Oil Pressure Sensor (4th pin top row) - MOVED to GPIO34
 extern const int BATTERY_VOLTAGE_PIN; // ADC1_CH0 (GPIO36) - Battery Voltage (4th pin bottom row) - MOVED to GPIO36
 extern const int FUEL_LEVEL_PIN;      // ADC1_CH7 (GPIO35) - Fuel Tank Level (5th pin top row) - MOVED
+// Optional: Hydraulic Pressure Sensor (ADC1 channel)
+extern const int HYD_PRESSURE_PIN;    // ADC1_CH5 (GPIO33) - Hydraulic Pressure Sensor (placeholder)
 
 // ============================================================================
 // DIGITAL INPUT PINS - Status Feedback (Physical sequence from header)
@@ -54,6 +56,9 @@ extern const float TEMP_SENSOR_OFFSET;       // Temperature sensor offset (°C)
 extern const float TEMP_SENSOR_SCALE;        // Temperature sensor scale factor
 extern const float OIL_PRESSURE_OFFSET;      // Oil pressure sensor offset (kPa)
 extern const float OIL_PRESSURE_SCALE;       // Oil pressure sensor scale factor
+// Hydraulic Pressure Sensor calibration
+extern const float HYD_PRESSURE_OFFSET;      // Hydraulic pressure sensor offset (kPa)
+extern const float HYD_PRESSURE_SCALE;       // Hydraulic pressure sensor scale factor
 // Battery Voltage Divider (for 12V/24V systems)
 extern const float BATTERY_VOLTAGE_DIVIDER; // Calibrated for 56kΩ/10kΩ divider
 extern const float FUEL_LEVEL_EMPTY;         // ADC value for empty tank

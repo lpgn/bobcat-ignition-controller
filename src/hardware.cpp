@@ -12,6 +12,7 @@
 float runtime_battery_divider = BATTERY_VOLTAGE_DIVIDER;
 float runtime_temp_scale = TEMP_SENSOR_SCALE;
 float runtime_pressure_scale = OIL_PRESSURE_SCALE;
+float runtime_hyd_pressure_scale = HYD_PRESSURE_SCALE;
 int runtime_fuel_empty = FUEL_LEVEL_EMPTY;
 int runtime_fuel_full = FUEL_LEVEL_FULL;
 
@@ -63,6 +64,7 @@ void loadCalibrationConstants() {
   runtime_battery_divider = prefs.getFloat("battery_div", BATTERY_VOLTAGE_DIVIDER);
   runtime_temp_scale = prefs.getFloat("temp_scale", TEMP_SENSOR_SCALE);
   runtime_pressure_scale = prefs.getFloat("pressure_scale", OIL_PRESSURE_SCALE);
+  runtime_hyd_pressure_scale = prefs.getFloat("hyd_pressure_scale", HYD_PRESSURE_SCALE);
   runtime_fuel_empty = prefs.getInt("fuel_empty", (int)FUEL_LEVEL_EMPTY);
   runtime_fuel_full = prefs.getInt("fuel_full", (int)FUEL_LEVEL_FULL);
   
@@ -72,6 +74,7 @@ void loadCalibrationConstants() {
   Serial.print("  Battery divider: "); Serial.println(runtime_battery_divider, 6);
   Serial.print("  Temperature scale: "); Serial.println(runtime_temp_scale, 6);
   Serial.print("  Pressure scale: "); Serial.println(runtime_pressure_scale, 6);
+  Serial.print("  Hyd pressure scale: "); Serial.println(runtime_hyd_pressure_scale, 6);
   Serial.print("  Fuel empty ADC: "); Serial.println(runtime_fuel_empty);
   Serial.print("  Fuel full ADC: "); Serial.println(runtime_fuel_full);
 }
@@ -200,6 +203,21 @@ float readFuelLevel() {
   int rawValue = analogRead(FUEL_LEVEL_PIN);
   // Convert to percentage (0-100%) using runtime calibration values
   return map(rawValue, runtime_fuel_empty, runtime_fuel_full, 0, 100);
+}
+
+float readHydraulicPressure() {
+  int rawValue = analogRead(HYD_PRESSURE_PIN);
+  // Basic broken sensor detection similar to oil
+  if (rawValue > 4000) {
+    static unsigned long lastWarn = 0;
+    if (millis() - lastWarn > 10000) {
+      Serial.println("WARNING: Hydraulic pressure sensor appears disconnected/broken (ADC > 4000)");
+      Serial.print("Raw ADC reading: "); Serial.println(rawValue);
+      lastWarn = millis();
+    }
+    return 0.0; // safe default
+  }
+  return (rawValue * runtime_hyd_pressure_scale) + HYD_PRESSURE_OFFSET;
 }
 
 // Digital input reading functions

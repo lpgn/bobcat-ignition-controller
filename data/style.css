@@ -490,6 +490,18 @@ body {
     color: #9c27b0;
 }
 
+/* Hydraulic gauge specific styling */
+.hyd-gauge .gauge-needle {
+    background: #00bcd4; /* cyan */
+    box-shadow: 0 0 6px rgba(0, 188, 212, 0.8);
+    width: 2px;
+    height: 38px;
+}
+
+.hyd-gauge .gauge-value {
+    color: #00bcd4;
+}
+
 /* Status Display */
 /* Warning Lights */
 .warning-lights {

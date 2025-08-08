@@ -17,16 +17,19 @@ class IgnitionController {
         this.tempNeedle = document.getElementById('tempNeedle');
         this.voltageNeedle = document.getElementById('voltageNeedle');
         this.fuelNeedle = document.getElementById('fuelNeedle');
+    this.hydNeedle = document.getElementById('hydNeedle');
         
         this.pressureValue = document.getElementById('pressureValue');
         this.tempValue = document.getElementById('tempValue');
         this.voltageValue = document.getElementById('voltageValue');
         this.fuelValue = document.getElementById('fuelValue');
+    this.hydValue = document.getElementById('hydValue');
         
         this.pressureGauge = document.querySelector('.pressure-gauge');
         this.tempGauge = document.querySelector('.temp-gauge');
         this.voltageGauge = document.querySelector('.voltage-gauge');
         this.fuelGauge = document.querySelector('.fuel-gauge');
+    this.hydGauge = document.querySelector('.hyd-gauge');
         
         // Work lights button
         this.workLightsBtn = document.querySelector('[data-action="toggle_lights"]');
@@ -417,7 +420,7 @@ class IgnitionController {
         if (this.fuelValue) this.fuelValue.textContent = '0%';
         
         // Set gauges as inactive initially
-        [this.pressureGauge, this.tempGauge, this.voltageGauge, this.fuelGauge].forEach(gauge => {
+    [this.pressureGauge, this.tempGauge, this.voltageGauge, this.fuelGauge, this.hydGauge].forEach(gauge => {
             if (gauge) {
                 gauge.classList.remove('active');
             }
@@ -467,7 +470,7 @@ class IgnitionController {
         // Activate gauges based on state
         const gaugesActive = this.currentState !== 'off';
         
-        [this.pressureGauge, this.tempGauge, this.voltageGauge, this.fuelGauge].forEach(gauge => {
+    [this.pressureGauge, this.tempGauge, this.voltageGauge, this.fuelGauge, this.hydGauge].forEach(gauge => {
             if (gauge) {
                 if (gaugesActive) {
                     gauge.classList.add('active');
@@ -487,12 +490,21 @@ class IgnitionController {
         if (this.tempNeedle) this.tempNeedle.style.transform = `translateX(-50%) rotate(${tempAngle}deg)`;
         if (this.voltageNeedle) this.voltageNeedle.style.transform = `translateX(-50%) rotate(${voltageAngle}deg)`;
         if (this.fuelNeedle) this.fuelNeedle.style.transform = `translateX(-50%) rotate(${fuelAngle}deg)`;
+        if (this.hydNeedle) {
+            const hyd = status && typeof status.hyd_pressure === 'number' ? status.hyd_pressure : 0;
+            const hydAngle = Math.min(Math.max((hyd / 3000.0) * 180 - 90, -90), 90);
+            this.hydNeedle.style.transform = `translateX(-50%) rotate(${hydAngle}deg)`;
+        }
         
         // Update value displays
         if (this.pressureValue) this.pressureValue.textContent = `${pressure.toFixed(1)} BAR`;
         if (this.tempValue) this.tempValue.textContent = `${Math.round(temperature)}°C`;
         if (this.voltageValue) this.voltageValue.textContent = `${voltage.toFixed(1)}V`;
         if (this.fuelValue) this.fuelValue.textContent = `${Math.round(fuel)}%`;
+        if (this.hydValue) {
+            const hyd = status && typeof status.hyd_pressure === 'number' ? status.hyd_pressure : 0;
+            this.hydValue.textContent = `${Math.round(hyd)} kPa`;
+        }
     }
 }
 

@@ -17,7 +17,7 @@ class SettingsManager {
 
     setDefaults() {
         // Engine Parameters
-        document.getElementById('glowPlugDuration').value = 20;
+    document.getElementById('glowPlugDuration').value = 20;
         document.getElementById('crankingTimeout').value = 10;
         document.getElementById('cooldownDuration').value = 120;
         
@@ -35,15 +35,20 @@ class SettingsManager {
         if (!this.settings) return;
         
         // Engine Parameters
-        if (this.settings.glowPlugDuration) document.getElementById('glowPlugDuration').value = this.settings.glowPlugDuration / 1000;
-        if (this.settings.crankingTimeout) document.getElementById('crankingTimeout').value = this.settings.crankingTimeout / 1000;
-        if (this.settings.cooldownDuration) document.getElementById('cooldownDuration').value = this.settings.cooldownDuration / 1000;
+    // Backend returns seconds already for these fields
+    if (this.settings.glowDuration != null) document.getElementById('glowPlugDuration').value = this.settings.glowDuration;
+    if (this.settings.crankingTimeout != null) document.getElementById('crankingTimeout').value = this.settings.crankingTimeout;
+    if (this.settings.cooldownDuration != null) document.getElementById('cooldownDuration').value = this.settings.cooldownDuration;
         
         // Alarm Thresholds
-        if (this.settings.maxCoolantTemp) document.getElementById('maxTemp').value = this.settings.maxCoolantTemp;
-        if (this.settings.minOilPressure) document.getElementById('minOilPressure').value = this.settings.minOilPressure;
-        if (this.settings.minBatteryVoltage) document.getElementById('minVoltage').value = this.settings.minBatteryVoltage;
-        if (this.settings.maxBatteryVoltage) document.getElementById('maxVoltage').value = this.settings.maxBatteryVoltage;
+    if (this.settings.maxTemp != null) document.getElementById('maxTemp').value = this.settings.maxTemp;
+    if (this.settings.minOilPressure != null) document.getElementById('minOilPressure').value = this.settings.minOilPressure;
+    if (this.settings.minVoltage != null) document.getElementById('minVoltage').value = this.settings.minVoltage;
+    if (this.settings.maxVoltage != null) document.getElementById('maxVoltage').value = this.settings.maxVoltage;
+    if (this.settings.minHydPressure != null) {
+        const el = document.getElementById('minHydPressure');
+        if (el) el.value = this.settings.minHydPressure;
+    }
         
         // WiFi Configuration (SSID only, never populate password for security)
         if (this.settings.wifiSSID) document.getElementById('wifiSSID').value = this.settings.wifiSSID;
@@ -78,15 +83,17 @@ class SettingsManager {
     collectFormData() {
         return {
             // Engine Parameters (convert seconds to milliseconds for internal use)
-            glowPlugDuration: parseInt(document.getElementById('glowPlugDuration').value) * 1000,
-            crankingTimeout: parseInt(document.getElementById('crankingTimeout').value) * 1000,
-            cooldownDuration: parseInt(document.getElementById('cooldownDuration').value) * 1000,
+            // Backend expects seconds for these fields
+            glowDuration: parseInt(document.getElementById('glowPlugDuration').value),
+            crankingTimeout: parseInt(document.getElementById('crankingTimeout').value),
+            cooldownDuration: parseInt(document.getElementById('cooldownDuration').value),
             
             // Alarm Thresholds
-            maxCoolantTemp: parseInt(document.getElementById('maxTemp').value),
+            maxTemp: parseInt(document.getElementById('maxTemp').value),
             minOilPressure: parseInt(document.getElementById('minOilPressure').value),
-            minBatteryVoltage: parseFloat(document.getElementById('minVoltage').value),
-            maxBatteryVoltage: parseFloat(document.getElementById('maxVoltage').value),
+            minHydPressure: parseInt(document.getElementById('minHydPressure').value || '0'),
+            minVoltage: parseFloat(document.getElementById('minVoltage').value),
+            maxVoltage: parseFloat(document.getElementById('maxVoltage').value),
             
             // WiFi Configuration
             wifiSSID: document.getElementById('wifiSSID').value,
@@ -100,28 +107,40 @@ class SettingsManager {
     async saveSettings() {
         try {
             const settings = this.collectFormData();
-            
+
             // Validate settings
             if (!this.validateSettings(settings)) {
                 this.showStatus('Invalid settings. Please check your inputs.', 'error');
                 return;
             }
-            
-            const response = await fetch('/api/settings', {
+
+            // Post each field individually as { key, value } to match backend API
+            const posts = [];
+            const postSetting = (key, value) => fetch('/api/settings', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(settings),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key, value: String(value) })
             });
-            
-            const result = await response.json();
-            
-            if (result.status === 'success') {
+
+            posts.push(postSetting('glowDuration', settings.glowDuration));
+            posts.push(postSetting('crankingTimeout', settings.crankingTimeout));
+            posts.push(postSetting('cooldownDuration', settings.cooldownDuration));
+            posts.push(postSetting('maxTemp', settings.maxTemp));
+            posts.push(postSetting('minOilPressure', settings.minOilPressure));
+            posts.push(postSetting('minVoltage', settings.minVoltage));
+            posts.push(postSetting('maxVoltage', settings.maxVoltage));
+            if (!Number.isNaN(settings.minHydPressure)) posts.push(postSetting('minHydPressure', settings.minHydPressure));
+            if (settings.wifiSSID) posts.push(postSetting('wifiSSID', settings.wifiSSID));
+            if (settings.wifiPassword) posts.push(postSetting('wifiPassword', settings.wifiPassword));
+            if (!Number.isNaN(settings.fuelLevelLowThreshold)) posts.push(postSetting('fuelLevelLowThreshold', settings.fuelLevelLowThreshold));
+
+            const results = await Promise.all(posts.map(p => p.catch(e => e)));
+            const allOk = results.every(r => r && r.ok);
+            if (allOk) {
                 this.showStatus('Settings saved successfully!', 'success');
                 this.settings = settings;
             } else {
-                this.showStatus(result.message || 'Save failed', 'error');
+                this.showStatus('Some settings failed to save', 'error');
             }
         } catch (error) {
             console.error('Error saving settings:', error);
@@ -146,11 +165,13 @@ class SettingsManager {
     }
 
     validateSettings(settings) {
-        // Basic validation
-        if (settings.glowPlugDuration < 5000 || settings.glowPlugDuration > 60000) return false;
-        if (settings.crankingTimeout < 5000 || settings.crankingTimeout > 30000) return false;
-        if (settings.minBatteryVoltage < 10.0 || settings.minBatteryVoltage > 13.0) return false;
-        if (settings.maxBatteryVoltage < 13.0 || settings.maxBatteryVoltage > 16.0) return false;
+        // Basic validation (seconds for durations)
+        if (settings.glowDuration < 5 || settings.glowDuration > 60) return false;
+        if (settings.crankingTimeout < 5 || settings.crankingTimeout > 30) return false;
+        if (settings.cooldownDuration < 60 || settings.cooldownDuration > 300) return false;
+        if (settings.minVoltage < 10.0 || settings.minVoltage > 13.0) return false;
+        if (settings.maxVoltage < 13.0 || settings.maxVoltage > 16.0) return false;
+        if (settings.maxVoltage <= settings.minVoltage) return false;
         
         return true;
     }
@@ -249,20 +270,23 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function updateWiFiStatus() {
-    fetch('/api/status')
+    fetch('/status')
         .then(response => response.json())
         .then(data => {
             const homeStatusEl = document.getElementById('homeNetworkStatus');
-            if (data.homeNetworkStatus !== "Not Connected") {
-                homeStatusEl.textContent = `Connected (${data.homeNetworkStatus})`;
-                homeStatusEl.style.color = '#2ecc71';
+            if (data.wifi_connected) {
+                const ip = data.wifi_ip || 'connected';
+                homeStatusEl.textContent = `Connected (${ip})`;
+                homeStatusEl.classList.remove('error');
+                homeStatusEl.classList.add('success');
             } else {
                 homeStatusEl.textContent = 'Not Connected';
-                homeStatusEl.style.color = '#e74c3c';
+                homeStatusEl.classList.remove('success');
+                homeStatusEl.classList.add('error');
             }
 
             const apStatusEl = document.getElementById('apStatus');
-            apStatusEl.textContent = data.apStatus;
+            apStatusEl.textContent = data.ap_ip ? `Active at ${data.ap_ip}` : 'AP Active';
         })
         .catch(error => {
             console.error('Error fetching WiFi status:', error);
@@ -311,17 +335,31 @@ function refreshSensorData() {
     .then(response => response.json())
     .then(data => {
         // Update sensor readings in table
-        document.getElementById('batteryRaw').textContent = data.battery_raw || '--';
-        document.getElementById('batteryCalc').textContent = (data.battery_calculated ? data.battery_calculated.toFixed(2) + ' V' : '-- V');
+    const batteryRawEl = document.getElementById('batteryRaw');
+    const batteryCalcEl = document.getElementById('batteryCalc');
+    if (batteryRawEl) batteryRawEl.textContent = (data.battery_raw ?? '--');
+    if (batteryCalcEl) batteryCalcEl.textContent = (data.battery_calculated != null ? data.battery_calculated.toFixed(2) : '--');
         
-        document.getElementById('tempRaw').textContent = data.temperature_raw || '--';
-        document.getElementById('tempCalc').textContent = (data.temperature_calculated ? data.temperature_calculated.toFixed(1) + ' °C' : '-- °C');
+    const tempRawEl = document.getElementById('tempRaw');
+    const tempCalcEl = document.getElementById('tempCalc');
+    if (tempRawEl) tempRawEl.textContent = (data.temperature_raw ?? '--');
+    if (tempCalcEl) tempCalcEl.textContent = (data.temperature_calculated != null ? data.temperature_calculated.toFixed(1) : '--');
         
-        document.getElementById('pressureRaw').textContent = data.pressure_raw || '--';
-        document.getElementById('pressureCalc').textContent = (data.pressure_calculated ? data.pressure_calculated.toFixed(1) + ' kPa' : '-- kPa');
+    const pressureRawEl = document.getElementById('pressureRaw');
+    const pressureCalcEl = document.getElementById('pressureCalc');
+    if (pressureRawEl) pressureRawEl.textContent = (data.pressure_raw ?? '--');
+    if (pressureCalcEl) pressureCalcEl.textContent = (data.pressure_calculated != null ? data.pressure_calculated.toFixed(1) : '--');
         
-        document.getElementById('fuelRaw').textContent = data.fuel_raw || '--';
-        document.getElementById('fuelCalc').textContent = (data.fuel_calculated ? data.fuel_calculated.toFixed(1) + ' %' : '-- %');
+    const fuelRawEl = document.getElementById('fuelRaw');
+    const fuelCalcEl = document.getElementById('fuelCalc');
+    if (fuelRawEl) fuelRawEl.textContent = (data.fuel_raw ?? '--');
+    if (fuelCalcEl) fuelCalcEl.textContent = (data.fuel_calculated != null ? data.fuel_calculated.toFixed(1) : '--');
+
+    // Hydraulic pressure
+    const hydRawEl = document.getElementById('hydRaw');
+    const hydCalcEl = document.getElementById('hydCalc');
+    if (hydRawEl) hydRawEl.textContent = (data.hydraulic_raw ?? '--');
+    if (hydCalcEl) hydCalcEl.textContent = (data.hydraulic_calculated != null ? data.hydraulic_calculated.toFixed(0) : '--');
     })
     .catch(error => {
         console.error('Error fetching sensor data:', error);
@@ -362,7 +400,8 @@ function getFieldDisplayName(inputId) {
         'actualVoltage': 'Battery Voltage',
         'actualTemp': 'Engine Temperature', 
         'actualPressure': 'Oil Pressure',
-        'actualFuelLevel': 'Fuel Level'
+    'actualFuelLevel': 'Fuel Level',
+    'actualHydPressure': 'Hydraulic Pressure'
     };
     return fieldNames[inputId] || inputId;
 }
@@ -374,7 +413,8 @@ function autoCalibrateSingle(inputId, actualValue) {
         'actualVoltage': 'battery',
         'actualTemp': 'temperature', 
         'actualPressure': 'pressure',
-        'actualFuelLevel': 'fuel'
+    'actualFuelLevel': 'fuel',
+    'actualHydPressure': 'hydraulic'
     };
     
     const sensorType = sensorMap[inputId];
@@ -461,23 +501,27 @@ function showAutoSaveStatus() {
 // Power management functions
 async function updatePowerStatus() {
     try {
-        const response = await fetch('/api/power-status');
+        const response = await fetch('/status');
         const data = await response.json();
-        
+
         // Update sleep mode status
-        const sleepModeElement = document.querySelector('[id*="sleepMode"]');
+        const sleepModeElement = document.getElementById('sleepStatus');
         if (sleepModeElement) {
-            sleepModeElement.textContent = `Sleep mode: ${data.sleepEnabled ? 'Enabled' : 'Disabled'}`;
+            const enabled = !!data.sleep_mode_enabled;
+            sleepModeElement.textContent = `Sleep mode: ${enabled ? 'Enabled' : 'Disabled'}`;
+            sleepModeElement.classList.toggle('success', enabled);
+            sleepModeElement.classList.toggle('error', !enabled);
         }
-        
+
         // Update activity timer
-        const activityElement = document.querySelector('[id*="activityTime"]');
+        const activityElement = document.getElementById('activityTime');
         if (activityElement) {
-            const minutes = Math.floor(data.timeSinceActivity / 60);
-            const seconds = data.timeSinceActivity % 60;
-            const sleepIn = Math.max(0, 1800 - data.timeSinceActivity); // 30 minutes
+            const since = Number(data.time_since_activity || 0);
+            const minutes = Math.floor(since / 60);
+            const seconds = Math.floor(since % 60);
+            const sleepIn = Number(data.time_until_sleep || 0);
             const sleepMinutes = Math.floor(sleepIn / 60);
-            const sleepSeconds = sleepIn % 60;
+            const sleepSeconds = Math.floor(sleepIn % 60);
             activityElement.textContent = `Time since activity: ${minutes}m ${seconds}s (sleep in: ${sleepMinutes}m ${sleepSeconds}s)`;
         }
     } catch (error) {
@@ -487,11 +531,14 @@ async function updatePowerStatus() {
 
 async function toggleSleepMode() {
     try {
-        const response = await fetch('/api/toggle-sleep', { method: 'POST' });
+        const response = await fetch('/control', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'toggle_sleep_mode' })
+        });
         const result = await response.json();
-        
-        if (result.status === 'success') {
-            window.settingsManager.showStatus(`Sleep mode ${result.enabled ? 'enabled' : 'disabled'}`, 'success');
+        if (result.success) {
+            window.settingsManager.showStatus(result.message || 'Sleep mode toggled', 'success');
             updatePowerStatus();
         } else {
             window.settingsManager.showStatus('Failed to toggle sleep mode', 'error');
@@ -505,8 +552,17 @@ async function toggleSleepMode() {
 async function sleepNow() {
     if (confirm('Put device to sleep now? It will wake up when the main control page is accessed.')) {
         try {
-            await fetch('/api/sleep-now', { method: 'POST' });
-            window.settingsManager.showStatus('Entering sleep mode...', 'info');
+            const response = await fetch('/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'sleep_now' })
+            });
+            const result = await response.json();
+            if (result.success) {
+                window.settingsManager.showStatus('Entering sleep mode...', 'info');
+            } else {
+                window.settingsManager.showStatus(result.message || 'Cannot sleep now', 'error');
+            }
         } catch (error) {
             console.error('Error entering sleep mode:', error);
             window.settingsManager.showStatus('Network error', 'error');
@@ -554,10 +610,8 @@ async function factoryReset() {
     if (userInput === confirmText) {
         try {
             const response = await fetch('/api/factory-reset', { method: 'POST' });
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                alert('Factory reset complete. Device will restart.');
+            if (response.ok) {
+                alert('Factory reset initiated. Device will restart.');
                 window.location.reload();
             } else {
                 window.settingsManager.showStatus('Factory reset failed', 'error');
@@ -571,12 +625,14 @@ async function factoryReset() {
 
 // Toggle password visibility
 function togglePasswordVisibility() {
-    const passwordInput = document.getElementById('wifiPassword');
+    const apPasswordInput = document.getElementById('wifiPassword');
+    const homePasswordInput = document.getElementById('homePassword');
     const checkbox = document.getElementById('showPassword');
-    
-    if (checkbox.checked) {
-        passwordInput.type = 'text';
-    } else {
-        passwordInput.type = 'password';
-    }
+
+    const type = checkbox.checked ? 'text' : 'password';
+    if (apPasswordInput) apPasswordInput.type = type;
+    if (homePasswordInput) homePasswordInput.type = type;
 }
+
+// Helper to trigger calibration explicitly from button clicks
+// calibrateClick buttons removed; calibration is triggered by pressing Enter in actual value fields.

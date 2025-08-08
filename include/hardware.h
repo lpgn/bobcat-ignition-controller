@@ -16,6 +16,7 @@
 extern float runtime_battery_divider;
 extern float runtime_temp_scale;
 extern float runtime_pressure_scale;
+extern float runtime_hyd_pressure_scale;
 extern int runtime_fuel_empty;
 extern int runtime_fuel_full;
 
@@ -49,6 +50,7 @@ float readEngineTemp();        // Coolant temperature (°C)
 float readOilPressure();       // Oil pressure (kPa)
 float readBatteryVoltage();    // Battery voltage (V)
 float readFuelLevel();         // Fuel level (%)
+float readHydraulicPressure(); // Hydraulic pressure (kPa)
 
 // ============================================================================
 // DIGITAL INPUT READING FUNCTIONS

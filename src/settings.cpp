@@ -103,6 +103,7 @@ void SettingsManager::setDefaultSettings() {
     // Alarm Thresholds
     currentSettings.maxCoolantTemp = 104;          // °C
     currentSettings.minOilPressure = 69;           // kPa (~0.7 bar)
+    currentSettings.minHydPressure = 0;            // disabled by default
     currentSettings.minBatteryVoltage = 11.0f;     // V
     currentSettings.maxBatteryVoltage = 15.0f;     // V
     
@@ -113,6 +114,7 @@ void SettingsManager::setDefaultSettings() {
     // Sensor Calibration
     // Note: Temperature uses inverted NTC formula (150 - ADC*scale), no offset needed
     currentSettings.pressureScale = 0.1682f;       // kPa per ADC unit
+    currentSettings.hydPressureScale = 0.1682f;    // default similar to oil until calibrated
     currentSettings.fuelLevelEmpty = 200;          // ADC value
     currentSettings.fuelLevelFull = 3800;          // ADC value
     currentSettings.fuelLevelLowThreshold = 15;    // % for low fuel warning
@@ -271,9 +273,9 @@ bool SettingsManager::updateSensorCalibration(float tempOffset, float pressScale
     
     // Log changes
     char oldVal[80], newVal[80];
-    sprintf(oldVal, "TO:%.1f PS:%.3f FE:%d FF:%d FL:%d%%", currentSettings.tempSensorOffset, 
-            currentSettings.pressureScale, currentSettings.fuelLevelEmpty, currentSettings.fuelLevelFull, currentSettings.fuelLevelLowThreshold);
-    sprintf(newVal, "TO:%.1f PS:%.3f FE:%d FF:%d FL:%d%%", tempOffset, pressScale, fuelEmpty, fuelFull, fuelLowThreshold);
+    sprintf(oldVal, "TO:%.1f PS:%.3f HPS:%.3f FE:%d FF:%d FL:%d%%", currentSettings.tempSensorOffset, 
+        currentSettings.pressureScale, currentSettings.hydPressureScale, currentSettings.fuelLevelEmpty, currentSettings.fuelLevelFull, currentSettings.fuelLevelLowThreshold);
+    sprintf(newVal, "TO:%.1f PS:%.3f HPS:%.3f FE:%d FF:%d FL:%d%%", tempOffset, pressScale, currentSettings.hydPressureScale, fuelEmpty, fuelFull, fuelLowThreshold);
     logSettingsChange("Sensor Calibration", oldVal, newVal);
     
     // Update settings
@@ -324,7 +326,35 @@ bool SettingsManager::validateSettings(const BobcatSettings& settings) {
     if (settings.fuelLevelEmpty >= settings.fuelLevelFull || 
         settings.fuelLevelEmpty > SettingsLimits::MAX_FUEL_ADC || 
         settings.fuelLevelFull > SettingsLimits::MAX_FUEL_ADC) return false;
+    if (settings.minHydPressure < SettingsLimits::MIN_HYD_PRESSURE_LIMIT || settings.minHydPressure > SettingsLimits::MAX_HYD_PRESSURE_LIMIT) return false;
+    if (settings.hydPressureScale < SettingsLimits::MIN_HYD_PRESSURE_SCALE || settings.hydPressureScale > SettingsLimits::MAX_HYD_PRESSURE_SCALE) return false;
     
+    return true;
+}
+
+bool SettingsManager::updateHydraulicThreshold(int16_t minHydPressure) {
+    if (minHydPressure < SettingsLimits::MIN_HYD_PRESSURE_LIMIT || minHydPressure > SettingsLimits::MAX_HYD_PRESSURE_LIMIT) {
+        Serial.printf("Invalid min hydraulic pressure: %d (must be %d-%d kPa)\n", minHydPressure, SettingsLimits::MIN_HYD_PRESSURE_LIMIT, SettingsLimits::MAX_HYD_PRESSURE_LIMIT);
+        return false;
+    }
+    char oldVal[32], newVal[32];
+    sprintf(oldVal, "%d", currentSettings.minHydPressure);
+    sprintf(newVal, "%d", minHydPressure);
+    logSettingsChange("Hydraulic Threshold", oldVal, newVal);
+    currentSettings.minHydPressure = minHydPressure;
+    return true;
+}
+
+bool SettingsManager::updateHydraulicCalibration(float hydPressScale) {
+    if (hydPressScale < SettingsLimits::MIN_HYD_PRESSURE_SCALE || hydPressScale > SettingsLimits::MAX_HYD_PRESSURE_SCALE) {
+        Serial.printf("Invalid hydraulic pressure scale: %.3f (must be %.3f-%.3f)\n", hydPressScale, SettingsLimits::MIN_HYD_PRESSURE_SCALE, SettingsLimits::MAX_HYD_PRESSURE_SCALE);
+        return false;
+    }
+    char oldVal[32], newVal[32];
+    sprintf(oldVal, "%.3f", currentSettings.hydPressureScale);
+    sprintf(newVal, "%.3f", hydPressScale);
+    logSettingsChange("Hydraulic Pressure Scale", oldVal, newVal);
+    currentSettings.hydPressureScale = hydPressScale;
     return true;
 }
 

@@ -40,6 +40,7 @@ void handleGetSettings(AsyncWebServerRequest *request) {
     // Alarm Thresholds
     doc["maxTemp"] = settings.maxCoolantTemp;
     doc["minOilPressure"] = settings.minOilPressure;
+    doc["minHydPressure"] = settings.minHydPressure;
     doc["minVoltage"] = settings.minBatteryVoltage;
     doc["maxVoltage"] = settings.maxBatteryVoltage;
     
@@ -48,6 +49,8 @@ void handleGetSettings(AsyncWebServerRequest *request) {
     
     // Sensor Calibration (only threshold is user-configurable)
     doc["fuelLevelLowThreshold"] = settings.fuelLevelLowThreshold;
+    doc["pressureScale"] = settings.pressureScale;
+    doc["hydPressureScale"] = settings.hydPressureScale;
     
     String jsonResponse;
     serializeJson(doc, jsonResponse);
@@ -89,6 +92,9 @@ void onSetSettingBody(AsyncWebServerRequest *request, uint8_t *data, size_t len,
             int16_t pressure = atoi(value);
             const BobcatSettings& current = g_settingsManager.getSettings();
             success = g_settingsManager.updateAlarmThresholds(current.maxCoolantTemp, pressure, current.minBatteryVoltage, current.maxBatteryVoltage);
+        } else if (strcmp(key, "minHydPressure") == 0) {
+            int16_t pressure = atoi(value);
+            success = g_settingsManager.updateHydraulicThreshold(pressure);
         } else if (strcmp(key, "minVoltage") == 0) {
             float voltage = atof(value);
             const BobcatSettings& current = g_settingsManager.getSettings();
@@ -404,9 +410,10 @@ void setupWebServer() {
         doc["temperature"] = readEngineTemp();
         doc["pressure"] = readOilPressure();
         doc["battery"] = readBatteryVoltage();
-        doc["battery_voltage"] = readBatteryVoltage();
+    doc["battery_voltage"] = readBatteryVoltage();
         doc["engine_temp"] = readEngineTemp();
         doc["oil_pressure"] = readOilPressure();
+    doc["hyd_pressure"] = readHydraulicPressure();
         
         // Add state flags for dashboard
         doc["lights_on"] = digitalRead(LIGHTS_PIN);
@@ -471,17 +478,20 @@ void setupWebServer() {
         int batteryRaw = analogRead(BATTERY_VOLTAGE_PIN);
         int temperatureRaw = analogRead(ENGINE_TEMP_PIN);
         int pressureRaw = analogRead(OIL_PRESSURE_PIN);
-        int fuelRaw = analogRead(FUEL_LEVEL_PIN);
+    int fuelRaw = analogRead(FUEL_LEVEL_PIN);
+    int hydRaw = analogRead(HYD_PRESSURE_PIN);
         
         doc["battery_raw"] = batteryRaw;
         doc["temperature_raw"] = temperatureRaw;
         doc["pressure_raw"] = pressureRaw;
-        doc["fuel_raw"] = fuelRaw;
+    doc["fuel_raw"] = fuelRaw;
+    doc["hydraulic_raw"] = hydRaw;
         
         // Sensor diagnostics
         doc["battery_status"] = (batteryRaw > 100 && batteryRaw < 4000) ? "OK" : "CHECK";
         doc["temperature_status"] = (temperatureRaw > 10 && temperatureRaw < 4000) ? "OK" : "CHECK";
-        doc["pressure_status"] = (pressureRaw < 4000) ? "OK" : "BROKEN";
+    doc["pressure_status"] = (pressureRaw < 4000) ? "OK" : "BROKEN";
+    doc["hydraulic_status"] = (hydRaw < 4000) ? "OK" : "BROKEN";
         doc["fuel_status"] = (fuelRaw > 10 && fuelRaw < 4090) ? "OK" : "CHECK";
         
         // Detailed diagnostics for pressure sensor
@@ -498,7 +508,8 @@ void setupWebServer() {
         doc["temp_offset"] = TEMP_SENSOR_OFFSET;  // Not calibrated yet
         doc["temp_scale"] = runtime_temp_scale;
         doc["pressure_offset"] = OIL_PRESSURE_OFFSET;  // Not calibrated yet
-        doc["pressure_scale"] = runtime_pressure_scale;
+    doc["pressure_scale"] = runtime_pressure_scale;
+    doc["hyd_pressure_scale"] = runtime_hyd_pressure_scale;
         doc["fuel_empty"] = runtime_fuel_empty;
         doc["fuel_full"] = runtime_fuel_full;
         
@@ -506,7 +517,8 @@ void setupWebServer() {
         doc["battery_calculated"] = readBatteryVoltage();
         doc["temperature_calculated"] = readEngineTemp();
         doc["pressure_calculated"] = readOilPressure();
-        doc["fuel_calculated"] = readFuelLevel();
+    doc["fuel_calculated"] = readFuelLevel();
+    doc["hydraulic_calculated"] = readHydraulicPressure();
         
         String jsonResponse;
         serializeJson(doc, jsonResponse);
@@ -534,6 +546,7 @@ void setupWebServer() {
         int temperatureRaw = analogRead(ENGINE_TEMP_PIN);
         int pressureRaw = analogRead(OIL_PRESSURE_PIN);
         int fuelRaw = analogRead(FUEL_LEVEL_PIN);
+    int hydRaw = analogRead(HYD_PRESSURE_PIN);
         
         bool calibrationApplied = false;
         String calibrationDetails = "";
@@ -566,6 +579,14 @@ void setupWebServer() {
             if (newScale > 0.001 && newScale < 10.0) {
                 prefs.putFloat("pressure_scale", newScale);
                 calibrationDetails = "Pressure scale: " + String(newScale, 6);
+                calibrationApplied = true;
+            }
+        }
+        else if (sensor == "hydraulic" && hydRaw < 4000) {
+            float newScale = actualValue / hydRaw;
+            if (newScale > 0.001 && newScale < 10.0) {
+                prefs.putFloat("hyd_pressure_scale", newScale);
+                calibrationDetails = "Hydraulic pressure scale: " + String(newScale, 6);
                 calibrationApplied = true;
             }
         }
@@ -664,6 +685,18 @@ void setupWebServer() {
                 updated = true;
             }
         }
+        if (request->hasParam("hyd_pressure_scale", true)) {
+            String value = request->getParam("hyd_pressure_scale", true)->value();
+            float newScale = value.toFloat();
+            if (newScale > 0.001 && newScale < 10.0) {
+                Preferences prefs;
+                prefs.begin("calibration", false);
+                prefs.putFloat("hyd_pressure_scale", newScale);
+                prefs.end();
+                updatedConstants += "Hydraulic pressure scale: " + String(newScale, 6) + " ";
+                updated = true;
+            }
+        }
         
         if (request->hasParam("fuel_empty", true)) {
             String value = request->getParam("fuel_empty", true)->value();
@@ -703,6 +736,23 @@ void setupWebServer() {
         
         String jsonResponse;
         serializeJson(responseDoc, jsonResponse);
+        request->send(200, "application/json", jsonResponse);
+    });
+
+    // Reset calibration to defaults
+    server.on("/api/reset-calibration", HTTP_POST, [](AsyncWebServerRequest *request){
+        StaticJsonDocument<256> doc;
+        Preferences prefs;
+        prefs.begin("calibration", false);
+        // Clear all calibration keys in this namespace
+        prefs.clear();
+        prefs.end();
+        // Reload runtime constants from defaults (or stored values if any)
+        loadCalibrationConstants();
+        doc["status"] = "success";
+        doc["message"] = "Calibration reset to defaults";
+        String jsonResponse;
+        serializeJson(doc, jsonResponse);
         request->send(200, "application/json", jsonResponse);
     });
 

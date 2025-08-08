@@ -19,6 +19,7 @@ struct BobcatSettings {
     // Alarm Thresholds
     int16_t maxCoolantTemp;         // Maximum coolant temperature °C (default: 104)
     int16_t minOilPressure;         // Minimum oil pressure kPa (default: 69)
+    int16_t minHydPressure;         // Minimum hydraulic pressure kPa (optional, default: 0 -> disabled)
     float minBatteryVoltage;        // Minimum battery voltage V (default: 11.0)
     float maxBatteryVoltage;        // Maximum battery voltage V (default: 15.0)
     
@@ -29,6 +30,7 @@ struct BobcatSettings {
     // Sensor Calibration
     float tempSensorOffset;         // Temperature sensor offset °C (default: -40.0, UNUSED)
     float pressureScale;            // Oil pressure scale kPa/unit (default: 0.1682)
+    float hydPressureScale;         // Hydraulic pressure scale kPa/unit (default: 0.1682)
     uint16_t fuelLevelEmpty;        // Fuel empty ADC value (default: 200)
     uint16_t fuelLevelFull;         // Fuel full ADC value (default: 3800)
     uint8_t fuelLevelLowThreshold;  // Low fuel warning threshold % (default: 15)
@@ -58,12 +60,14 @@ public:
     uint32_t getCooldownDuration() const { return currentSettings.cooldownDuration; }
     int16_t getMaxCoolantTemp() const { return currentSettings.maxCoolantTemp; }
     int16_t getMinOilPressure() const { return currentSettings.minOilPressure; }
+    int16_t getMinHydPressure() const { return currentSettings.minHydPressure; }
     float getMinBatteryVoltage() const { return currentSettings.minBatteryVoltage; }
     float getMaxBatteryVoltage() const { return currentSettings.maxBatteryVoltage; }
     const char* getWifiSSID() const { return currentSettings.wifiSSID; }
     const char* getWifiPassword() const { return currentSettings.wifiPassword; }
     float getTempSensorOffset() const { return currentSettings.tempSensorOffset; }
     float getPressureScale() const { return currentSettings.pressureScale; }
+    float getHydPressureScale() const { return currentSettings.hydPressureScale; }
     uint16_t getFuelLevelEmpty() const { return currentSettings.fuelLevelEmpty; }
     uint16_t getFuelLevelFull() const { return currentSettings.fuelLevelFull; }
     uint8_t getFuelLevelLowThreshold() const { return currentSettings.fuelLevelLowThreshold; }
@@ -71,8 +75,10 @@ public:
     // Setters for updating settings
     bool updateEngineSettings(uint32_t glowDuration, uint32_t crankTimeout, uint32_t cooldown);
     bool updateAlarmThresholds(int16_t maxTemp, int16_t minPressure, float minVolt, float maxVolt);
+    bool updateHydraulicThreshold(int16_t minHydPressure);
     bool updateWifiSettings(const char* ssid, const char* password);
     bool updateSensorCalibration(float tempOffset, float pressScale, uint16_t fuelEmpty, uint16_t fuelFull, uint8_t fuelLowThreshold);
+    bool updateHydraulicCalibration(float hydPressScale);
     
     // Validation functions
     bool validateSettings(const BobcatSettings& settings);
@@ -111,6 +117,8 @@ namespace SettingsLimits {
     constexpr int16_t MAX_COOLANT_TEMP = 120;
     constexpr int16_t MIN_OIL_PRESSURE_LIMIT = 30;
     constexpr int16_t MAX_OIL_PRESSURE_LIMIT = 150;
+    constexpr int16_t MIN_HYD_PRESSURE_LIMIT = 0;
+    constexpr int16_t MAX_HYD_PRESSURE_LIMIT = 3000; // kPa range for hydraulics
     
     // Voltage limits
     constexpr float MIN_BATTERY_VOLTAGE_LIMIT = 10.0f;
@@ -127,6 +135,8 @@ namespace SettingsLimits {
     constexpr float MAX_TEMP_OFFSET = 50.0f;
     constexpr float MIN_PRESSURE_SCALE = 0.01f;
     constexpr float MAX_PRESSURE_SCALE = 1.0f;
+    constexpr float MIN_HYD_PRESSURE_SCALE = 0.01f;
+    constexpr float MAX_HYD_PRESSURE_SCALE = 5.0f;
     constexpr uint16_t MIN_FUEL_ADC = 0;
     constexpr uint16_t MAX_FUEL_ADC = 4095;
 }
