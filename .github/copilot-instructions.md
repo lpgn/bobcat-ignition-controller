@@ -24,19 +24,27 @@ This is an **ESP32-based ignition controller** for old Bobcat equipment (specifi
 
 ### Prerequisites - ALWAYS Required
 1. **PlatformIO CLI** - Installed and configured on your system
-   - Use `platformio` for Windows
-   - Ensure `platformio` command is available in your PATH setting the path directory with $env:Path += ';C:\.platformio\penv\Scripts' if needed, for Linux use `export PATH=$PATH:/home/user/.platformio/penv/Scripts`
+   - Use `platformio` for Windows (PATH permanently configured)
    - Use `pio` for Linux
    - Ensure `pio` command is available in your PATH
 
 2. **USB cable** - For programming ESP32 (if doing actual hardware testing)
 
+### One-Time Setup: Add PlatformIO to PATH Permanently (Windows)
+
+If `platformio` command is not recognized, add it to your system PATH permanently:
+
+```powershell
+# Add PlatformIO to user PATH permanently (run once)
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\.platformio\penv\Scripts", [EnvironmentVariableTarget]::User)
+
+# Verify it works (restart terminal if needed)
+platformio --version
+```
+
 ### Fast PowerShell commands (Windows) — shortest working form
 
 ```powershell
-# One-time per session: add PlatformIO to PATH
-$env:Path += ';C:\.platformio\penv\Scripts'
-
 # Build firmware
 platformio run
 
@@ -71,7 +79,7 @@ platformio run -e esp32dev-ota -t uploadfs
 ### Validation Steps - No Automated Testing Available
 
 **Manual validation only:**
-1. **Compile check**: `pio run` must complete without errors
+1. **Compile check**: `platformio run` must complete without errors
 2. **Upload check**: Verify firmware and filesystem uploads via Playwright logs
 3. **Web interface**: Verify web files in `/data/` are valid HTML/CSS/JS
 
