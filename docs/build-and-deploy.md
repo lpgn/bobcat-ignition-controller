@@ -3,7 +3,7 @@
 ## Build firmware
 
 ```powershell
-platformio.exe run
+platformio run
 ```
 
 ## Build filesystem

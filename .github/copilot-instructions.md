@@ -207,7 +207,7 @@ The system operates as a real ignition key with these states:
 - **Global access**: Use `g_settingsManager` (declared in `settings.cpp`, extern in `settings.h`)
 
 ### Build & Upload Issues  
-- **Build failures**: Use full platformio.exe path, check platformio.ini for dependencies
+- **Build failures**: Ensure PlatformIO is in PATH, check platformio.ini for dependencies
 - **Web changes not visible**: Run `buildfs` + upload via ElegantOTA web interface
 - **Firmware upload**: NEVER use serial upload for production - always use ElegantOTA web interface at `/update`
 - **Serial connection failed**: Ignore serial upload errors for production - use OTA workflow instead
