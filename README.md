@@ -2,6 +2,14 @@
 
 ESP32-based control system for managing old Bobcat equipment with web-based interface, glow plug preheating, and safety monitoring.
 
+## Documentation
+
+See the complete, restructured documentation in `docs/`:
+
+- Start here: [docs/README.md](docs/README.md)
+- Quick start: [docs/getting-started.md](docs/getting-started.md)
+- Build & deploy: [docs/build-and-deploy.md](docs/build-and-deploy.md)
+
 ## Features
 
 - **Web Interface**: Modern responsive web interface with grouped controls
@@ -16,6 +24,7 @@ ESP32-based control system for managing old Bobcat equipment with web-based inte
 ## Important Notes
 
 ⚠️ **This system is designed for older Bobcat equipment where:**
+
 - Engine cannot be stopped electronically (manual lever only)
 - No ignition/run relay is present (engine runs independently once started)
 - Safety system provides alerts only - cannot auto-shutdown engine
@@ -23,19 +32,23 @@ ESP32-based control system for managing old Bobcat equipment with web-based inte
 ## Hardware Requirements
 
 ### ESP32 Development Board
+
 - ESP32-WROOM-32 or compatible
 - Minimum 30 GPIO pins recommended
 
 ### Relay Modules
+
 - 2x High-current automotive relays (30A minimum)
 - Relay driver modules (optoisolated recommended)
 
 ### Sensors
+
 - Engine temperature sensor (NTC thermistor or similar)
 - Oil pressure sensor (0-5V output)
 - Battery voltage monitoring (voltage divider circuit)
 
 ### User Interface
+
 - Momentary push buttons (2x - Start/Stop)
 - Status LED
 - Buzzer/alarm (optional)
@@ -74,12 +87,14 @@ ESP32-based control system for managing old Bobcat equipment with web-based inte
 ## Installation
 
 ### PlatformIO
-```bash
+
+```pwsh
 cd bobcat-ignition-controller
 pio run --target upload
 ```
 
 ### Arduino IDE
+
 1. Install ESP32 board package
 2. Open `src/main.cpp` in Arduino IDE
 3. Select ESP32 Dev Module board
@@ -87,7 +102,7 @@ pio run --target upload
 
 ## Wiring Diagram
 
-```
+```text
 ESP32          Relay Module       Bobcat System
 GPIO2  ----→   Relay 1 Control ----→ Glow Plug Circuit
 GPIO4  ----→   Relay 2 Control ----→ Starter Motor Circuit
@@ -107,11 +122,13 @@ GPIO32 ←----   Battery Voltage (via voltage divider)
 ## Configuration
 
 ### Timing Constants
+
 - `GLOW_PLUG_DURATION`: Glow plug heating time (default: 20 seconds)
 - `IGNITION_TIMEOUT`: Maximum starter engagement time (default: 5 seconds)
 - `DEBOUNCE_DELAY`: Button debounce time (default: 50ms)
 
 ### Safety Thresholds
+
 - Battery voltage minimum: 10.5V
 - Engine temperature limits: TBD based on sensor specifications
 - Oil pressure limits: TBD based on engine specifications
@@ -127,17 +144,20 @@ GPIO32 ←----   Battery Voltage (via voltage divider)
 ## Troubleshooting
 
 ### Common Issues
+
 1. **Won't Start**: Check battery voltage, verify relay connections
 2. **Glow Plugs Not Heating**: Check relay 1 wiring and fuse
 3. **Starter Won't Engage**: Check relay 2 wiring and connections
 4. **False Error Conditions**: Verify sensor wiring and calibration
 
 ### Serial Monitor
+
 Connect to ESP32 at 115200 baud for detailed operation logs and debugging information.
 
 ## Safety Warnings
 
 ⚠️ **HIGH VOLTAGE/CURRENT SYSTEM** ⚠️
+
 - This system controls high-current automotive circuits
 - Improper installation can damage equipment or cause injury
 - Always disconnect battery before installation
