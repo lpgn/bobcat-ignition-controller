@@ -20,6 +20,11 @@
 #include "web_interface.h"
 #include "settings.h"
 #include <ElegantOTA.h>
+// Optional CLI-friendly OTA (PlatformIO espota.py)
+#include <ArduinoOTA.h>
+#include <WiFi.h>
+
+static bool g_otaInitialized = false;
 
 void setup() {
   Serial.begin(115200);
@@ -46,6 +51,14 @@ void setup() {
   
   setupWebServer(); // Initialize the web server
 
+  // Configure ArduinoOTA (begin is deferred until WiFi connected)
+  ArduinoOTA.setHostname("bobcat-ignition");
+  // To require a password, uncomment and pass via PIO with --auth
+  // ArduinoOTA.setPassword("change_me");
+  ArduinoOTA.onStart([]() { Serial.println("ArduinoOTA: Start"); });
+  ArduinoOTA.onEnd([]() { Serial.println("ArduinoOTA: End"); });
+  ArduinoOTA.onError([](ota_error_t error) { Serial.printf("ArduinoOTA Error[%u]\n", error); });
+
   Serial.println("System initialized - Key is in OFF position");
   Serial.println("Turn key to ON, then GLOW PLUG, then hold START to crank engine");
   Serial.println("System will auto-sleep after 30 minutes of inactivity");
@@ -54,6 +67,15 @@ void setup() {
 void loop() {
   // ElegantOTA loop function
   ElegantOTA.loop();
+  // Handle ArduinoOTA in the main loop (non-blocking)
+  if (!g_otaInitialized && WiFi.status() == WL_CONNECTED) {
+    ArduinoOTA.begin();
+    g_otaInitialized = true;
+    Serial.print("ArduinoOTA listening on ");
+    Serial.print(WiFi.localIP());
+    Serial.println(":3232");
+  }
+  ArduinoOTA.handle();
   
   // Don't allow automatic sleep for the first 2 minutes after boot
   // This gives time to connect and configure the system

@@ -24,19 +24,22 @@ This is an **ESP32-based ignition controller** for old Bobcat equipment (specifi
 
 2. **USB cable** - For programming ESP32 (if doing actual hardware testing)
 
-### Build Commands - Essential Only
+### Fast PowerShell commands (Windows) — shortest working form
 
-```bash
-# 1. Build firmware
-platformio.exe run
+```powershell
+# One-time per session: add PlatformIO to PATH
+$env:Path += ';C:\.platformio\penv\Scripts'
 
-# 2. Build filesystem
-platformio.exe run --target buildfs
+# Build firmware
+platformio run
+
+# Build filesystem (LittleFS)
+platformio run --target buildfs
 ```
-### Upload Commands - Use Playwright MCP + ElegantOTA
+### Upload options
 
 ```bash
-# 1. Use Playwright MCP to upload via ElegantOTA
+# Option A) Playwright MCP + ElegantOTA (first-time seed, visible browser)
 mcp_playwright_browser_navigate: http://192.168.1.128/update
 mcp_playwright_browser_select_option: "Firmware"
 mcp_playwright_browser_file_upload: .pio/build/esp32dev/firmware.bin
@@ -46,6 +49,16 @@ mcp_playwright_browser_wait_for: "Update Successful"
 mcp_playwright_browser_select_option: "LittleFS / SPIFFS"
 mcp_playwright_browser_file_upload: .pio/build/esp32dev/littlefs.bin
 mcp_playwright_browser_wait_for: "Update Successful"
+
+# Option B) PlatformIO CLI (ArduinoOTA/espota) for ongoing updates
+# Set upload_port in platformio.ini env:esp32dev-ota for zero-typing; otherwise pass --upload-port DEVICE_IP
+
+# Firmware OTA
+platformio run -e esp32dev-ota -t upload
+
+# Filesystem OTA (LittleFS)
+platformio run -e esp32dev-ota -t buildfs
+platformio run -e esp32dev-ota -t uploadfs
 ```
 
 ### Validation Steps - No Automated Testing Available
