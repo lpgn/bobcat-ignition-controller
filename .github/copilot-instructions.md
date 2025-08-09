@@ -28,10 +28,10 @@ This is an **ESP32-based ignition controller** for old Bobcat equipment (specifi
 
 ```bash
 # 1. Build firmware
-C:\.platformio\penv\Scripts\platformio.exe run
+platformio.exe run
 
 # 2. Build filesystem
-C:\.platformio\penv\Scripts\platformio.exe run --target buildfs
+platformio.exe run --target buildfs
 ```
 ### Upload Commands - Use Playwright MCP + ElegantOTA
 
