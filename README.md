@@ -17,7 +17,7 @@ Minimal docs:
 ## OTA updates (summary)
 
 - First-time upload: use ElegantOTA in a visible browser at `http://DEVICE_IP/update` to upload both firmware and LittleFS images.
-- Ongoing updates: use PlatformIO CLI with ArduinoOTA (espota). See full steps in [Build & deploy](docs/build-and-deploy.md) and [Getting started](docs/getting-started.md).
+- Ongoing updates: use PlatformIO CLI with ArduinoOTA (espota). See commands in [.github/copilot-instructions.md](.github/copilot-instructions.md).
 
 ## Features
 
