@@ -4,11 +4,20 @@ ESP32-based control system for managing old Bobcat equipment with web-based inte
 
 ## Documentation
 
-See the complete, restructured documentation in `docs/`:
+Single source for build/flash/OTA commands: [.github/copilot-instructions.md](.github/copilot-instructions.md)
 
-- Start here: [docs/README.md](docs/README.md)
-- Quick start: [docs/getting-started.md](docs/getting-started.md)
-- Build & deploy: [docs/build-and-deploy.md](docs/build-and-deploy.md)
+Minimal docs:
+
+- Manual: [docs/manual.md](docs/manual.md)
+- Hardware: [docs/hardware.md](docs/hardware.md)
+- Software: [docs/software.md](docs/software.md)
+- Wiring: [docs/wiring.md](docs/wiring.md)
+- Schematics: [docs/schematics.mmd](docs/schematics.mmd)
+
+## OTA updates (summary)
+
+- First-time upload: use ElegantOTA in a visible browser at `http://DEVICE_IP/update` to upload both firmware and LittleFS images.
+- Ongoing updates: use PlatformIO CLI with ArduinoOTA (espota). See full steps in [Build & deploy](docs/build-and-deploy.md) and [Getting started](docs/getting-started.md).
 
 ## Features
 
