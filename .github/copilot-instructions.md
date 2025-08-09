@@ -18,7 +18,7 @@ This is an **ESP32-based ignition controller** for old Bobcat equipment (specifi
 ### Prerequisites - ALWAYS Required
 1. **PlatformIO CLI** - Installed and configured on your system
    - Use `C:\.platformio\penv\Scripts\platformio.exe` for Windows
-   - Ensure `platformio` command is available in your PATH
+   - Ensure `platformio` command is available in your PATH setting the path directory with $env:Path += ';C:\.platformio\penv\Scripts' if needed, for Linux use `export PATH=$PATH:/home/user/.platformio/penv/Scripts`
    - Use `pio` for Linux
    - Ensure `pio` command is available in your PATH
 
