@@ -11,7 +11,7 @@ Minimal docs:
 - Manual: [docs/manual.md](docs/manual.md)
 - Hardware: [docs/hardware.md](docs/hardware.md)
 - Software: [docs/software.md](docs/software.md)
-- Wiring: [docs/wiring.md](docs/wiring.md)
+- Build & Deploy: [docs/build-and-deploy.md](docs/build-and-deploy.md)
 - Schematics: [docs/schematics.mmd](docs/schematics.mmd)
 
 ## OTA updates (summary)

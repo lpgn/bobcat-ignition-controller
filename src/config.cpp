@@ -9,11 +9,11 @@
 // ANALOG INPUT PINS - Engine Sensors (ADC1 channels) - Sequential assignment
 // ============================================================================
 const int ENGINE_TEMP_PIN = 39;       // ADC1_CH3 - Coolant Temperature Sensor - MOVED
-const int OIL_PRESSURE_PIN = 34;      // ADC1_CH6 - Oil Pressure Sensor (0-5V) - MOVED to GPIO34
+const int OIL_PRESSURE_PIN = 34;      // ADC1_CH6 - Oil Pressure Sender (0-180Ω resistive) - MOVED to GPIO34
 const int BATTERY_VOLTAGE_PIN = 36;   // ADC1_CH0 - Battery Voltage (via divider) - MOVED to GPIO36
-const int FUEL_LEVEL_PIN = 35;        // ADC1_CH7 - Fuel Level Sensor (0-5V) - MOVED
+const int FUEL_LEVEL_PIN = 35;        // ADC1_CH7 - Fuel Level Sender (240-33Ω resistive) - MOVED
 // Optional additional sensor
-const int HYD_PRESSURE_PIN = 33;      // ADC1_CH5 - Hydraulic Pressure Sensor (0-5V)
+const int HYD_PRESSURE_PIN = 33;      // ADC1_CH5 - Hydraulic Pressure Sensor (resistive type recommended)
 
 // ============================================================================
 // DIGITAL INPUT PINS - Status Feedback (Physical sequence from header)
@@ -48,11 +48,11 @@ const unsigned long ACTIVITY_TIMEOUT = 300000;    // 5 minutes of inactivity bef
 const float TEMP_SENSOR_OFFSET = -40.0;      // Offset for temperature calculation (legacy, not used in new formula)
 const float TEMP_SENSOR_SCALE = 0.040;       // Scale factor for inverted NTC formula (°C per ADC unit)
 
-// Oil Pressure Sensor (0-5V = 0-689 kPa typical, ~0-6.9 bar)
+// Oil Pressure Sender (0-180Ω resistive sender with 220Ω pull-up to 3.3V)
 const float OIL_PRESSURE_OFFSET = 0.0;       // Pressure sensor offset
 const float OIL_PRESSURE_SCALE = 0.1682;     // 689 kPa / 4095 ADC = 0.1682 kPa/unit
 
-// Hydraulic Pressure Sensor (0-5V typical). Default scale matches oil until calibrated
+// Hydraulic Pressure Sensor (resistive type recommended, similar to oil pressure)
 const float HYD_PRESSURE_OFFSET = 0.0;       // kPa
 const float HYD_PRESSURE_SCALE = 0.1682;     // kPa/unit (placeholder)
 

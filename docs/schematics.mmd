@@ -1,345 +1,109 @@
-```mermaid
-graph TD
-    subgraph "Power Source"
-        direction TB
-        BAT["+12V Battery"]
-        GND["Chassis Ground"]
-        FUSE["20A Main Fuse"]
-        BAT --> FUSE
-        FUSE --> POWER_BUS["+12V Power Bus"]
-    end
-
-    subgraph "LILYGO T-Relay ESP32 Board"
-        direction TB
-        VIN["VIN (12V Input)"]
-        ESP_GND["GND"]
-        ESP32["ESP32-WROOM-32"]
-        
-        subgraph "Relay Control GPIOs"
-            GPIO5["GPIO5 → Relay 1"]
-            GPIO21["GPIO21 → Relay 2"]
-            GPIO22["GPIO22 → Relay 3"]
-            GPIO18["GPIO18 → Relay 4"]
-        end
-        
-        subgraph "Sensor Input GPIOs"
-            GPIO36["GPIO36 (ADC1_CH0)"]
-            GPIO39["GPIO39 (ADC1_CH3)"]
-            GPIO34["GPIO34 (ADC1_CH6)"]
-            GPIO35["GPIO35 (ADC1_CH7)"]
-        end
-        
-        subgraph "Status Input GPIOs"
-            GPIO27["GPIO27 (Digital)"]
-            GPIO14["GPIO14 (Digital)"]
-        end
-        
-        subgraph "4-Channel Relay Module"
-            REL1["Relay 1<br/>Main Power"]
-            REL2["Relay 2<br/>Glow Plugs"]
-            REL3["Relay 3<br/>Starter"]
-            REL4["Relay 4<br/>Lights"]
-        end
-        
-        ESP32 --> GPIO5
-        ESP32 --> GPIO21
-        ESP32 --> GPIO22
-        ESP32 --> GPIO18
-        ESP32 --> GPIO36
-        ESP32 --> GPIO39
-        ESP32 --> GPIO34
-        ESP32 --> GPIO35
-        ESP32 --> GPIO27
-        ESP32 --> GPIO14
-        
-        GPIO5 --> REL1
-        GPIO21 --> REL2
-        GPIO22 --> REL3
-        GPIO18 --> REL4
-    end
-
-    subgraph "Signal Conditioning"
-        direction TB
-        TEMP_COND["Temperature<br/>Signal Conditioner"]
-        PRESS_COND["Pressure<br/>Signal Conditioner"]
-        VOLT_DIV["Battery Voltage<br/>Divider (4:1)"]
-        FUEL_COND["Fuel Level<br/>Conditioner"]
-    end
-
-    subgraph "Engine Sensors"
-        direction TB
-        TEMP_SENSOR["Engine Temperature<br/>Sensor"]
-        OIL_SENSOR["Oil Pressure<br/>Sensor"]
-        FUEL_SENSOR["Fuel Level<br/>Sender (Optional)"]
-        ALT_LAMP["Alternator<br/>Lamp Terminal"]
-        OIL_SWITCH["Oil Pressure<br/>Switch"]
-    end
-
-    subgraph "Bobcat Electrical Systems"
-        direction TB
-        subgraph "Power Distribution"
-            MAIN_BUS["Main Electrical Bus"]
-            IGN_SWITCH["Ignition Switch Input"]
-        end
-        
-        subgraph "Engine Control"
-            GLOW_CTRL["Glow Plug Controller"]
-            STARTER_SOL["Starter Solenoid"]
-        end
-        
-        subgraph "Lighting"
-            FRONT_LIGHTS["Front Work Lights"]
-            REAR_LIGHTS["Rear Work Lights"]
-        end
-    end
-
-    subgraph "Protection & Fusing"
-        direction TB
-        FUSE_15A["15A Fuse<br/>Main Power"]
-        FUSE_10A_GLOW["10A Fuse<br/>Glow Plugs"]
-        FUSE_5A["5A Fuse<br/>Starter"]
-        FUSE_10A_LIGHT["10A Fuse<br/>Lights"]
-    end
-
-    %% Power Connections
-    POWER_BUS --> VIN
-    POWER_BUS --> FUSE_15A
-    GND --> ESP_GND
-    
-    %% Relay Power Distribution
-    FUSE_15A --> REL1
-    REL1 --> REL2
-    REL1 --> REL3
-    REL1 --> REL4
-    
-    %% Relay Output Connections
-    REL1 --> FUSE_15A
-    REL1 --> MAIN_BUS
-    REL1 --> IGN_SWITCH
-    
-    REL2 --> FUSE_10A_GLOW
-    FUSE_10A_GLOW --> GLOW_CTRL
-    
-    REL3 --> FUSE_5A
-    FUSE_5A --> STARTER_SOL
-    
-    REL4 --> FUSE_10A_LIGHT
-    FUSE_10A_LIGHT --> FRONT_LIGHTS
-    FUSE_10A_LIGHT --> REAR_LIGHTS
-
-    %% Sensor Connections
-    TEMP_SENSOR --> TEMP_COND
-    TEMP_COND --> GPIO36
-    
-    OIL_SENSOR --> PRESS_COND
-    PRESS_COND --> GPIO39
-    
-    POWER_BUS --> VOLT_DIV
-    VOLT_DIV --> GPIO34
-    
-    FUEL_SENSOR --> FUEL_COND
-    FUEL_COND --> GPIO35
-    
-    ALT_LAMP --> GPIO27
-    OIL_SWITCH --> GPIO14
-
-    %% WiFi Access Point
-    ESP32 -.->|WiFi 2.4GHz| WEBAPP["Web Interface<br/>192.168.4.1"]
-    
-    classDef powerSupply fill:#ffcccc
-    classDef controller fill:#ccffcc
-    classDef sensors fill:#ccccff
-    classDef outputs fill:#ffffcc
-    classDef protection fill:#ffccff
-    
-    class BAT,GND,FUSE,POWER_BUS powerSupply
-    class ESP32,REL1,REL2,REL3,REL4 controller
-    class TEMP_SENSOR,OIL_SENSOR,FUEL_SENSOR,ALT_LAMP,OIL_SWITCH sensors
-    class MAIN_BUS,GLOW_CTRL,STARTER_SOL,FRONT_LIGHTS,REAR_LIGHTS outputs
-    class FUSE_15A,FUSE_10A_GLOW,FUSE_5A,FUSE_10A_LIGHT protection
-```
-
-## System Block Diagram
-
-```mermaid
-flowchart TD
-    subgraph "User Interface Layer"
-        WEB["Web Browser<br/>Mobile/Desktop"]
-        WIFI["WiFi Connection<br/>192.168.4.1"]
-    end
-    
-    subgraph "Control Layer"
-        ESP32["ESP32 Controller<br/>Main Logic"]
-        STATE["State Machine<br/>Safety Logic"]
-        TIMER["Timer Manager<br/>Glow Plug Control"]
-    end
-    
-    subgraph "Hardware Abstraction Layer"
-        RELAY_CTRL["Relay Control<br/>4-Channel Driver"]
-        SENSOR_IF["Sensor Interface<br/>ADC + Digital"]
-        PWR_MGMT["Power Management<br/>12V → 3.3V"]
-    end
-    
-    subgraph "Physical Hardware"
-        RELAYS["4x SPDT Relays<br/>10A Rating"]
-        SENSORS["Engine Sensors<br/>Temp/Press/Voltage"]
-        BOBCAT["Bobcat Systems<br/>Power/Glow/Start/Lights"]
-    end
-    
-    WEB <--> WIFI
-    WIFI <--> ESP32
-    ESP32 <--> STATE
-    ESP32 <--> TIMER
-    STATE <--> RELAY_CTRL
-    SENSOR_IF <--> ESP32
-    RELAY_CTRL <--> RELAYS
-    SENSOR_IF <--> SENSORS
-    RELAYS <--> BOBCAT
-    PWR_MGMT <--> ESP32
-    PWR_MGMT <--> BOBCAT
-    
-    classDef ui fill:#e1f5fe
-    classDef control fill:#f3e5f5
-    classDef hal fill:#fff3e0
-    classDef hardware fill:#e8f5e8
-    
-    class WEB,WIFI ui
-    class ESP32,STATE,TIMER control
-    class RELAY_CTRL,SENSOR_IF,PWR_MGMT hal
-    class RELAYS,SENSORS,BOBCAT hardware
-```
-
-## Power Flow Diagram
-
-```mermaid
+%%{init: {"theme":"default","flowchart":{"defaultRenderer":"elk"}} }%%
 flowchart LR
-    subgraph "Power Input"
-        BATT["12V Battery<br/>Bobcat"]
-        FUSE_MAIN["20A Main Fuse"]
+    %% POWER & FUSING
+    subgraph PWR [Power & Fusing]
+      BAT{{"+12V Battery"}}
+      FUSE_MAIN["20A Main Fuse"]
+      POWER_BUS["12V Power Bus"]
+      FUSE_15A["15A Fuse Main Power"]
+      FUSE_10A_GLOW["10A Fuse Glow Plugs"]
+      FUSE_5A["5A Fuse Starter"]
+      FUSE_10A_LIGHT["10A Fuse Lights"]
+      GND[("Ground")]
+      BAT --> FUSE_MAIN --> POWER_BUS
+      POWER_BUS -->|Main power| FUSE_15A
+    end
+
+    %% MICROCONTROLLER & RELAYS
+    subgraph CTRL ["LILYGO T-Relay ESP32 Board & Relays"]
+      ESP32["ESP32-WROOM"]
+      VIN["VIN (12V)"]
+      ESP_GND[("Board GND")]
+      REL1["Relay 1 Main Power<br/>GPIO21"]
+      REL2["Relay 2 Glow Plugs<br/>GPIO19"]
+      REL3["Relay 3 Starter<br/>GPIO18"]
+      REL4["Relay 4 Lights<br/>GPIO5"]
+      ESP32 -.->|WiFi| WEBAPP["Web UI 192.168.4.1"]
+      VIN -.-> ESP32
+      ESP_GND -.-> ESP32
+      ESP32 -->|Control| REL1
+      ESP32 -->|Control| REL2
+      ESP32 -->|Control| REL3
+      ESP32 -->|Control| REL4
     end
     
-    subgraph "Controller Power"
-        REG_12V["12V Bus"]
-        REG_5V["5V Regulator<br/>500mA"]
-        REG_3V3["3.3V Regulator<br/>600mA"]
+    %% SENSORS WITH ACTUAL GPIO PINS
+    subgraph SENS ["Sensors & Signal Conditioning"]
+      TEMP_SENSOR["Engine Temp NTC<br/>10kΩ @ 25°C"]
+      TEMP_PU["10kΩ Pull-up to 3.3V"]
+      OIL_SENDER["Oil Pressure Sender<br/>0-180Ω"]
+      OIL_PU["220Ω Pull-up to 3.3V"]
+      BAT_DIV_R1["Battery Voltage Divider<br/>100kΩ"]
+      BAT_DIV_R2["33kΩ to GND"]
+      ESP_3V3["ESP32 3.3V Rail"]
+      FUEL_SENDER["Fuel Level Sender<br/>240-33Ω Float"]
+      FUEL_PU["330Ω Pull-up to 3.3V"]
+      HYD_SENDER["Hydraulic Pressure Sender<br/>0-180Ω"]
+      HYD_PU["220Ω Pull-up to 3.3V"]
+      ALT_SIGNAL["Alternator Charge"]
+      ALT_PU["Internal Pull-up"]
+      RUN_SIGNAL["Engine Run Feedback"]
+      RUN_PU["Internal Pull-up"]
+      
+      TEMP_SENSOR --- TEMP_PU
+      TEMP_PU -->|GPIO39 ADC1_CH3| ESP32
+      OIL_SENDER --- OIL_PU
+      OIL_PU -->|GPIO34 ADC1_CH6| ESP32
+      POWER_BUS --- BAT_DIV_R1 --- BAT_DIV_R2
+      BAT_DIV_R2 --- GND
+      BAT_DIV_R1 -->|GPIO36 ADC1_CH0| ESP32
+      ESP_3V3 -.-> TEMP_PU
+      ESP_3V3 -.-> OIL_PU
+      ESP_3V3 -.-> FUEL_PU
+      ESP_3V3 -.-> HYD_PU
+      FUEL_SENDER --- FUEL_PU
+      FUEL_PU -->|GPIO35 ADC1_CH7| ESP32
+      HYD_SENDER --- HYD_PU
+      HYD_PU -->|GPIO33 ADC1_CH5| ESP32
+      ALT_SIGNAL --- ALT_PU
+      ALT_PU -->|GPIO22 Digital| ESP32
+      RUN_SIGNAL --- RUN_PU
+      RUN_PU -->|GPIO26 Digital| ESP32
     end
-    
-    subgraph "Load Distribution"
-        RELAY_PWR["Relay Coils<br/>4x ~30mA each"]
-        ESP_PWR["ESP32 Core<br/>~200mA"]
-        SENSOR_PWR["Sensor Supply<br/>~50mA"]
+
+    %% OUTPUTS (BOBCAT ELECTRICAL)
+    subgraph OUT ["Bobcat Engine & Electrical"]
+      MAIN_DIST["Main Electrical Distribution"]
+      GLOW_PLUGS["Glow Plug Bus Bar"]
+      STARTER_SOL["Starter Solenoid<br/>(with flyback diode)"]
+      WORK_LIGHTS["Work Lights<br/>(Front & Rear)"]
+      
+      FUSE_15A --> REL1
+      REL1 -->|30A Switched 12V| MAIN_DIST
+      POWER_BUS --> FUSE_10A_GLOW
+      FUSE_10A_GLOW --> REL2
+      REL2 -->|Switched 12V| GLOW_PLUGS
+      POWER_BUS --> FUSE_5A
+      FUSE_5A --> REL3
+      REL3 -->|High Current| STARTER_SOL
+      POWER_BUS --> FUSE_10A_LIGHT
+      FUSE_10A_LIGHT --> REL4
+      REL4 -->|Switched 12V| WORK_LIGHTS
     end
-    
-    subgraph "Output Loads"
-        MAIN_OUT["Main Power<br/>Variable Load"]
-        GLOW_OUT["Glow Plugs<br/>~8A"]
-        START_OUT["Starter Solenoid<br/>~3A"]
-        LIGHT_OUT["Work Lights<br/>~6A"]
-    end
-    
-    BATT --> FUSE_MAIN
-    FUSE_MAIN --> REG_12V
-    REG_12V --> REG_5V
-    REG_12V --> REG_3V3
-    REG_12V --> RELAY_PWR
-    REG_3V3 --> ESP_PWR
-    REG_5V --> SENSOR_PWR
-    
-    REG_12V -.->|Via Relay 1| MAIN_OUT
-    REG_12V -.->|Via Relay 2| GLOW_OUT
-    REG_12V -.->|Via Relay 3| START_OUT
-    REG_12V -.->|Via Relay 4| LIGHT_OUT
-    
-    classDef power fill:#ffebee
-    classDef regulation fill:#e8f5e8
-    classDef loads fill:#fff3e0
-    classDef outputs fill:#e3f2fd
-    
-    class BATT,FUSE_MAIN power
-    class REG_12V,REG_5V,REG_3V3 regulation
-    class RELAY_PWR,ESP_PWR,SENSOR_PWR loads
-    class MAIN_OUT,GLOW_OUT,START_OUT,LIGHT_OUT outputs
-```
 
-## Safety Interlock Diagram
+    %% MAIN POWER CONNECTIONS
+    POWER_BUS --- VIN
+    GND --- ESP_GND
 
-```mermaid
-stateDiagram-v2
-    [*] --> PowerOff
+    %% LEGEND & STYLING
+    classDef power fill:#ffe6e6,stroke:#c00,stroke-width:2px;
+    classDef sensor fill:#e6f0ff,stroke:#1e67b6,stroke-width:2px;
+    classDef ctrl fill:#eaffea,stroke:#23a023,stroke-width:2px;
+    classDef out fill:#fffccf,stroke:#bba900,stroke-width:2px;
+    classDef fuse fill:#ffd0fa,stroke:#954ca4,stroke-width:2px;
     
-    state PowerOff {
-        [*] --> AllRelaysOff
-        AllRelaysOff --> WiFiActive : WiFi remains active
-        note right of AllRelaysOff : Engine continues running\n(manual stop only)
-    }
-    
-    PowerOff --> PowerOn : User presses POWER ON
-    
-    state PowerOn {
-        [*] --> MainPowerActive
-        MainPowerActive --> GlowPlugsReady
-        GlowPlugsReady --> StarterReady
-        StarterReady --> LightsReady
-        
-        state GlowPlugsReady {
-            [*] --> GlowIdle
-            GlowIdle --> GlowActive : User presses GLOW
-            GlowActive --> GlowTimer : 20-second timer
-            GlowTimer --> GlowIdle : Timer expires
-        }
-        
-        state StarterReady {
-            [*] --> StarterIdle
-            StarterIdle --> StarterActive : User presses START
-            StarterActive --> StarterIdle : User releases or timeout
-            note right of StarterActive : Max 10-second engagement
-        }
-        
-        state LightsReady {
-            [*] --> LightsOff
-            LightsOff --> LightsOn : User toggles LIGHTS
-            LightsOn --> LightsOff : User toggles LIGHTS
-        }
-    }
-    
-    PowerOn --> PowerOff : User presses POWER OFF
-    PowerOn --> AlertState : Sensor warning
-    
-    state AlertState {
-        [*] --> VisualAlert
-        VisualAlert --> ContinueOperation
-        note right of VisualAlert : No automatic shutdown\nVisual warning only
-    }
-    
-    AlertState --> PowerOn : Alert acknowledged
-```
-    GPIO2 -- controls --> GlowRelay
-    GPIO4 -- controls --> StarterRelay
-
-    StartBtn -- to --> GPIO18
-    StopBtn -- to --> GPIO19
-    GPIO5 -- to --> StatusLED
-    GPIO21 -- to --> Buzzer
-
-    TempSensor -- to --> GPIO34
-    PressureSensor -- to --> GPIO35
-    VoltageSensor -- to --> GPIO32
-
-    BAT -- "+12V" --> GlowRelay
-    BAT -- "+12V" --> StarterRelay
-
-    GlowRelay -- powers --> GlowPlugs
-    StarterRelay -- powers --> StarterSolenoid
-
-    GlowPlugs -- to --> GND
-    StarterSolenoid -- to --> GND
-    GND_ESP -- to --> GND
-
-    %% Styling
-    style "ESP32 DevKit v1" fill:#f9f,stroke:#333,stroke-width:2px
-    style "User Interface" fill:#ccf,stroke:#333,stroke-width:2px
-    style "Sensors" fill:#cfc,stroke:#333,stroke-width:2px
-    style "Driver Circuits (Relays)" fill:#bbf,stroke:#333,stroke-width:2px
-    style "Bobcat Electrical System" fill:#dfd,stroke:#333,stroke-width:2px
-    style "Power Source" fill:#ff9,stroke:#333,stroke-width:2px
-```
+    class BAT,FUSE_MAIN,POWER_BUS,GND,VIN,ESP_GND power;
+    class FUSE_15A,FUSE_10A_GLOW,FUSE_5A,FUSE_10A_LIGHT fuse;
+    class ESP32,REL1,REL2,REL3,REL4 ctrl;
+    class TEMP_SENSOR,TEMP_PU,OIL_SENDER,OIL_PU,BAT_DIV_R1,BAT_DIV_R2,ESP_3V3,FUEL_SENDER,FUEL_PU,HYD_SENDER,HYD_PU,ALT_SIGNAL,ALT_PU,RUN_SIGNAL,RUN_PU sensor;
+    class MAIN_DIST,GLOW_PLUGS,STARTER_SOL,WORK_LIGHTS out;
