@@ -23,10 +23,9 @@ This is an **ESP32-based ignition controller** for old Bobcat equipment (specifi
 ## Build Instructions & Environment Setup
 
 ### Prerequisites - ALWAYS Required
-1. **PlatformIO CLI** - Installed and configured on your system
-   - Use `platformio` for Windows (PATH permanently configured)
-   - Use `pio` for Linux
-   - Ensure `pio` command is available in your PATH
+1. **PlatformIO CLI** - Must be installed and available in PATH
+   - Command must work: `platformio run`
+   - If command not found, PlatformIO installation is required
 
 2. **USB cable** - For programming ESP32 (if doing actual hardware testing)
 
@@ -42,7 +41,9 @@ If `platformio` command is not recognized, add it to your system PATH permanentl
 platformio --version
 ```
 
-### Fast PowerShell commands (Windows) — shortest working form
+### Build Commands - SIMPLE APPROACH ONLY
+
+**CRITICAL: Only use these simple commands. No complex PATH manipulation in tasks.**
 
 ```powershell
 # Build firmware
@@ -51,10 +52,13 @@ platformio run
 # Build filesystem (LittleFS)
 platformio run --target buildfs
 ```
+
+**If `platformio` command is not found, use the PATH setup above, then restart terminal. Do NOT use complex task workarounds.**
+
 ### Upload options
 
 ```bash
-# Option A) Playwright MCP + ElegantOTA (first-time seed, visible browser)
+# Option A) Playwright MCP + ElegantOTA (recommended for remote updates)
 mcp_playwright_browser_navigate: http://192.168.1.128/update
 mcp_playwright_browser_select_option: "Firmware"
 mcp_playwright_browser_file_upload: .pio/build/esp32dev/firmware.bin
@@ -65,15 +69,16 @@ mcp_playwright_browser_select_option: "LittleFS / SPIFFS"
 mcp_playwright_browser_file_upload: .pio/build/esp32dev/littlefs.bin
 mcp_playwright_browser_wait_for: "Update Successful"
 
-# Option B) PlatformIO CLI (ArduinoOTA/espota) for ongoing updates
-# Set upload_port in platformio.ini env:esp32dev-ota for zero-typing; otherwise pass --upload-port DEVICE_IP
+# Option B) PlatformIO OTA Upload (command line)
+# Firmware OTA (requires device IP)
+platformio run -t upload --upload-port 192.168.1.128
 
-# Firmware OTA
-platformio run -e esp32dev-ota -t upload
+# Filesystem OTA
+platformio run -t uploadfs --upload-port 192.168.1.128
 
-# Filesystem OTA (LittleFS)
-platformio run -e esp32dev-ota -t buildfs
-platformio run -e esp32dev-ota -t uploadfs
+# Option C) Serial Upload (first-time flashing or recovery)
+platformio run -t upload
+platformio run -t uploadfs
 ```
 
 ### Validation Steps - No Automated Testing Available
