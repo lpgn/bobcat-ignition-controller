@@ -57,6 +57,20 @@ float readHydraulicPressure(); // Hydraulic pressure (kPa)
 // ============================================================================
 bool readAlternatorCharge();     // Alternator charging status
 bool readEngineRunFeedback();   // Engine running feedback
+
+// ============================================================================
+// SAFETY INTERLOCK FUNCTIONS - MANDATORY FOR SAFE OPERATION
+// ============================================================================
+bool readSeatBarSafety();          // Read seat bar safety switch (true = operator seated)
+bool readNeutralSafety();          // Read neutral safety switch (true = transmission in neutral)
+bool safetyInterlocksPassed();     // Check all safety interlocks (true = safe to start)
+
+// ============================================================================
+// PRESSURE SWITCH FUNCTIONS - Digital switches, not analog senders
+// ============================================================================
+bool readOilPressureSwitch();      // Oil pressure switch (true = pressure OK)
+bool readHydraulicPressureSwitch(); // Hydraulic pressure switch (true = pressure OK)
+
 // ============================================================================
 // SAFETY CHECK FUNCTIONS
 // ============================================================================

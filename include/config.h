@@ -33,6 +33,12 @@ extern const int ALTERNATOR_CHARGE_PIN;    // GPIO22 - Alternator Charge Indicat
 extern const int ENGINE_RUN_FEEDBACK_PIN;  // GPIO26 - Engine Running Feedback (2nd pin top row)
 
 // ============================================================================
+// SAFETY INTERLOCK PINS - MANDATORY FOR SAFE OPERATION
+// ============================================================================
+extern const int SEAT_BAR_PIN;             // GPIO25 - Seat Bar Safety Switch (INPUT_PULLUP)
+extern const int NEUTRAL_SAFETY_PIN;       // GPIO27 - Transmission Neutral Safety Switch (INPUT_PULLUP)
+
+// ============================================================================
 // POWER MANAGEMENT PINS
 // ============================================================================
 extern const int WAKE_UP_BUTTON_PIN;       // GPIO0 (BOOT button) - Wake up from deep sleep

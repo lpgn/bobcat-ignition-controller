@@ -1,6 +1,12 @@
 # Bobcat Ignition Controller
 
+**🚨 SAFETY CRITICAL SYSTEM 🚨**
+
+**READ [docs/SAFETY_CRITICAL.md](docs/SAFETY_CRITICAL.md) BEFORE PROCEEDING**
+
 ESP32-based control system for managing old Bobcat equipment with web-based interface, glow plug preheating, and safety monitoring.
+
+**⚠️ WARNING**: This code controls high-current automotive relays and diesel engine systems. The current design has **SAFETY VIOLATIONS** that must be corrected before use. See [docs/SAFETY_CRITICAL.md](docs/SAFETY_CRITICAL.md) for mandatory requirements.
 
 ## Documentation
 
@@ -8,6 +14,7 @@ Single source for build/flash/OTA commands: [.github/copilot-instructions.md](.g
 
 Minimal docs:
 
+- **🚨 SAFETY CRITICAL: [docs/SAFETY_CRITICAL.md](docs/SAFETY_CRITICAL.md)**
 - Manual: [docs/manual.md](docs/manual.md)
 - Hardware: [docs/hardware.md](docs/hardware.md)
 - Software: [docs/software.md](docs/software.md)

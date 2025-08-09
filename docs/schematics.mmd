@@ -1,29 +1,40 @@
+```mermaid.flowchart
 %%{init: {"theme":"default","flowchart":{"defaultRenderer":"elk"}} }%%
 flowchart LR
+    %% TITLE & WARNING
+    subgraph WARNING ["🚨 SAFETY CRITICAL DESIGN 🚨"]
+      WARN1["❌ CURRENT DESIGN HAS SAFETY VIOLATIONS"]
+      WARN2["⚠️ GLOW PLUGS: 40-80A load exceeds 10A relay rating"]
+      WARN3["⚠️ LIGHTS: 9.2A load insufficient safety margin"]
+      WARN4["✅ CORRECTED: Use external relays for high current"]
+      WARN5["📋 READ SAFETY_CRITICAL.md BEFORE IMPLEMENTING"]
+    end
+
     %% POWER & FUSING
     subgraph PWR [Power & Fusing]
       BAT{{"+12V Battery"}}
       FUSE_MAIN["20A Main Fuse"]
       POWER_BUS["12V Power Bus"]
       FUSE_15A["15A Fuse Main Power"]
-      FUSE_10A_GLOW["10A Fuse Glow Plugs"]
+      FUSE_2A["2A Fuse ESP32 Board"]
       FUSE_5A["5A Fuse Starter"]
-      FUSE_10A_LIGHT["10A Fuse Lights"]
       GND[("Ground")]
       BAT --> FUSE_MAIN --> POWER_BUS
       POWER_BUS -->|Main power| FUSE_15A
+      POWER_BUS -->|ESP32 power| FUSE_2A
     end
 
     %% MICROCONTROLLER & RELAYS
-    subgraph CTRL ["LILYGO T-Relay ESP32 Board & Relays"]
+    subgraph CTRL ["LILYGO T-Relay ESP32 Board (HRS4H-S-DC5V: 10A MAX!)"]
       ESP32["ESP32-WROOM"]
       VIN["VIN (12V)"]
       ESP_GND[("Board GND")]
-      REL1["Relay 1 Main Power<br/>GPIO21"]
-      REL2["Relay 2 Glow Plugs<br/>GPIO19"]
-      REL3["Relay 3 Starter<br/>GPIO18"]
-      REL4["Relay 4 Lights<br/>GPIO5"]
+      REL1["Relay 1 Main Power<br/>GPIO21 (✅ Safe)"]
+      REL2["Relay 2 Glow Pilot<br/>GPIO19 (⚠️ Pilot Only!)"]
+      REL3["Relay 3 Starter<br/>GPIO18 (✅ +Diode)"]
+      REL4["Relay 4 Light Pilot<br/>GPIO5 (⚠️ Pilot Only!)"]
       ESP32 -.->|WiFi| WEBAPP["Web UI 192.168.4.1"]
+      FUSE_2A --> VIN
       VIN -.-> ESP32
       ESP_GND -.-> ESP32
       ESP32 -->|Control| REL1
@@ -31,69 +42,102 @@ flowchart LR
       ESP32 -->|Control| REL3
       ESP32 -->|Control| REL4
     end
+
+    %% SAFETY INTERLOCKS (MANDATORY)
+    subgraph SAFETY ["🚨 MANDATORY SAFETY INTERLOCKS"]
+      SEAT_BAR["Seat Bar Safety Switch<br/>Normally Open"]
+      NEUTRAL_SW["Neutral Safety Switch<br/>Normally Open"]
+      SEAT_PU["Internal Pull-up GPIO25"]
+      NEUTRAL_PU["Internal Pull-up GPIO27"]
+      
+      SEAT_BAR --- SEAT_PU
+      SEAT_PU -->|GPIO25 INPUT_PULLUP| ESP32
+      NEUTRAL_SW --- NEUTRAL_PU
+      NEUTRAL_PU -->|GPIO27 INPUT_PULLUP| ESP32
+      SEAT_BAR --- GND
+      NEUTRAL_SW --- GND
+    end
+
+    %% EXTERNAL HIGH-CURRENT RELAYS (CORRECTED DESIGN)
+    subgraph EXT_REL ["🔧 EXTERNAL AUTOMOTIVE RELAYS (MANDATORY)"]
+      GLOW_RELAY["Factory Glow Plug Relay<br/>40-80A Rating"]
+      LIGHT_RELAY["30A Automotive Relay<br/>Bosch-style"]
+      GLOW_COIL["Low Current Coil"]
+      LIGHT_COIL["Low Current Coil"]
+      FLYBACK1["1N4007 Flyback Diode"]
+      FLYBACK2["1N4007 Flyback Diode"]
+      
+      REL2 -->|Low Current Control| GLOW_COIL
+      GLOW_COIL --- FLYBACK1
+      REL4 -->|Low Current Control| LIGHT_COIL  
+      LIGHT_COIL --- FLYBACK2
+    end
     
-    %% SENSORS WITH ACTUAL GPIO PINS
+    %% SENSORS WITH ACTUAL GPIO PINS & CHARACTERIZATION NOTES
     subgraph SENS ["Sensors & Signal Conditioning"]
-      TEMP_SENSOR["Engine Temp NTC<br/>10kΩ @ 25°C"]
+      TEMP_SENSOR["Engine Temp NTC P/N 6658818<br/>⚠️ REQUIRES CHARACTERIZATION"]
       TEMP_PU["10kΩ Pull-up to 3.3V"]
-      OIL_SENDER["Oil Pressure Sender<br/>0-180Ω"]
-      OIL_PU["220Ω Pull-up to 3.3V"]
-      BAT_DIV_R1["Battery Voltage Divider<br/>100kΩ"]
-      BAT_DIV_R2["33kΩ to GND"]
+      OIL_SENDER["Oil Pressure Sender P/N 6969775<br/>0-180Ω Switch to Ground"]
+      OIL_PU["Internal Pull-up"]
+      BAT_DIV_R1["Battery Voltage Divider<br/>56kΩ (measured)"]
+      BAT_DIV_R2["10kΩ to GND (measured)"]
       ESP_3V3["ESP32 3.3V Rail"]
-      FUEL_SENDER["Fuel Level Sender<br/>240-33Ω Float"]
-      FUEL_PU["330Ω Pull-up to 3.3V"]
-      HYD_SENDER["Hydraulic Pressure Sender<br/>0-180Ω"]
-      HYD_PU["220Ω Pull-up to 3.3V"]
-      ALT_SIGNAL["Alternator Charge"]
-      ALT_PU["Internal Pull-up"]
+      FUEL_SENDER["Fuel Level Sender<br/>⚠️ REQUIRES MEASUREMENT<br/>240-33Ω or 73-10Ω or 0-90Ω"]
+      FUEL_PU["100Ω Pull-up to 3.3V"]
+      HYD_SENDER["Hydraulic Pressure Sender P/N 6671062<br/>Switch to Ground"]
+      HYD_PU["Internal Pull-up"]
+      ALT_SIGNAL["Alternator 'L' Terminal<br/>0V→14V Engine Run"]
+      ALT_DIV_R1["10kΩ"]
+      ALT_DIV_R2["3.3kΩ + 3.6V Zener"]
       RUN_SIGNAL["Engine Run Feedback"]
       RUN_PU["Internal Pull-up"]
       
       TEMP_SENSOR --- TEMP_PU
       TEMP_PU -->|GPIO39 ADC1_CH3| ESP32
       OIL_SENDER --- OIL_PU
-      OIL_PU -->|GPIO34 ADC1_CH6| ESP32
+      OIL_PU -->|GPIO34 Digital INPUT_PULLUP| ESP32
       POWER_BUS --- BAT_DIV_R1 --- BAT_DIV_R2
       BAT_DIV_R2 --- GND
       BAT_DIV_R1 -->|GPIO36 ADC1_CH0| ESP32
       ESP_3V3 -.-> TEMP_PU
-      ESP_3V3 -.-> OIL_PU
       ESP_3V3 -.-> FUEL_PU
-      ESP_3V3 -.-> HYD_PU
       FUEL_SENDER --- FUEL_PU
       FUEL_PU -->|GPIO35 ADC1_CH7| ESP32
       HYD_SENDER --- HYD_PU
-      HYD_PU -->|GPIO33 ADC1_CH5| ESP32
-      ALT_SIGNAL --- ALT_PU
-      ALT_PU -->|GPIO22 Digital| ESP32
+      HYD_PU -->|GPIO33 Digital INPUT_PULLUP| ESP32
+      ALT_SIGNAL --- ALT_DIV_R1 --- ALT_DIV_R2
+      ALT_DIV_R2 --- GND
+      ALT_DIV_R1 -->|GPIO22 Digital| ESP32
       RUN_SIGNAL --- RUN_PU
       RUN_PU -->|GPIO26 Digital| ESP32
     end
 
-    %% OUTPUTS (BOBCAT ELECTRICAL)
-    subgraph OUT ["Bobcat Engine & Electrical"]
+    %% OUTPUTS (BOBCAT ELECTRICAL) - CORRECTED DESIGN
+    subgraph OUT ["Bobcat Engine & Electrical - CORRECTED"]
       MAIN_DIST["Main Electrical Distribution"]
-      GLOW_PLUGS["Glow Plug Bus Bar"]
-      STARTER_SOL["Starter Solenoid<br/>(with flyback diode)"]
-      WORK_LIGHTS["Work Lights<br/>(Front & Rear)"]
+      GLOW_PLUGS["Glow Plug Bus Bar<br/>🔥 40-80A LOAD"]
+      STARTER_SOL["Starter Solenoid<br/>(with 1N4007 flyback diode)"]
+      WORK_LIGHTS["Work Lights<br/>🔥 9.2A LOAD (Front & Rear)"]
       
       FUSE_15A --> REL1
       REL1 -->|30A Switched 12V| MAIN_DIST
-      POWER_BUS --> FUSE_10A_GLOW
-      FUSE_10A_GLOW --> REL2
-      REL2 -->|Switched 12V| GLOW_PLUGS
+      POWER_BUS -->|Through Factory Wiring| GLOW_RELAY
+      GLOW_RELAY -->|40-80A Switched| GLOW_PLUGS
       POWER_BUS --> FUSE_5A
       FUSE_5A --> REL3
-      REL3 -->|High Current| STARTER_SOL
-      POWER_BUS --> FUSE_10A_LIGHT
-      FUSE_10A_LIGHT --> REL4
-      REL4 -->|Switched 12V| WORK_LIGHTS
+      REL3 -->|Direct 5-15A| STARTER_SOL
+      POWER_BUS -->|Through 30A Relay| LIGHT_RELAY
+      LIGHT_RELAY -->|30A Switched| WORK_LIGHTS
     end
 
     %% MAIN POWER CONNECTIONS
-    POWER_BUS --- VIN
     GND --- ESP_GND
+
+    %% FLYBACK DIODE FOR STARTER
+    subgraph PROTECT ["Protection"]
+      STARTER_FLYBACK["1N4007 Flyback Diode<br/>Across Starter Solenoid"]
+      STARTER_SOL --- STARTER_FLYBACK
+    end
 
     %% LEGEND & STYLING
     classDef power fill:#ffe6e6,stroke:#c00,stroke-width:2px;
@@ -101,9 +145,15 @@ flowchart LR
     classDef ctrl fill:#eaffea,stroke:#23a023,stroke-width:2px;
     classDef out fill:#fffccf,stroke:#bba900,stroke-width:2px;
     classDef fuse fill:#ffd0fa,stroke:#954ca4,stroke-width:2px;
+    classDef safety fill:#ffcccc,stroke:#d00,stroke-width:3px;
+    classDef warning fill:#ffeecc,stroke:#f80,stroke-width:3px;
     
     class BAT,FUSE_MAIN,POWER_BUS,GND,VIN,ESP_GND power;
-    class FUSE_15A,FUSE_10A_GLOW,FUSE_5A,FUSE_10A_LIGHT fuse;
+    class FUSE_15A,FUSE_2A,FUSE_5A fuse;
     class ESP32,REL1,REL2,REL3,REL4 ctrl;
-    class TEMP_SENSOR,TEMP_PU,OIL_SENDER,OIL_PU,BAT_DIV_R1,BAT_DIV_R2,ESP_3V3,FUEL_SENDER,FUEL_PU,HYD_SENDER,HYD_PU,ALT_SIGNAL,ALT_PU,RUN_SIGNAL,RUN_PU sensor;
+    class TEMP_SENSOR,TEMP_PU,OIL_SENDER,OIL_PU,BAT_DIV_R1,BAT_DIV_R2,ESP_3V3,FUEL_SENDER,FUEL_PU,HYD_SENDER,HYD_PU,ALT_SIGNAL,ALT_DIV_R1,ALT_DIV_R2,RUN_SIGNAL,RUN_PU sensor;
     class MAIN_DIST,GLOW_PLUGS,STARTER_SOL,WORK_LIGHTS out;
+    class SEAT_BAR,NEUTRAL_SW,SEAT_PU,NEUTRAL_PU safety;
+    class WARN1,WARN2,WARN3,WARN4,WARN5,GLOW_RELAY,LIGHT_RELAY,GLOW_COIL,LIGHT_COIL,FLYBACK1,FLYBACK2 warning;
+
+```

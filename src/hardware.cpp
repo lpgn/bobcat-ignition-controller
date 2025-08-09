@@ -43,6 +43,22 @@ void initializePins() {
   // Initialize digital input pins
   pinMode(ENGINE_RUN_FEEDBACK_PIN, INPUT_PULLUP);
   pinMode(ALTERNATOR_CHARGE_PIN, INPUT_PULLUP);
+  
+  // Initialize safety interlock pins (MANDATORY for safe operation)
+  pinMode(SEAT_BAR_PIN, INPUT_PULLUP);
+  pinMode(NEUTRAL_SAFETY_PIN, INPUT_PULLUP);
+  
+  // Initialize pressure switch pins as digital inputs (not analog)
+  pinMode(OIL_PRESSURE_PIN, INPUT_PULLUP);
+  pinMode(HYD_PRESSURE_PIN, INPUT_PULLUP);
+  
+  Serial.print("Safety interlocks configured: ");
+  Serial.print("Seat Bar (GPIO"); Serial.print(SEAT_BAR_PIN); Serial.print("), ");
+  Serial.print("Neutral Safety (GPIO"); Serial.print(NEUTRAL_SAFETY_PIN); Serial.println(")");
+  
+  Serial.print("Pressure switches configured: ");
+  Serial.print("Oil Pressure (GPIO"); Serial.print(OIL_PRESSURE_PIN); Serial.print("), ");
+  Serial.print("Hydraulic Pressure (GPIO"); Serial.print(HYD_PRESSURE_PIN); Serial.println(")");
 
   // ADC pins for sensors (no pinMode needed for ADC)
 
@@ -170,28 +186,17 @@ float readEngineTemp() {
   return sum / TEMP_FILTER_SIZE;
 }
 
+// Legacy analog pressure functions - DEPRECATED
+// Oil and hydraulic pressure are actually DIGITAL SWITCHES, not analog senders
 float readOilPressure() {
-  int rawValue = analogRead(OIL_PRESSURE_PIN);
+  // DEPRECATED: This function is kept for API compatibility but should not be used
+  // Oil pressure sender P/N 6969775 is a SWITCH, not an analog sender
+  // Use readOilPressureSwitch() instead for proper digital switch reading
   
-  // Check for broken/disconnected sensor
-  // If ADC reads very high (near 4095), sensor is likely broken/disconnected
-  if (rawValue > 4000) {
-    // Sensor appears to be broken - return a safe default value
-    // Log this condition for diagnostics
-    static unsigned long lastWarning = 0;
-    if (millis() - lastWarning > 10000) { // Warn every 10 seconds
-      Serial.println("WARNING: Oil pressure sensor appears disconnected/broken (ADC > 4000)");
-      Serial.print("Raw ADC reading: "); Serial.println(rawValue);
-      lastWarning = millis();
-    }
-    
-    // Return a neutral pressure value to avoid false alarms
-    // This prevents the system from triggering low oil pressure warnings
-    // when the sensor is simply broken
-    return 100.0; // kPa - safe middle value
-  }
+  Serial.println("WARNING: readOilPressure() is deprecated - use readOilPressureSwitch()");
   
-  return (rawValue * runtime_pressure_scale) + OIL_PRESSURE_OFFSET;
+  // Return a safe pressure value based on switch state
+  return readOilPressureSwitch() ? 100.0 : 0.0; // 100 kPa if switch indicates OK pressure
 }
 
 float readBatteryVoltage() {
@@ -206,18 +211,14 @@ float readFuelLevel() {
 }
 
 float readHydraulicPressure() {
-  int rawValue = analogRead(HYD_PRESSURE_PIN);
-  // Basic broken sensor detection similar to oil
-  if (rawValue > 4000) {
-    static unsigned long lastWarn = 0;
-    if (millis() - lastWarn > 10000) {
-      Serial.println("WARNING: Hydraulic pressure sensor appears disconnected/broken (ADC > 4000)");
-      Serial.print("Raw ADC reading: "); Serial.println(rawValue);
-      lastWarn = millis();
-    }
-    return 0.0; // safe default
-  }
-  return (rawValue * runtime_hyd_pressure_scale) + HYD_PRESSURE_OFFSET;
+  // DEPRECATED: This function is kept for API compatibility but should not be used
+  // Hydraulic pressure sender P/N 6671062 is a SWITCH, not an analog sender
+  // Use readHydraulicPressureSwitch() instead for proper digital switch reading
+  
+  Serial.println("WARNING: readHydraulicPressure() is deprecated - use readHydraulicPressureSwitch()");
+  
+  // Return a safe pressure value based on switch state
+  return readHydraulicPressureSwitch() ? 100.0 : 0.0; // 100 kPa if switch indicates OK pressure
 }
 
 // Digital input reading functions
@@ -234,6 +235,43 @@ bool readEngineRunFeedback() {
   
   // Original logic (uncomment when sensors are connected):
   // return digitalRead(ENGINE_RUN_FEEDBACK_PIN) == HIGH;
+}
+
+// SAFETY INTERLOCK FUNCTIONS - MANDATORY FOR SAFE OPERATION
+bool readSeatBarSafety() {
+  // INPUT_PULLUP: LOW when switch closed (operator seated), HIGH when open (no operator)
+  return digitalRead(SEAT_BAR_PIN) == LOW;
+}
+
+bool readNeutralSafety() {
+  // INPUT_PULLUP: LOW when switch closed (transmission in neutral), HIGH when open (in gear)
+  return digitalRead(NEUTRAL_SAFETY_PIN) == LOW;
+}
+
+bool safetyInterlocksPassed() {
+  // Both safety conditions must be satisfied for safe operation
+  bool seatBarEngaged = readSeatBarSafety();
+  bool transmissionInNeutral = readNeutralSafety();
+  
+  if (!seatBarEngaged) {
+    Serial.println("SAFETY VIOLATION: Operator not seated (seat bar not engaged)");
+  }
+  if (!transmissionInNeutral) {
+    Serial.println("SAFETY VIOLATION: Transmission not in neutral");
+  }
+  
+  return seatBarEngaged && transmissionInNeutral;
+}
+
+// PRESSURE SWITCH FUNCTIONS (Digital, not analog)
+bool readOilPressureSwitch() {
+  // Oil pressure switch: INPUT_PULLUP, LOW when pressure OK, HIGH when low pressure
+  return digitalRead(OIL_PRESSURE_PIN) == LOW; // LOW = OK pressure, HIGH = low pressure
+}
+
+bool readHydraulicPressureSwitch() {
+  // Hydraulic pressure switch: INPUT_PULLUP, LOW when pressure OK, HIGH when low pressure  
+  return digitalRead(HYD_PRESSURE_PIN) == LOW; // LOW = OK pressure, HIGH = low pressure
 }
 
 // Safety check functions (basic stubs, expand as needed)

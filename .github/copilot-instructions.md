@@ -4,7 +4,14 @@
 
 This is an **ESP32-based ignition controller** for old Bobcat equipment (specifically Bobcat 743 with Kubota V1702-BA diesel engine). The system provides web-based control for glow plug preheating, starter control, lighting, and safety monitoring for diesel engines that cannot be stopped electronically.
 
-**⚠️ SAFETY CRITICAL SYSTEM ⚠️** - This code controls high-current automotive relays and diesel engine systems. Incorrect changes can cause equipment damage, safety hazards, or engine damage.
+**🚨 CRITICAL SAFETY ALERT 🚨**
+**CURRENT DESIGN HAS SAFETY VIOLATIONS - SEE [docs/SAFETY_CRITICAL.md](docs/SAFETY_CRITICAL.md)**
+
+- **❌ GLOW PLUG RELAY**: 40-80A load exceeds 10A relay rating - **FIRE/EXPLOSION HAZARD**
+- **⚠️ LIGHTING RELAY**: 9.2A load with insufficient safety margin
+- **❌ MISSING INTERLOCKS**: No seat bar or neutral safety switches
+
+**⚠️ SAFETY CRITICAL SYSTEM ⚠️** - This code controls high-current automotive relays and diesel engine systems. The current implementation has **MANDATORY** safety corrections required before use.
 
 ### Key Facts
 - **Project Type**: Embedded firmware for ESP32 microcontroller
@@ -17,7 +24,7 @@ This is an **ESP32-based ignition controller** for old Bobcat equipment (specifi
 
 ### Prerequisites - ALWAYS Required
 1. **PlatformIO CLI** - Installed and configured on your system
-   - Use `C:\.platformio\penv\Scripts\platformio.exe` for Windows
+   - Use `platformio` for Windows
    - Ensure `platformio` command is available in your PATH setting the path directory with $env:Path += ';C:\.platformio\penv\Scripts' if needed, for Linux use `export PATH=$PATH:/home/user/.platformio/penv/Scripts`
    - Use `pio` for Linux
    - Ensure `pio` command is available in your PATH

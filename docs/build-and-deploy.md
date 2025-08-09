@@ -3,13 +3,13 @@
 ## Build firmware
 
 ```powershell
-& 'C:\.platformio\penv\Scripts\platformio.exe' run
+platformio.exe run
 ```
 
 ## Build filesystem
 
 ```powershell
-& 'C:\.platformio\penv\Scripts\platformio.exe' run --target buildfs
+platformio run --target buildfs
 ```
 
 ## OTA options
@@ -35,14 +35,14 @@ Requirements: device on LAN, ArduinoOTA enabled in firmware (already configured)
 - Firmware OTA:
 
 ```powershell
-& 'C:\.platformio\penv\Scripts\platformio.exe' run -e esp32dev-ota -t upload --upload-port <DEVICE_IP>
+platformio run -e esp32dev-ota -t upload --upload-port <DEVICE_IP>
 ```
 
 - Filesystem OTA (LittleFS):
 
 ```powershell
-& 'C:\.platformio\penv\Scripts\platformio.exe' run -e esp32dev-ota -t buildfs
-& 'C:\.platformio\penv\Scripts\platformio.exe' run -e esp32dev-ota -t uploadfs --upload-port <DEVICE_IP>
+platformio run -e esp32dev-ota -t buildfs
+platformio run -e esp32dev-ota -t uploadfs --upload-port <DEVICE_IP>
 ```
 
 Optional: if you set an OTA password in code, append: `--auth=<PASSWORD>`
