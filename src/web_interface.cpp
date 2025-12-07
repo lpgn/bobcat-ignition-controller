@@ -410,10 +410,10 @@ void setupWebServer() {
         doc["temperature"] = readEngineTemp();
         doc["pressure"] = readOilPressure();
         doc["battery"] = readBatteryVoltage();
-    doc["battery_voltage"] = readBatteryVoltage();
+        doc["battery_voltage"] = readBatteryVoltage();
         doc["engine_temp"] = readEngineTemp();
         doc["oil_pressure"] = readOilPressure();
-    doc["hyd_pressure"] = readHydraulicPressure();
+        doc["hyd_pressure"] = readHydraulicPressure();
         
         // Add state flags for dashboard
         doc["lights_on"] = digitalRead(LIGHTS_PIN);
@@ -425,8 +425,8 @@ void setupWebServer() {
         doc["high_temperature"] = (g_systemState.currentState == HIGH_TEMPERATURE);
         doc["low_battery"] = (readBatteryVoltage() < 11.5);
         
-        // Add mock data for missing sensors
-        doc["fuel_level"] = 75;
+        // Fuel level from sensor (or mock if not connected)
+        doc["fuel_level"] = readFuelLevel();
         doc["engine_hours"] = 1234;
         
         // Add glow plug countdown (whenever glow plugs are on and timer is running)
@@ -478,14 +478,14 @@ void setupWebServer() {
         int batteryRaw = analogRead(BATTERY_VOLTAGE_PIN);
         int temperatureRaw = analogRead(ENGINE_TEMP_PIN);
         int pressureRaw = analogRead(OIL_PRESSURE_PIN);
-    int fuelRaw = analogRead(FUEL_LEVEL_PIN);
-    int hydRaw = analogRead(HYD_PRESSURE_PIN);
+        int fuelRaw = analogRead(FUEL_LEVEL_PIN);
+        int hydRaw = analogRead(HYD_PRESSURE_PIN);
         
         doc["battery_raw"] = batteryRaw;
         doc["temperature_raw"] = temperatureRaw;
         doc["pressure_raw"] = pressureRaw;
-    doc["fuel_raw"] = fuelRaw;
-    doc["hydraulic_raw"] = hydRaw;
+        doc["fuel_raw"] = fuelRaw;
+        doc["hydraulic_raw"] = hydRaw;
         
         // Sensor diagnostics
         doc["battery_status"] = (batteryRaw > 100 && batteryRaw < 4000) ? "OK" : "CHECK";
@@ -508,8 +508,8 @@ void setupWebServer() {
         doc["temp_offset"] = TEMP_SENSOR_OFFSET;  // Not calibrated yet
         doc["temp_scale"] = runtime_temp_scale;
         doc["pressure_offset"] = OIL_PRESSURE_OFFSET;  // Not calibrated yet
-    doc["pressure_scale"] = runtime_pressure_scale;
-    doc["hyd_pressure_scale"] = runtime_hyd_pressure_scale;
+        doc["pressure_scale"] = runtime_pressure_scale;
+        doc["hyd_pressure_scale"] = runtime_hyd_pressure_scale;
         doc["fuel_empty"] = runtime_fuel_empty;
         doc["fuel_full"] = runtime_fuel_full;
         
@@ -517,8 +517,8 @@ void setupWebServer() {
         doc["battery_calculated"] = readBatteryVoltage();
         doc["temperature_calculated"] = readEngineTemp();
         doc["pressure_calculated"] = readOilPressure();
-    doc["fuel_calculated"] = readFuelLevel();
-    doc["hydraulic_calculated"] = readHydraulicPressure();
+        doc["fuel_calculated"] = readFuelLevel();
+        doc["hydraulic_calculated"] = readHydraulicPressure();
         
         String jsonResponse;
         serializeJson(doc, jsonResponse);
@@ -546,7 +546,7 @@ void setupWebServer() {
         int temperatureRaw = analogRead(ENGINE_TEMP_PIN);
         int pressureRaw = analogRead(OIL_PRESSURE_PIN);
         int fuelRaw = analogRead(FUEL_LEVEL_PIN);
-    int hydRaw = analogRead(HYD_PRESSURE_PIN);
+        int hydRaw = analogRead(HYD_PRESSURE_PIN);
         
         bool calibrationApplied = false;
         String calibrationDetails = "";
