@@ -1,1093 +1,637 @@
-/* CSS Custom Properties - AMG Mercedes Style */
+/* Bobcat AMG GT R Theme */
 :root {
-    --background-color: #0f1012;
-    --bezel-color: linear-gradient(135deg, #444950, #1c1f24);
-    --face-color: #1a1a1a;
-    --accent-red: #da291c;
-    /* AMG Red */
-    --accent-silver: #e0e0e0;
-    --text-color: #ffffff;
-    --label-active: #ffffff;
-    --label-inactive: #555555;
-
-    /* Brand Colors (were missing) */
-    --bobcat-orange: #ff6600;
-    --key-color: #d4af37;
-
-    /* Gauge Colors */
-    --gauge-bg: #111;
-    --gauge-border: #333;
-    --needle-color: #da291c;
-
-    /* Status Colors */
-    --status-off: #444;
-    --status-on: #4caf50;
-    --status-warn: #ff9800;
-    --status-alert: #f44336;
+    --bg-dark: #0b0c10;
+    --bg-panel: rgba(20, 20, 25, 0.85);
+    --amg-green: #b8fb3c;
+    /* Green Hell Magno */
+    --amg-red: #ff3e3e;
+    --text-primary: #ffffff;
+    --text-dim: #888888;
+    --carbon-fiber: repeating-linear-gradient(45deg,
+            #111 0px,
+            #111 2px,
+            #181818 2px,
+            #181818 4px);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+    --neon-glow: 0 0 10px rgba(184, 251, 60, 0.5);
 }
 
-/* Carbon Fiber Pattern helper */
-.carbon-fiber {
-    background:
-        radial-gradient(black 15%, transparent 16%) 0 0,
-        radial-gradient(black 15%, transparent 16%) 8px 8px,
-        radial-gradient(rgba(255, 255, 255, .1) 15%, transparent 20%) 0 1px,
-        radial-gradient(rgba(255, 255, 255, .1) 15%, transparent 20%) 8px 9px;
-    background-color: #151515;
-    background-size: 16px 16px;
-}
-
-/* Reset and base styles */
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
 }
 
 body {
-    font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-    background: var(--background-color);
-    color: var(--text-color);
-    min-height: 100vh;
+    background: #000;
+    color: var(--text-primary);
+    font-family: 'Exo 2', sans-serif;
+    height: 100vh;
+    overflow: hidden;
     display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.amg-dashboard {
+    width: 100%;
+    height: 100%;
+    max-width: 1200px;
+    /* Constrain on ultra-wide */
+    background: var(--carbon-fiber);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
+}
+
+/* Header */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+}
+
+.brand-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+}
+
+.amg-slashes {
+    color: var(--amg-green);
+    margin-right: 5px;
+    font-style: italic;
+}
+
+.model-badge {
+    font-size: 0.8rem;
+    color: #999;
+    text-transform: uppercase;
+    margin-top: -5px;
+    letter-spacing: 4px;
+    text-align: right;
+}
+
+.r-badge {
+    color: var(--amg-green);
+    font-weight: bold;
+}
+
+.status-pill {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 5px 20px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    color: var(--amg-green);
+    text-shadow: 0 0 5px rgba(184, 251, 60, 0.3);
+}
+
+.clock-display {
+    font-family: 'Orbitron', sans-serif;
+    color: #fff;
+    font-size: 1.2rem;
+}
+
+/* Cluster Grid */
+.cluster-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 1fr;
+    gap: 20px;
+    padding: 20px 0;
+}
+
+/* Wings */
+.wing-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+}
+
+/* Gauge Groups */
+.gauge-group {
+    display: flex;
+    flex-direction: row;
+    /* Force Horizontal */
+    gap: 20px;
     align-items: center;
     justify-content: center;
-    user-select: none;
-    overflow: hidden;
-    /* Prevent scroll on mobile drag */
-    /* Subtle metallic vignette */
-    background: radial-gradient(circle at center, #1a1c20 0%, #000000 100%);
 }
 
-.container {
-    text-align: center;
-    padding: 20px;
-    max-width: 600px;
-    width: 100%;
-}
-
-.header {
-    margin-bottom: 40px;
+/* Bar Gauges - Uniform Size */
+.bar-gauge-wrapper {
+    background: var(--bg-panel);
+    padding: 15px;
+    border-radius: 10px;
+    border: var(--glass-border);
+    backdrop-filter: blur(10px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    text-align: center;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    width: 110px;
+    /* Fixed width for uniformity */
+    height: 240px;
+    /* Fixed height for uniformity */
+    justify-content: space-between;
 }
 
-.logo-title-section {
+/* Info Box Wrapper (Volts/Pressure) */
+.info-box-wrapper {
+    background: var(--bg-panel);
+    padding: 15px;
+    border-radius: 10px;
+    border: var(--glass-border);
+    backdrop-filter: blur(10px);
     display: flex;
+    flex-direction: column;
     align-items: center;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    width: 110px;
+    /* Same width as bar gauges */
+    height: 110px;
+    /* Compact height */
     justify-content: center;
-    gap: 20px;
-    margin-bottom: 15px;
+    gap: 10px;
+    margin-top: auto;
+    /* Bottom align if needed */
+    margin-bottom: auto;
 }
 
-.bobcat-logo {
-    height: 80px;
-    width: auto;
-    max-width: 100%;
-    object-fit: contain;
+.digital-value-large {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.8rem;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
-.logo-title-section h1 {
-    font-size: 3rem;
-    margin: 0;
-    color: var(--bobcat-orange);
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-    line-height: 1;
-}
-
-.status-indicator {
-    margin: 0;
-}
-
-.master-status {
-    font-size: 1.1rem;
+.unit-label {
+    font-size: 0.8rem;
+    color: var(--amg-green);
     font-weight: bold;
-    color: var(--text-color);
-    padding: 5px 15px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Ignition Assembly */
-.ignition-assembly {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 40px 0;
+.bar-gauge-wrapper:before {
+    /* Top accent line */
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: var(--amg-green);
+    box-shadow: 0 0 10px var(--amg-green);
 }
 
-/* Premium Bezel - Brushed Metal Look */
-.bezel {
-    width: 320px;
-    height: 320px;
-    background: conic-gradient(from 0deg,
-            #444 0%,
-            #111 20%,
-            #666 40%,
-            #111 60%,
-            #444 80%,
-            #111 100%);
-    border-radius: 50%;
-    border: 2px solid #000;
-    box-shadow:
-        0 10px 40px rgba(0, 0, 0, 0.8),
-        inset 0 0 15px rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.gauge-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.bar-track {
+    width: 20px;
+    height: 150px;
+    background: #222;
+    border-radius: 10px;
     position: relative;
-    padding: 10px;
-    /* Space for the ring */
-}
-
-/* Inner Face - Carbon Fiber */
-.face {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background:
-        radial-gradient(black 15%, transparent 16%) 0 0,
-        radial-gradient(black 15%, transparent 16%) 8px 8px,
-        radial-gradient(rgba(255, 255, 255, .1) 15%, transparent 20%) 0 1px,
-        radial-gradient(rgba(255, 255, 255, .1) 15%, transparent 20%) 8px 9px;
-    background-color: #1a1a1a;
-    background-size: 16px 16px;
-    box-shadow:
-        inset 0 0 30px rgba(0, 0, 0, 0.9),
-        inset 0 0 5px rgba(255, 255, 255, 0.1);
-    position: relative;
+    overflow: hidden;
     border: 1px solid #333;
 }
 
-.face.on-active {
-    box-shadow:
-        inset 0 0 15px rgba(0, 0, 0, 0.7),
-        0 2px 10px rgba(0, 0, 0, 0.3),
-        0 0 20px rgba(0, 255, 0, 0.3);
-}
-
-.face.glow-active {
-    box-shadow:
-        inset 0 0 15px rgba(0, 0, 0, 0.7),
-        0 2px 10px rgba(0, 0, 0, 0.3),
-        0 0 20px rgba(255, 170, 0, 0.4);
-    animation: glow-face-pulse 1s ease-in-out infinite alternate;
-}
-
-.face.start-active {
-    box-shadow:
-        inset 0 0 15px rgba(0, 0, 0, 0.7),
-        0 2px 10px rgba(0, 0, 0, 0.3),
-        0 0 20px rgba(255, 68, 68, 0.4);
-}
-
-@keyframes glow-face-pulse {
-    0% {
-        box-shadow:
-            inset 0 0 15px rgba(0, 0, 0, 0.7),
-            0 2px 10px rgba(0, 0, 0, 0.3),
-            0 0 20px rgba(255, 170, 0, 0.4);
-    }
-
-    100% {
-        box-shadow:
-            inset 0 0 15px rgba(0, 0, 0, 0.7),
-            0 2px 10px rgba(0, 0, 0, 0.3),
-            0 0 35px rgba(255, 170, 0, 0.6);
-    }
-}
-
-/* Position Labels - Backlit Instrument Style */
-.position-label {
+/* Vertical Bar animation - Script will set height via style */
+.bar-fill {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    font-weight: 700;
-    font-size: 14px;
-    color: var(--label-inactive);
-    pointer-events: none;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    transition: all 0.2s ease;
-    font-family: 'Eurostile', 'Segoe UI', sans-serif;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    /* JS will control this */
+    background: linear-gradient(to top, var(--amg-green), #fff);
+    box-shadow: 0 0 10px var(--amg-green);
+    transition: height 0.5s ease-out;
+}
 
-    /* Center the label element itself before applying radial transform */
-    width: 0;
-    height: 0;
+.digital-value {
+    margin-top: 10px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    color: #fff;
+}
+
+/* Center Hero */
+.center-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 20px;
+    /* Added spacing */
+}
+
+.hero-gauge-container {
+    width: 350px;
+    height: 350px;
+    position: relative;
+}
+
+.hero-dial {
+    width: 100%;
+    height: 100%;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-/* Active state styling for labels - crisp illumination */
-.position-label.active {
-    color: var(--label-active);
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+.dial-ring {
+    width: 100%;
+    height: 100%;
+    transform: rotate(135deg);
+    /* Start from bottom left */
 }
 
-/* 
-   Radial Positioning Logic:
-   Radius = 135px (approx 45% of 300px face)
-   Technique: Rotate container to angle, translate outward, then un-rotate text (if upright) or keep rotated.
-   Current design prefers text rotated to match the key angle.
-*/
-
-/* OFF position (-30 deg) */
-.off-label {
-    transform: rotate(-30deg) translate(0, -135px);
+.dial-bg {
+    fill: none;
+    stroke: #222;
+    stroke-width: 15;
+    stroke-linecap: round;
+    stroke-dasharray: 420;
+    /* Approx 75% of circle */
+    stroke-dashoffset: 0;
 }
 
-/* ON position (0 deg) */
-.on-label {
-    transform: rotate(0deg) translate(0, -135px);
-    color: var(--status-on);
-    opacity: 0.3;
+/* Hero Needle/Progress Ring */
+.dial-progress {
+    fill: none;
+    stroke: var(--amg-green);
+    stroke-width: 15;
+    stroke-linecap: round;
+    stroke-dasharray: 420;
+    stroke-dashoffset: 420;
+    /* Start hidden */
+    transition: stroke-dashoffset 0.5s ease-out;
+    filter: drop-shadow(0 0 5px var(--amg-green));
 }
 
-.on-label.active {
-    opacity: 1;
-    color: #4caf50;
-    text-shadow: 0 0 15px #4caf50;
-}
-
-/* GLOW position (+45 deg) */
-.glow-label {
-    transform: rotate(45deg) translate(0, -135px);
-    color: var(--status-warn);
-    opacity: 0.3;
-}
-
-.glow-label.active {
-    opacity: 1;
-    color: #ff9800;
-    text-shadow: 0 0 15px #ff9800;
-}
-
-.glow-timer {
+.hero-content {
     position: absolute;
-    top: 100%;
-    /* Below text */
-    left: 50%;
-    transform: translateX(-50%) rotate(-45deg);
-    /* Counter-rotate timer to be upright? Or keep with text? Let's keep consistent */
-    font-family: 'Courier New', monospace;
-    color: #ff9800;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 2px 4px;
-    margin-top: 5px;
-    white-space: nowrap;
+    text-align: center;
+    z-index: 10;
 }
 
-/* START position (+90 deg) */
+.hero-label {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+    letter-spacing: 2px;
+}
+
+.hero-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 4rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    line-height: 1;
+}
+
+.hero-unit {
+    font-size: 1rem;
+    color: var(--amg-green);
+    font-weight: bold;
+}
+
+.sub-hero-info {
+    display: flex;
+    gap: 40px;
+    margin-top: 20px;
+    /* Fixed overlap */
+    z-index: 5;
+}
+
+.info-item {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: 1px solid #333;
+}
+
+.info-item .label {
+    display: block;
+    font-size: 0.7rem;
+    color: #888;
+}
+
+.info-item .value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    color: var(--amg-green);
+}
+
+/* Right Wing - Ignition & Controls */
+.right-wing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.control-cluster {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.ignition-module {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+
+.ignition-bezel {
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, #222 0%, #111 100%);
+    border-radius: 50%;
+    border: 2px solid #333;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.8);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Key Face */
+.face {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.pos-indicator {
+    position: absolute;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    color: #444;
+    transition: all 0.3s;
+    text-align: center;
+    width: 60px;
+    height: 20px;
+    /* Centering logic similar to before */
+    top: 50%;
+    left: 50%;
+    margin-left: -30px;
+    margin-top: -10px;
+}
+
+.pos-indicator.active {
+    color: #fff;
+    text-shadow: 0 0 10px #fff;
+}
+
+/* Position mapping (approx) */
+.off-label {
+    transform: rotate(-30deg) translate(0, -90px);
+}
+
+.on-label {
+    transform: rotate(0deg) translate(0, -90px);
+}
+
+.glow-label {
+    transform: rotate(45deg) translate(0, -90px);
+}
+
 .start-label {
-    transform: rotate(90deg) translate(0, -135px);
-    color: var(--status-alert);
-    opacity: 0.3;
+    transform: rotate(90deg) translate(0, -90px);
+    color: var(--amg-red);
 }
 
 .start-label.active {
-    opacity: 1;
-    color: #f44336;
-    text-shadow: 0 0 15px #f44336;
+    color: #ff0000;
+    text-shadow: 0 0 15px #ff0000;
 }
 
-/* Key Container */
-.key-container {
+.key-slot-container {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 200px;
-    height: 200px;
+    width: 120px;
+    height: 120px;
 }
 
-/* The Key - Premium Aluminum Knob */
 .key {
     width: 100%;
     height: 100%;
     position: relative;
+    transform-origin: center;
     cursor: pointer;
-    transform-origin: center center;
-    transition: none;
+    /* Initial rotation */
     transform: rotate(-30deg);
-    z-index: 15;
 }
 
-.key.transitioning {
-    transition: transform 0.2s ease-out;
-}
-
-.key-shaft {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 40px;
-    height: 220px;
-    background: linear-gradient(90deg, #d0d0d0, #f8f8f8, #a0a0a0);
-    border-radius: 4px;
-    box-shadow:
-        0 4px 15px rgba(0, 0, 0, 0.6),
-        inset 0 1px 2px rgba(255, 255, 255, 0.8);
-    z-index: 20;
-    /* Machined texture */
-    background-image: repeating-linear-gradient(90deg, transparent 0, transparent 2px, rgba(0, 0, 0, 0.05) 3px);
-}
-
-.key-base {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 140px;
+/* Stylized Key Head */
+.key-head {
+    width: 80px;
     height: 140px;
-    background: radial-gradient(circle at 30% 30%, #e0e0e0, #999);
-    border-radius: 50%;
-    box-shadow:
-        0 5px 20px rgba(0, 0, 0, 0.5),
-        inset 0 2px 5px rgba(255, 255, 255, 0.9);
-    z-index: 19;
-    /* Concentric circles texture */
-    background-image: repeating-radial-gradient(center, transparent 0, transparent 4px, rgba(0, 0, 0, 0.05) 5px);
-    border: 1px solid #888;
-}
-
-/* Add a center cap with branding */
-.key-base::after {
-    content: "";
-    /* Could be logo */
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 60px;
-    height: 60px;
     background: linear-gradient(135deg, #333, #000);
-    border-radius: 50%;
-    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
     border: 2px solid #555;
-}
-
-/* Center dot */
-/* Modern Gauge Container - positioned below the ignition assembly */
-.gauge-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    margin: 20px 0;
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.4);
-    border-radius: 15px;
-    border: 1px solid #333;
-}
-
-.gauge {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle at center, #222, #000);
-    border-radius: 50%;
-    border: 2px solid #444;
-    box-shadow:
-        0 4px 8px rgba(0, 0, 0, 0.5),
-        inset 0 0 10px rgba(0, 0, 0, 0.8);
-    margin: 0;
-}
-
-/* Gauge scale using conic gradient for ticks/zones */
-.gauge::before {
-    content: "";
+    border-radius: 10px;
     position: absolute;
-    width: 90%;
-    height: 90%;
-    border-radius: 50%;
-    background: conic-gradient(from 225deg,
-            #fff 0deg, #fff 1deg, transparent 1deg, transparent 29deg,
-            #fff 29deg, #fff 30deg, transparent 30deg, transparent 59deg,
-            #fff 59deg, #fff 60deg, transparent 60deg, transparent 89deg,
-            #fff 89deg, #fff 90deg, transparent 90deg, transparent 119deg,
-            #fff 119deg, #fff 120deg, transparent 120deg, transparent 149deg,
-            #fff 149deg, #fff 150deg, transparent 150deg, transparent 179deg,
-            #fff 179deg, #fff 180deg, transparent 180deg, transparent 209deg,
-            #da291c 209deg, #da291c 210deg, transparent 210deg, transparent 239deg,
-            #da291c 239deg, #da291c 270deg, transparent 270deg);
-    mask: radial-gradient(transparent 65%, black 66%);
-    -webkit-mask: radial-gradient(transparent 65%, black 66%);
-    opacity: 0.6;
-}
-
-.gauge-arc {
-    /* Deprecated - replaced by ::before pseudo element for ticks */
-    display: none;
-}
-
-.gauge-needle {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 40px;
-    /* Radius length */
-    height: 3px;
-    background: var(--needle-color);
-    transform-origin: left center;
-    /* Rotate from center */
-    transform: rotate(135deg);
-    /* Start at 7 o'clock (min value) */
-    transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    /* Smooth damping */
-    box-shadow: 0 0 4px rgba(218, 41, 28, 0.8);
-    z-index: 10;
-    border-radius: 0 3px 3px 0;
-}
-
-/* Center cap for needle */
-.gauge::after {
-    content: "";
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    background: #444;
-    border: 1px solid #666;
-    border-radius: 50%;
-    z-index: 11;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
-.gauge-label {
-    position: absolute;
-    bottom: 20px;
-    font-size: 8px;
-    font-weight: 700;
-    color: #888;
-    letter-spacing: 1px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-.gauge-value {
-    position: absolute;
-    bottom: 8px;
-    font-size: 10px;
-    color: #fff;
-    font-family: 'Courier New', monospace;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 1px 4px;
-    border-radius: 2px;
-}
-
-/* Custom colors per gauge type if needed, but AMG prefers uniform red needles */
-.pressure-gauge .gauge-needle,
-.temp-gauge .gauge-needle,
-.voltage-gauge .gauge-needle,
-.fuel-gauge .gauge-needle,
-.hyd-gauge .gauge-needle {
-    background: var(--needle-color);
-    box-shadow: 0 0 4px rgba(218, 41, 28, 0.6);
-    /* Reset dimensions from previous replace if needed */
-    width: 35px;
-    height: 2px;
-}
-
-.pressure-gauge .gauge-value,
-.temp-gauge .gauge-value,
-.voltage-gauge .gauge-value,
-.fuel-gauge .gauge-value,
-.hyd-gauge .gauge-value {
-    color: #fff;
-}
-
-/* Status Display */
-/* Warning Lights */
-.warning-lights {
+/* Warning Cluster */
+.warning-cluster {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.warning-row {
-    display: flex;
-    justify-content: center;
-    align-items: center;
     gap: 15px;
-}
-
-.warning-light {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.7rem;
-    color: #bdc3c7;
-}
-
-.warn-icon {
-    font-size: 1.1rem;
-    line-height: 1;
-}
-
-/* Control Buttons Row */
-.control-buttons {
-    display: flex;
     justify-content: center;
-    align-items: center;
-    gap: 50px;
-    margin-top: 30px;
+    margin-bottom: 20px;
 }
 
-.light {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #333;
-    border: 1px solid #555;
-}
-
-.light.red.active {
-    background: #f44336;
-    box-shadow: 0 0 10px #f44336;
-}
-
-.light.amber.active {
-    background: #ff9800;
-    box-shadow: 0 0 10px #ff9800;
-}
-
-.light.green.active {
-    background: #4caf50;
-    box-shadow: 0 0 10px #4caf50;
-}
-
-/* Emergency Stop */
-.emergency-section {
+.warning-item {
+    width: 40px;
+    height: 40px;
+    border-radius: 5px;
+    background: #1a1a1a;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    border: 1px solid #333;
+    opacity: 0.3;
+    transition: all 0.3s;
 }
 
-.emergency-btn {
-    background: linear-gradient(145deg, #ff4444, #cc2222);
-    color: white;
-    border: 2px solid #990000;
-    border-radius: 8px;
-    width: 80px;
-    height: 50px;
-    font-size: 0.8rem;
+.warning-item.active {
+    opacity: 1;
+    background: #330000;
+    border-color: #ff0000;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+}
+
+.warning-item .icon {
+    font-size: 1.2rem;
+}
+
+/* Buttons */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.amg-btn {
+    background: transparent;
+    border: 1px solid var(--amg-green);
+    color: var(--amg-green);
+    padding: 10px 20px;
+    font-family: 'Exo 2', sans-serif;
     font-weight: bold;
     cursor: pointer;
-    box-shadow:
-        0 4px 8px rgba(0, 0, 0, 0.4),
-        inset 0 2px 0 rgba(255, 255, 255, 0.2),
-        inset 0 -2px 0 rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    transition: all 0.3s;
     text-transform: uppercase;
     letter-spacing: 1px;
-    line-height: 1.1;
 }
 
-/* Work Lights Button - Toggle Switch Style */
-.light-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.amg-btn:hover {
+    background: var(--amg-green);
+    color: #000;
+    box-shadow: 0 0 15px var(--amg-green);
 }
 
-.light-btn {
-    background: linear-gradient(145deg, #666, #444);
-    color: #ccc;
-    border: 2px solid var(--button-border-color, #555);
-    border-radius: 8px;
-    width: 80px;
-    height: 50px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow:
-        0 4px 8px rgba(0, 0, 0, 0.4),
-        inset 0 2px 0 rgba(255, 255, 255, 0.1),
-        inset 0 -2px 0 rgba(0, 0, 0, 0.3),
-        var(--button-border-glow, none);
-    transition: all 0.4s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.stop-btn {
+    border-color: var(--amg-red);
+    color: var(--amg-red);
 }
 
-.light-btn.active {
-    /* Keep the button face dark - only the border should glow */
-    background: linear-gradient(145deg, #666, #444) !important;
-    color: #ccc !important;
-    /* The border glow is handled by JavaScript via CSS custom properties */
+.stop-btn:hover {
+    background: var(--amg-red);
+    box-shadow: 0 0 15px var(--amg-red);
 }
 
-.emergency-btn:hover {
-    transform: translateY(-2px);
-    box-shadow:
-        0 6px 12px rgba(0, 0, 0, 0.5),
-        inset 0 2px 0 rgba(255, 255, 255, 0.3),
-        inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+/* Loading/Status Request Loader */
+.request-loader:after {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    background: currentColor;
+    border-radius: 50%;
+    margin-left: 5px;
+    animation: blink 1s infinite;
 }
 
-.emergency-btn:active {
-    transform: translateY(0);
-    box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.4),
-        inset 0 2px 0 rgba(255, 255, 255, 0.2),
-        inset 0 -2px 0 rgba(0, 0, 0, 0.3);
-}
+@keyframes blink {
 
-.light-btn:hover {
-    transform: translateY(-2px);
-    box-shadow:
-        0 6px 12px rgba(0, 0, 0, 0.5),
-        inset 0 2px 0 rgba(255, 255, 255, 0.2),
-        inset 0 -2px 0 rgba(0, 0, 0, 0.3);
-}
-
-.light-btn:active {
-    transform: translateY(0);
-    box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.4),
-        inset 0 2px 0 rgba(255, 255, 255, 0.1),
-        inset 0 -2px 0 rgba(0, 0, 0, 0.4);
-}
-
-@keyframes glow-pulse {
-    0% {
-        opacity: 0.8;
+    0%,
+    100% {
+        opacity: 0;
     }
 
-    100% {
+    50% {
         opacity: 1;
     }
 }
 
-@keyframes start-pulse {
-    0% {
-        opacity: 0.7;
-    }
-
-    100% {
-        opacity: 1;
-    }
-}
-
-@keyframes light-glow {
-    0% {
-        box-shadow:
-            0 4px 8px rgba(0, 0, 0, 0.4),
-            0 0 20px rgba(255, 255, 0, 0.6),
-            0 0 30px rgba(255, 255, 0, 0.3),
-            inset 0 2px 0 rgba(255, 255, 255, 0.6),
-            inset 0 -2px 0 rgba(0, 0, 0, 0.2);
-    }
-
-    100% {
-        box-shadow:
-            0 4px 8px rgba(0, 0, 0, 0.4),
-            0 0 30px rgba(255, 255, 0, 0.9),
-            0 0 50px rgba(255, 255, 0, 0.5),
-            inset 0 2px 0 rgba(255, 255, 255, 0.8),
-            inset 0 -2px 0 rgba(0, 0, 0, 0.2);
-    }
-}
-
-@keyframes bright-glow {
-    0% {
-        box-shadow:
-            0 4px 8px rgba(0, 0, 0, 0.4),
-            0 0 15px rgba(255, 221, 0, 0.6),
-            0 0 25px rgba(255, 221, 0, 0.3),
-            inset 0 2px 0 rgba(255, 255, 255, 0.4),
-            inset 0 -2px 0 rgba(0, 0, 0, 0.2);
-    }
-
-    100% {
-        box-shadow:
-            0 4px 8px rgba(0, 0, 0, 0.4),
-            0 0 25px rgba(255, 221, 0, 0.9),
-            0 0 40px rgba(255, 221, 0, 0.6),
-            inset 0 2px 0 rgba(255, 255, 255, 0.6),
-            inset 0 -2px 0 rgba(0, 0, 0, 0.2);
-    }
-}
-
-/* Instructions */
-.instructions {
-    background: rgba(0, 0, 0, 0.3);
-    padding: 20px;
-    border-radius: 10px;
-    margin-top: 30px;
-    text-align: left;
-}
-
-.instructions h3 {
-    color: var(--key-color);
-    margin-bottom: 15px;
-}
-
-.instructions ul {
-    list-style: none;
-    padding-left: 0;
-}
-
-.instructions li {
-    margin-bottom: 8px;
-    padding-left: 20px;
-    position: relative;
-}
-
-.instructions li:before {
-    content: "→";
-    position: absolute;
-    left: 0;
-    color: var(--key-color);
-    font-weight: bold;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .container {
-        padding: 15px;
-    }
-
-    .logo-title-section {
-        gap: 15px;
-    }
-
-    .bobcat-logo {
-        height: 60px;
-    }
-
-    .logo-title-section h1 {
-        font-size: 2.5rem;
-    }
-
-    .master-status {
-        font-size: 1rem;
-        padding: 4px 12px;
-    }
-
-    /* Make the key assembly much larger on mobile - almost full width */
-    .bezel {
-        width: 90vw;
-        max-width: 350px;
-        height: 90vw;
-        max-height: 350px;
-    }
-
-    .face {
-        width: calc(90vw - 50px);
-        max-width: 300px;
-        height: calc(90vw - 50px);
-        max-height: 300px;
-    }
-
-    .key-container {
-        width: calc(90vw - 100px);
-        max-width: 250px;
-        height: calc(90vw - 100px);
-        max-height: 250px;
-    }
-
-    .key-shaft {
-        width: 8px;
-        height: calc(90vw - 150px);
-        max-height: 120px;
-    }
-
-    .position-label {
-        font-size: 14px;
-        /* Adjust radius for mobile - calc() works with transform? 
-           Better to use % or VW in transform if possible, but pixels are safer.
-           Let's scale the transform using a CSS variable or media query override. 
-        */
-    }
-
-    /* Update Radial positions for mobile sizes */
-    /* Mobile Face is ~300px max, but can be smaller (calc(90vw - 50px)) */
-    /* Let's use a simpler approach: scale the wrapper or use % radius in transform */
-
-    .off-label {
-        transform: rotate(-30deg) translate(0, -110px);
-    }
-
-    .on-label {
-        transform: rotate(0deg) translate(0, -110px);
-    }
-
-    .glow-label {
-        transform: rotate(45deg) translate(0, -110px);
-    }
-
-    .start-label {
-        transform: rotate(90deg) translate(0, -110px);
-    }
-
-    .gauge {
-        width: 70px;
-        height: 70px;
-        /* Keep square for circle */
-    }
-
-    .gauge-container {
-        gap: 15px;
-        margin: 20px 0;
-    }
-
-    /* Removed deprecated .gauge-arc responsive rules */
-
-    .gauge-needle {
-        width: 30px;
-        height: 2px;
-    }
-
-    .gauge-label {
-        font-size: 7px;
-    }
-
-    .gauge-value {
-        font-size: 8px;
-    }
-
-    .instructions {
-        text-align: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .container {
+@media (max-width: 800px) {
+    .cluster-grid {
+        grid-template-columns: 1fr;
         padding: 10px;
+        gap: 30px;
     }
 
-    .logo-title-section {
-        gap: 10px;
+    /* Stack order: Center Hero first, then gauges, then key */
+    .center-stage {
+        order: 1;
+        margin-bottom: 20px;
     }
 
-    .bobcat-logo {
-        height: 50px;
+    .left-wing {
+        order: 2;
+        width: 100%;
     }
 
-    .logo-title-section h1 {
-        font-size: 2rem;
+    .right-wing {
+        order: 3;
+        width: 100%;
+        /* Keep Right Wing vertical on mobile for Key clarity, or wrap */
+        flex-direction: column;
+        align-items: center;
+        gap: 30px;
     }
 
-    .master-status {
-        font-size: 0.9rem;
-        padding: 3px 10px;
+    /* Shrink Hero for Mobile */
+    .hero-gauge-container {
+        width: 280px;
+        height: 280px;
     }
 
-    /* Even larger on very small screens */
-    .bezel {
-        width: 95vw;
-        max-width: 320px;
-        height: 95vw;
-        max-height: 320px;
+    .hero-value {
+        font-size: 3rem;
     }
 
-    .face {
-        width: calc(95vw - 50px);
-        max-width: 270px;
-        height: calc(95vw - 50px);
-        max-height: 270px;
+    /* Left Gauge Group - Row for side-by-side bars */
+    .left-wing .gauge-group {
+        flex-direction: row;
+        width: 100%;
+        justify-content: center;
+        gap: 20px;
     }
 
-    .key-container {
-        width: calc(95vw - 100px);
-        max-width: 220px;
-        height: calc(95vw - 100px);
-        max-height: 220px;
+    /* Shrink Key for Mobile */
+    .ignition-bezel {
+        width: 220px;
+        height: 220px;
     }
 
-    .key-shaft {
-        width: 8px;
-        height: calc(95vw - 150px);
-        max-height: 110px;
+    .key-slot-container {
+        width: 100px;
+        height: 100px;
     }
 
-    .position-label {
-        font-size: 12px;
-    }
-
-    /* Very small screens */
-    .off-label {
-        transform: rotate(-30deg) translate(0, -90px);
-    }
-
-    .on-label {
-        transform: rotate(0deg) translate(0, -90px);
-    }
-
-    .glow-label {
-        transform: rotate(45deg) translate(0, -90px);
-    }
-
-    .start-label {
-        transform: rotate(90deg) translate(0, -90px);
-    }
-
-    .gauge {
+    .key-head {
         width: 60px;
-        height: 60px;
-        /* Keep square for circle */
+        height: 110px;
     }
 
-    .gauge-container {
-        gap: 10px;
-        margin: 15px 0;
-    }
-
-    /* Removed deprecated .gauge-arc responsive rules */
-
-    .gauge-needle {
-        width: 25px;
-        height: 2px;
-    }
-
-    .gauge-label {
-        font-size: 6px;
-    }
-
-    .gauge-value {
-        font-size: 7px;
+    /* Ensure Dashboard fits height if needed (scrolling allowed) */
+    .amg-dashboard {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
     }
 }
 
-/* Footer Styles */
-.footer {
-    margin-top: 40px;
-    padding: 20px 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tech-info span {
-    font-size: 0.9rem;
-    color: #888;
-    text-align: center;
-}
-
-.settings-info {
-    cursor: pointer;
-    transition: color 0.3s ease;
-}
-
-.settings-link {
-    font-size: 1rem;
-    color: var(--bobcat-orange);
-    text-decoration: none;
-    transition: color 0.3s ease;
-}
-
-.settings-link:hover {
-    color: #ff8533;
-    text-decoration: underline;
-}
-
-/* Compact Table for Settings */
-.compact-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
-
-.compact-table td,
-.compact-table th {
-    padding: 8px 4px;
-    vertical-align: middle;
-    text-align: left;
-}
-
-.compact-table .setting-input {
-    width: 100%;
-    max-width: 150px;
-}
-
-.wifi-table td,
-.wifi-table th {
-    text-align: center;
-}
-
-.wifi-table td:first-child,
-.wifi-table th:first-child {
-    text-align: left;
-}
-
-
-/* Sensor Configuration Table */
-.sensor-table th,
-.sensor-table td {
-    padding: 6px 4px;
-    /* Reduced padding */
-    text-align: center;
-    vertical-align: middle;
-    border-bottom: 1px solid #444;
-}
-
-.sensor-table td:first-child {
-    text-align: left;
-    font-weight: bold;
-}
-
-.sensor-table .setting-input {
-    width: 65px;
-    /* Reduced width */
-    font-size: 0.85rem;
-    /* Slightly smaller font */
-    padding: 4px;
-    text-align: center;
-}
-
-.sensor-table .sensor-value {
-    font-family: monospace;
-    font-size: 0.9rem;
-    color: #3498db;
-}
-
-.sensor-abbr {
-    font-size: 0.75rem;
-    color: #aaa;
-    margin-left: 4px;
-    letter-spacing: 0.3px;
-}
-
-.sensor-table #batteryCalc,
-.sensor-table #tempCalc,
-.sensor-table #pressureCalc,
-.sensor-table #fuelCalc {
-    color: #2ecc71;
-}
-
-@media (max-width: 480px) {
-    .footer {
-        margin-top: 30px;
-        padding: 15px 0;
+/* Landscape Mobile tweak */
+@media (max-height: 600px) and (orientation: landscape) {
+    .amg-dashboard {
+        height: auto;
+        overflow-y: auto;
     }
 
-    .tech-info span {
-        font-size: 0.8rem;
-    }
-
-    .settings-info span {
-        font-size: 0.9rem;
+    .cluster-grid {
+        grid-template-columns: 1fr 1fr;
+        /* Split view? Or keep 3 col if wide enough */
     }
 }
