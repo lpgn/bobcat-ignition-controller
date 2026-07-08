@@ -31,7 +31,12 @@ static void beginStart(unsigned long now) {
   g_systemState.ignitionStartTime = 0;    // starter engages later, once glow has warmed the motor
   g_systemState.startHoldTime = now;
   g_systemState.oilOkSince = 0;
-  Serial.println("START: glow preheating (starter waits for glow unless engine is warm)");
+  // Latch "warm" ONCE (no per-loop flicker). Ignore implausible temps (>120C or
+  // <WARM) so a floating/disconnected sensor never triggers a warm skip.
+  float t0 = readEngineTemp();
+  g_systemState.warmStart = (t0 >= WARM_ENGINE_TEMP_C && t0 <= 120.0f);
+  Serial.println(g_systemState.warmStart ? "START: warm engine - will crank immediately"
+                                         : "START: glow preheating, then crank");
 }
 
 void runIgnitionSequence() {
@@ -136,8 +141,7 @@ void runIgnitionSequence() {
       // already warm (warm restart cranks immediately). glowPlugStartTime carried
       // over from an earlier GLOW-step preheat by beginStart().
       unsigned long glowElapsed = now - g_systemState.glowPlugStartTime;
-      bool warm = readEngineTemp() >= WARM_ENGINE_TEMP_C;
-      bool preheatDone = warm || glowElapsed >= glowDur;
+      bool preheatDone = g_systemState.warmStart || glowElapsed >= glowDur;
       bool interlockOk = g_systemState.maintenanceMode ||
                          (readSeatBarSafety() && readNeutralSafety() &&
                           readBatteryVoltage() >= s.minBatteryVoltage);
@@ -146,8 +150,8 @@ void runIgnitionSequence() {
       if (preheatDone && interlockOk) {
         if (g_systemState.ignitionStartTime == 0) {
           g_systemState.ignitionStartTime = now;   // starter engages now (crank-timeout starts here)
-          Serial.println(warm ? "Warm engine - cranking immediately"
-                              : "Glow preheat complete - cranking");
+          Serial.println(g_systemState.warmStart ? "Warm engine - cranking immediately"
+                                                  : "Glow preheat complete - cranking");
         }
         cranking = (now - g_systemState.ignitionStartTime) < crankTimeout;
       }

@@ -23,6 +23,7 @@ typedef struct {
 
     // RUNNING detection while cranking
     unsigned long oilOkSince;     // when oil pressure first went OK (0 = not OK)
+    bool warmStart;               // latched at hold-start: engine warm -> skip glow preheat
 
     // Buttons / relay flags
     bool emergencyStopPressed;
