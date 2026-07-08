@@ -396,7 +396,9 @@ bool SettingsManager::validateSettings(const BobcatSettings& settings) {
         } else if (t == PT_ADC) {
             if (!isAdc1Pin(g)) return false;
         } else {
-            if (!isHeaderPin(g) || isStrapPin(g) || isRelayGpio(g)) return false;
+            // Digital I/O: any broken-out header pin, PLUS the onboard LED (GPIO25).
+            bool legal = (g == 25) || (isHeaderPin(g) && !isStrapPin(g) && !isRelayGpio(g));
+            if (!legal) return false;
             if (t == PT_DIN && (g == 34 || g == 35 || g == 36 || g == 39)) return false;
         }
         for (int j = i + 1; j < PIN_FUNC_COUNT; j++) {
