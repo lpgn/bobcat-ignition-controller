@@ -1,95 +1,120 @@
 /*
  * Configuration Implementation for Bobcat Ignition Controller
- * Defines all constants and global variables for Diesel Engine Control
+ * Default pin map, legal-GPIO catalogs, and NVS seed constants.
  */
 
 #include "config.h"
 
 // ============================================================================
-// ANALOG INPUT PINS - Engine Sensors (ADC1 channels) - Sequential assignment
+// AUTHORITATIVE DEFAULT PIN MAP (LilyGO T-Relay 4-Channel board facts)
+//   Relays active-high: K1=21 power, K2=19 glow, K3=18 starter, K4=5 lights.
+//   Sensors on ADC1: temp=34, oil=35, hydraulic=32, battery=33, fuel=36.
+//   Digital: buzzer=26, seat-bar=27, neutral=13(pullup). Status LED=25.
 // ============================================================================
-const int ENGINE_TEMP_PIN = 39;       // ADC1_CH3 - Coolant Temperature Sensor - MOVED
-const int OIL_PRESSURE_PIN = 34;      // ADC1_CH6 - Oil Pressure Sender (0-180Ω resistive) - MOVED to GPIO34
-const int BATTERY_VOLTAGE_PIN = 36;   // ADC1_CH0 - Battery Voltage (via divider) - MOVED to GPIO36
-const int FUEL_LEVEL_PIN = 35;        // ADC1_CH7 - Fuel Level Sender (240-33Ω resistive) - MOVED
-// Optional additional sensor
-const int HYD_PRESSURE_PIN = 33;      // ADC1_CH5 - Hydraulic Pressure Sensor (resistive type recommended)
+const PinInfo PIN_TABLE[PIN_FUNC_COUNT] = {
+  { "mainPower",   "Main power",   21, PT_RELAY },
+  { "glow",        "Glow plugs",   19, PT_RELAY },
+  { "starter",     "Starter",      18, PT_RELAY },
+  { "lights",      "Lights",        5, PT_RELAY },
+  { "engineTemp",  "Engine temp",  34, PT_ADC   },
+  { "oilPressure", "Oil pressure", 35, PT_ADC   },
+  { "hydraulic",   "Hydraulic",    32, PT_ADC   },
+  { "battery",     "Battery",      33, PT_ADC   },
+  { "fuel",        "Fuel level",   36, PT_ADC   },
+  { "buzzer",      "Buzzer",       26, PT_DOUT  },
+  { "seatBar",     "Seat bar",     27, PT_DIN   },
+  { "neutral",     "Neutral",      13, PT_DIN   },
+  { "statusLed",   "Status LED",   25, PT_DOUT  },
+};
+
+// Exposed header pins (usable for I/O). Strapping pins are listed but flagged.
+const uint8_t HEADER_PINS[] = { 2, 4, 12, 13, 14, 15, 22, 23, 26, 27, 32, 33, 34, 35, 36, 39 };
+const size_t  HEADER_PINS_COUNT = sizeof(HEADER_PINS) / sizeof(HEADER_PINS[0]);
+
+// ADC1 channels - the only analog-capable pins while WiFi is active.
+const uint8_t ADC1_PINS[] = { 32, 33, 34, 35, 36, 39 };
+const size_t  ADC1_PINS_COUNT = sizeof(ADC1_PINS) / sizeof(ADC1_PINS[0]);
+
+// Fixed relay pins - cannot be remapped.
+const uint8_t RELAY_PINS[] = { 21, 19, 18, 5 };
+const size_t  RELAY_PINS_COUNT = sizeof(RELAY_PINS) / sizeof(RELAY_PINS[0]);
+
+// Strapping pins - never use for general I/O.
+const uint8_t STRAP_PINS[] = { 2, 4, 12, 15 };
+const size_t  STRAP_PINS_COUNT = sizeof(STRAP_PINS) / sizeof(STRAP_PINS[0]);
+
+bool isAdc1Pin(int gpio) {
+  for (size_t i = 0; i < ADC1_PINS_COUNT; i++) if (ADC1_PINS[i] == gpio) return true;
+  return false;
+}
+
+bool isRelayGpio(int gpio) {
+  for (size_t i = 0; i < RELAY_PINS_COUNT; i++) if (RELAY_PINS[i] == gpio) return true;
+  return false;
+}
+
+bool isStrapPin(int gpio) {
+  for (size_t i = 0; i < STRAP_PINS_COUNT; i++) if (STRAP_PINS[i] == gpio) return true;
+  return false;
+}
+
+bool isHeaderPin(int gpio) {
+  for (size_t i = 0; i < HEADER_PINS_COUNT; i++) if (HEADER_PINS[i] == gpio) return true;
+  return false;
+}
+
+const char* pinTypeToString(PinType t) {
+  switch (t) {
+    case PT_RELAY: return "relay";
+    case PT_ADC:   return "adc";
+    case PT_DIN:   return "digital-in";
+    case PT_DOUT:  return "digital-out";
+    default:       return "unknown";
+  }
+}
 
 // ============================================================================
-// DIGITAL INPUT PINS - Status Feedback (Physical sequence from header)
+// FIXED POWER-MANAGEMENT PIN
 // ============================================================================
-const int ALTERNATOR_CHARGE_PIN = 22;     // GPIO22 - Alternator Charge Indicator (1st pin top row)
-const int ENGINE_RUN_FEEDBACK_PIN = 26;   // GPIO26 - Engine Running Feedback (2nd pin top row)
+const int WAKE_UP_BUTTON_PIN = 0;   // GPIO0 (BOOT button)
 
 // ============================================================================
-// SAFETY INTERLOCK PINS - MANDATORY FOR SAFE OPERATION
-// ============================================================================
-const int SEAT_BAR_PIN = 25;              // GPIO25 - Seat Bar Safety Switch (normally open, closes when seated)
-const int NEUTRAL_SAFETY_PIN = 27;        // GPIO27 - Transmission Neutral Safety Switch (normally open, closes in neutral)
-
-// ============================================================================
-// POWER MANAGEMENT PINS
-// ============================================================================
-const int WAKE_UP_BUTTON_PIN = 0;         // GPIO0 (BOOT button) - Wake up from deep sleep
-const int SLEEP_ENABLE_PIN = 12;          // GPIO12 - Enable deep sleep mode (optional external control)
-
-// ============================================================================
-// DIESEL ENGINE TIMING CONSTANTS (in milliseconds)
-// ============================================================================
-const unsigned long GLOW_PLUG_DURATION = 20000;   // 20 seconds glow plug preheat
-const unsigned long IGNITION_TIMEOUT = 10000;     // 10 seconds max cranking
-const unsigned long COOLDOWN_DURATION = 120000;   // 2 minutes post-shutdown cooldown
-
-// ============================================================================
-// POWER MANAGEMENT CONSTANTS (in milliseconds)
+// POWER MANAGEMENT CONSTANTS (ms)
 // ============================================================================
 const unsigned long SLEEP_TIMEOUT = 1800000;      // 30 minutes before auto-sleep
-const unsigned long ACTIVITY_TIMEOUT = 300000;    // 5 minutes of inactivity before sleep eligibility
-
-
-// SENSOR CALIBRATION CONSTANTS - Only for sensors we're using
+const unsigned long ACTIVITY_TIMEOUT = 300000;    // 5 minutes inactivity before eligibility
 
 // ============================================================================
-// Coolant Temperature Sensor (NTC thermistor P/N 6658818)
-// ⚠️ REQUIRES MANUAL CHARACTERIZATION - no public resistance-vs-temperature curve available
-// Method: Measure resistance at 20°C, 40°C, 60°C, 80°C, 100°C in controlled water bath
-// Current values are PLACEHOLDERS until proper characterization is completed
-const float TEMP_SENSOR_OFFSET = -40.0;      // Offset for temperature calculation (legacy, not used in new formula)
-const float TEMP_SENSOR_SCALE = 0.040;       // Scale factor for inverted NTC formula (°C per ADC unit) - PLACEHOLDER
-
-// Oil Pressure Switch (P/N 6969775) - DIGITAL SWITCH, not analog sender  
-// Switch: normally open, closes to ground when pressure OK
-// Use digitalRead() with INPUT_PULLUP: LOW = pressure OK, HIGH = low pressure
-const float OIL_PRESSURE_OFFSET = 0.0;       // Pressure sensor offset (LEGACY - not used for digital switch)
-const float OIL_PRESSURE_SCALE = 0.1682;     // 689 kPa / 4095 ADC = 0.1682 kPa/unit (LEGACY - not used for digital switch)
-
-// Hydraulic Pressure Switch (P/N 6671062) - DIGITAL SWITCH, not analog sender
-// Switch: normally open, closes to ground when pressure OK  
-// Use digitalRead() with INPUT_PULLUP: LOW = pressure OK, HIGH = low pressure
-const float HYD_PRESSURE_OFFSET = 0.0;       // kPa (LEGACY - not used for digital switch)
-const float HYD_PRESSURE_SCALE = 0.1682;     // kPa/unit (LEGACY - not used for digital switch)
-
-// Battery Voltage Divider (for 12V/24V systems)
-// RESEARCH-VALIDATED: 56kΩ + 10kΩ voltage divider
-// Measured: 13.06V battery → 2.0V ADC input → ~2482 ADC reading
-// Voltage divider constant: 13.06V ÷ 2482 = 0.00526
-const float BATTERY_VOLTAGE_DIVIDER = 0.00526; // Calibrated for 56kΩ/10kΩ divider (research-validated)
-
-// Fuel Level Sensor Calibration
-// ⚠️ REQUIRES MANUAL MEASUREMENT - unknown resistance range
-// Could be 240-33Ω, 73-10Ω, or 0-90Ω standard
-// MANDATORY: Measure actual sender resistance at full and empty tank conditions
-// Current values are PLACEHOLDERS until proper measurement
-const float FUEL_LEVEL_EMPTY = 200.0;        // ADC reading for empty tank (PLACEHOLDER)
-const float FUEL_LEVEL_FULL = 3800.0;        // ADC reading for full tank (PLACEHOLDER)
+// DEFAULT DIESEL ENGINE TIMING (ms)
+// ============================================================================
+const unsigned long GLOW_PLUG_DURATION = 20000;   // 20 s glow preheat
+const unsigned long IGNITION_TIMEOUT = 10000;     // 10 s max cranking
+const unsigned long COOLDOWN_DURATION = 120000;   // 2 min cooldown
+const unsigned long RUNNING_OIL_CONFIRM_MS = 1500; // oil-OK dwell -> RUNNING
 
 // ============================================================================
-// Global variables
+// DEFAULT SENSOR CALIBRATION (placeholders until characterized)
 // ============================================================================
-const int MIN_OIL_PRESSURE = 69;             // Minimum oil pressure (kPa, ~0.7 bar)
-const int MAX_COOLANT_TEMP = 104;            // Maximum coolant temp (°C)
-const int MIN_BATTERY_VOLTAGE = 11;          // Minimum battery voltage (12V system)
-const int MAX_BATTERY_VOLTAGE = 15;          // Maximum battery voltage (12V system)
+const float TEMP_SENSOR_SCALE = 0.040f;       // °C per ADC unit (inverted NTC)
+const float OIL_PRESSURE_SCALE = 0.0195f;     // psi per ADC unit (~80 psi FS)
+const float HYD_PRESSURE_SCALE = 0.7326f;     // psi per ADC unit (~3000 psi FS)
+const float BATTERY_VOLTAGE_DIVIDER = 0.00526f; // V per ADC unit (56k/10k divider)
+const float FUEL_LEVEL_EMPTY = 200.0f;        // ADC value for empty
+const float FUEL_LEVEL_FULL = 3800.0f;        // ADC value for full
 
-// Global variables moved to SystemState_t struct in system_state.cpp
-// All state management now centralized through g_systemState
+// ============================================================================
+// DEFAULT ENGINE OPERATING PARAMETERS
+// ============================================================================
+const int MIN_OIL_PRESSURE = 15;      // psi
+const int MAX_COOLANT_TEMP = 104;     // °C
+const int MIN_HYD_PRESSURE = 800;     // psi
+const float MIN_BATTERY_VOLTAGE = 11.5f; // V
+const float MAX_BATTERY_VOLTAGE = 14.8f; // V
+
+// ============================================================================
+// DISPLAY RANGES
+// ============================================================================
+const int TEMP_DISPLAY_MIN = 40;      // °C
+const int TEMP_DISPLAY_MAX = 120;     // °C
+const int OIL_DISPLAY_MAX = 80;       // psi
+const int HYD_DISPLAY_MAX = 3000;     // psi

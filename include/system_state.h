@@ -1,6 +1,6 @@
 /*
  * System State Management Header for Bobcat Ignition Controller
- * Contains the main state machine logic
+ * Main state machine + cross-task flags (handlers set, loop() acts).
  */
 
 #ifndef SYSTEM_STATE_H
@@ -8,47 +8,60 @@
 
 #include <Arduino.h>
 
-// Centralized system state structure
 typedef struct {
     // Key and system state
-    int keyPosition;              // 0=OFF, 1=ON, 2=GLOW_PLUG, 3=START
-    bool keyStartHeld;            // True while START position is held
-    unsigned long startHoldTime;  // When START position was first engaged
-    
+    int keyPosition;              // 0=OFF, 1=ON, 2=GLOW, 3=START
+    bool keyStartHeld;            // true while START held
+    unsigned long startHoldTime;
+
     // System state
-    int currentState;             // SystemState enum value
+    int currentState;             // SystemState enum
     unsigned long glowPlugStartTime;
     unsigned long ignitionStartTime;
     unsigned long shutdownStartTime;
     bool shutdownInProgress;
 
-    // Button and relay states
+    // RUNNING detection while cranking
+    unsigned long oilOkSince;     // when oil pressure first went OK (0 = not OK)
+
+    // Buttons / relay flags
     bool emergencyStopPressed;
     bool lightsTogglePressed;
     bool workLightsOn;
 
-    // Sensor values (add more as needed)
+    // Sensor values (cached)
     float engineTemp;
     float oilPressure;
     float batteryVoltage;
     float fuelLevel;
 
     // Power management
-    unsigned long lastActivityTime;    // Last time there was user activity
-    bool sleepModeEnabled;            // Whether sleep mode is enabled
-    bool wakeUpPending;               // Wake up from sleep pending
-    unsigned long sleepTimer;         // Timer for sleep timeout
+    unsigned long lastActivityTime;
+    bool sleepModeEnabled;
+    bool wakeUpPending;
+    unsigned long sleepTimer;
 
-    // Add other state variables as needed
+    // Cross-task flags: web handlers (async_tcp) set these; loop() performs the
+    // actual flash writes / relay actuation / sleep.
+    volatile bool configDirty;          // settings changed in RAM -> persist
+    volatile bool reloadCalibration;    // runtime_* must be refreshed
+    volatile bool sleepRequested;       // deep-sleep requested from handler
+    volatile bool factoryResetRequested;
+    volatile bool overrideRequested;    // deliberate override crank (POST only)
+
+    // Engine-hours accumulator (ms of running time not yet folded into NVS)
+    unsigned long engineHoursAccumMs;
 } SystemState_t;
 
-// Global system state instance (defined in system_state.cpp)
 extern SystemState_t g_systemState;
 
-// State machine functions
+// State machine
 void runIgnitionSequence();
+void updateEngineHours(unsigned long now);
 
-// Helper function to convert system state enum to string
-const char* systemStateToString(int state);
+// Helpers
+const char* systemStateToString(int state);  // legacy long names
+const char* apiStateName(int state);          // /api contract names
+int apiStateSeq(int state);                    // seq 0..4
 
 #endif // SYSTEM_STATE_H

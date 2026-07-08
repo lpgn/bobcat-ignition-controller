@@ -1,96 +1,131 @@
 /*
  * Configuration Header for Bobcat Ignition Controller
- * Contains all pin definitions, constants, and system configuration
- * Diesel Engine GPIO Mapping for ESP32
+ * Board: LilyGO T-Relay 4-Channel (ESP32)
+ *
+ * NOTE: Physical GPIO assignments are NO LONGER hard-coded here. They live in a
+ * runtime pin map stored in NVS (see SettingsManager). This header only provides
+ * the pin-function catalog, the board's authoritative default map, the set of
+ * legal GPIOs, and the compile-time DEFAULT values used to seed NVS on first boot.
  */
 
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// ============================================================================
-// DIGITAL OUTPUT PINS - Relay Control (Active HIGH) - LILYGO T-Relay 4-Channel
-// ============================================================================
-const int MAIN_POWER_PIN = 21;        // GPIO21 - Main Power Relay Control (Relay 1)
-const int GLOW_PLUGS_PIN = 19;        // GPIO19 - Glow Plug Relay Control (Relay 2)
-// const int IGNITION_PIN = 23;       // This is not used in this Bobcat model
-const int STARTER_PIN = 18;           // GPIO18 - Starter Solenoid Relay (Relay 3)
-const int LIGHTS_PIN = 5;             // GPIO5 - Both Front and Back Lights Relay (Relay 4)
+#include <Arduino.h>
 
 // ============================================================================
-// ANALOG INPUT PINS - Engine Sensors (Physical sequence from header left to right)
+// PIN FUNCTION CATALOG (runtime pin map is indexed by this enum)
 // ============================================================================
-extern const int ENGINE_TEMP_PIN;     // ADC1_CH3 (GPIO39) - Coolant Temperature (5th pin bottom row) - MOVED
-extern const int OIL_PRESSURE_PIN;    // ADC1_CH6 (GPIO34) - Oil Pressure Sensor (4th pin top row) - MOVED to GPIO34
-extern const int BATTERY_VOLTAGE_PIN; // ADC1_CH0 (GPIO36) - Battery Voltage (4th pin bottom row) - MOVED to GPIO36
-extern const int FUEL_LEVEL_PIN;      // ADC1_CH7 (GPIO35) - Fuel Tank Level (5th pin top row) - MOVED
-// Optional: Hydraulic Pressure Sensor (ADC1 channel)
-extern const int HYD_PRESSURE_PIN;    // ADC1_CH5 (GPIO33) - Hydraulic Pressure Sensor (placeholder)
+enum PinFunc {
+  PIN_MAIN_POWER = 0,   // Relay K1 (active-high) - main power
+  PIN_GLOW,             // Relay K2 - glow plugs
+  PIN_STARTER,          // Relay K3 - starter solenoid
+  PIN_LIGHTS,           // Relay K4 - work lights
+  PIN_ENGINE_TEMP,      // ADC1 - coolant temperature
+  PIN_OIL_PRESSURE,     // ADC1 - oil pressure
+  PIN_HYDRAULIC,        // ADC1 - hydraulic pressure
+  PIN_BATTERY,          // ADC1 - battery sense
+  PIN_FUEL,             // ADC1 - fuel level
+  PIN_BUZZER,           // Digital out - alarm buzzer
+  PIN_SEAT_BAR,         // Digital in (pullup) - seat-bar interlock
+  PIN_NEUTRAL,          // Digital in (pullup) - neutral interlock
+  PIN_STATUS_LED,       // Digital out - onboard status LED
+  PIN_FUNC_COUNT
+};
+
+// Electrical class of a pin function - drives pinMode + validation.
+enum PinType {
+  PT_RELAY = 0,   // fixed active-high relay output
+  PT_ADC,         // analog input (ADC1 only)
+  PT_DIN,         // digital input with pullup
+  PT_DOUT         // digital output (buzzer / LED)
+};
+
+struct PinInfo {
+  const char* func;      // machine key, e.g. "engineTemp"
+  const char* label;     // human label, e.g. "Engine temp"
+  uint8_t     defaultGpio;
+  PinType     type;
+};
+
+// Authoritative board default map (see board pin facts).
+extern const PinInfo PIN_TABLE[PIN_FUNC_COUNT];
+
+// Legal-GPIO catalogs used by /api/pins and by write validation.
+extern const uint8_t HEADER_PINS[];   extern const size_t HEADER_PINS_COUNT;
+extern const uint8_t ADC1_PINS[];     extern const size_t ADC1_PINS_COUNT;
+extern const uint8_t RELAY_PINS[];    extern const size_t RELAY_PINS_COUNT;
+extern const uint8_t STRAP_PINS[];    extern const size_t STRAP_PINS_COUNT;
+
+// GPIO classification helpers (defined in config.cpp).
+bool isAdc1Pin(int gpio);       // one of ADC1 {32,33,34,35,36,39}
+bool isRelayGpio(int gpio);     // one of the fixed relay pins {21,19,18,5}
+bool isStrapPin(int gpio);      // strapping pin {2,4,12,15}
+bool isHeaderPin(int gpio);     // exposed header pin
+
+const char* pinTypeToString(PinType t);
 
 // ============================================================================
-// DIGITAL INPUT PINS - Status Feedback (Physical sequence from header)
+// FIXED POWER-MANAGEMENT PIN (BOOT button, not part of the runtime map)
 // ============================================================================
-extern const int ALTERNATOR_CHARGE_PIN;    // GPIO22 - Alternator Charge Indicator (1st pin top row)
-extern const int ENGINE_RUN_FEEDBACK_PIN;  // GPIO26 - Engine Running Feedback (2nd pin top row)
+extern const int WAKE_UP_BUTTON_PIN;   // GPIO0 - wake from deep sleep
 
 // ============================================================================
-// SAFETY INTERLOCK PINS - MANDATORY FOR SAFE OPERATION
+// POWER MANAGEMENT CONSTANTS (ms)
 // ============================================================================
-extern const int SEAT_BAR_PIN;             // GPIO25 - Seat Bar Safety Switch (INPUT_PULLUP)
-extern const int NEUTRAL_SAFETY_PIN;       // GPIO27 - Transmission Neutral Safety Switch (INPUT_PULLUP)
+extern const unsigned long SLEEP_TIMEOUT;
+extern const unsigned long ACTIVITY_TIMEOUT;
 
 // ============================================================================
-// POWER MANAGEMENT PINS
+// DEFAULT DIESEL ENGINE TIMING (ms) - seed values for NVS only.
+// The state machine reads the live values from SettingsManager.
 // ============================================================================
-extern const int WAKE_UP_BUTTON_PIN;       // GPIO0 (BOOT button) - Wake up from deep sleep
-extern const int SLEEP_ENABLE_PIN;         // GPIO12 - Enable deep sleep mode (optional external control)
+extern const unsigned long GLOW_PLUG_DURATION;
+extern const unsigned long IGNITION_TIMEOUT;
+extern const unsigned long COOLDOWN_DURATION;
+
+// Time oil pressure must stay OK while cranking before declaring RUNNING.
+extern const unsigned long RUNNING_OIL_CONFIRM_MS;
 
 // ============================================================================
-// POWER MANAGEMENT CONSTANTS
+// DEFAULT SENSOR CALIBRATION - seed values for NVS only.
 // ============================================================================
-extern const unsigned long SLEEP_TIMEOUT;         // Time before auto-sleep (milliseconds)
-extern const unsigned long ACTIVITY_TIMEOUT;      // Inactivity timeout for sleep (milliseconds)
+extern const float TEMP_SENSOR_SCALE;        // °C per ADC unit (inverted NTC)
+extern const float OIL_PRESSURE_SCALE;        // psi per ADC unit
+extern const float HYD_PRESSURE_SCALE;        // psi per ADC unit
+extern const float BATTERY_VOLTAGE_DIVIDER;   // V per ADC unit
+extern const float FUEL_LEVEL_EMPTY;          // ADC value for empty tank
+extern const float FUEL_LEVEL_FULL;           // ADC value for full tank
 
 // ============================================================================
-// DIESEL ENGINE TIMING CONSTANTS
+// DEFAULT ENGINE OPERATING PARAMETERS (thresholds) - seed values for NVS only.
 // ============================================================================
-extern const unsigned long GLOW_PLUG_DURATION;    // Glow plug preheat time
-extern const unsigned long IGNITION_TIMEOUT;      // Max cranking time
-extern const unsigned long COOLDOWN_DURATION;     // Post-shutdown cooldown
-// SENSOR CALIBRATION CONSTANTS - Only for sensors we're using
-// ============================================================================
-extern const float TEMP_SENSOR_OFFSET;       // Temperature sensor offset (°C)
-extern const float TEMP_SENSOR_SCALE;        // Temperature sensor scale factor
-extern const float OIL_PRESSURE_OFFSET;      // Oil pressure sensor offset (kPa)
-extern const float OIL_PRESSURE_SCALE;       // Oil pressure sensor scale factor
-// Hydraulic Pressure Sensor calibration
-extern const float HYD_PRESSURE_OFFSET;      // Hydraulic pressure sensor offset (kPa)
-extern const float HYD_PRESSURE_SCALE;       // Hydraulic pressure sensor scale factor
-// Battery Voltage Divider (for 12V/24V systems)
-extern const float BATTERY_VOLTAGE_DIVIDER; // Calibrated for 56kΩ/10kΩ divider
-extern const float FUEL_LEVEL_EMPTY;         // ADC value for empty tank
-extern const float FUEL_LEVEL_FULL;          // ADC value for full tank
+extern const int MIN_OIL_PRESSURE;      // psi
+extern const int MAX_COOLANT_TEMP;      // °C
+extern const int MIN_HYD_PRESSURE;      // psi
+extern const float MIN_BATTERY_VOLTAGE; // V
+extern const float MAX_BATTERY_VOLTAGE; // V
 
 // ============================================================================
-// ENGINE OPERATING PARAMETERS
+// DISPLAY RANGES for /api/status gauges (not thresholds).
 // ============================================================================
-extern const int MIN_OIL_PRESSURE;           // Minimum oil pressure (kPa)
-extern const int MAX_COOLANT_TEMP;           // Maximum coolant temp (°C)
-extern const int MIN_BATTERY_VOLTAGE;        // Minimum battery voltage (12V system)
-extern const int MAX_BATTERY_VOLTAGE;        // Maximum battery voltage (12V system)
+extern const int TEMP_DISPLAY_MIN;      // °C
+extern const int TEMP_DISPLAY_MAX;      // °C
+extern const int OIL_DISPLAY_MAX;       // psi
+extern const int HYD_DISPLAY_MAX;       // psi
 
-// System states - Updated to match actual ignition key positions
+// ============================================================================
+// SYSTEM STATES - match actual ignition key positions
+// ============================================================================
 enum SystemState {
   OFF,                    // Key off - everything off
   ON,                     // Key on - electrical systems active
-  GLOW_PLUG,              // Key in glow plug position - heating glow plugs
-  START,                  // Key in start position - cranking engine (momentary)
-  RUNNING,                // Engine running - key returned to ON position
-  LOW_OIL_PRESSURE,
-  HIGH_TEMPERATURE,
+  GLOW_PLUG,              // Glow plug preheat
+  START,                  // Cranking (momentary)
+  RUNNING,                // Engine running
+  LOW_OIL_PRESSURE,       // Running + low-oil alert
+  HIGH_TEMPERATURE,       // Running + over-temp alert
   ERROR
 };
-
-// Global system variables moved to SystemState_t struct
-// Access through g_systemState instance in system_state.h
 
 #endif // CONFIG_H

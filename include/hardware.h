@@ -1,92 +1,86 @@
 /*
  * Hardware Control Header for Bobcat Ignition Controller
- * Contains functions for controlling physical hardware components
- * Simplified Diesel Engine Interface
+ * Relay/sensor/interlock access through the runtime pin map.
  */
 
 #ifndef HARDWARE_H
 #define HARDWARE_H
 
 #include <Arduino.h>
-#include "system_state.h"  // For g_systemState access
+#include "config.h"
+#include "system_state.h"
 
 // ============================================================================
-// RUNTIME CALIBRATION VARIABLES - Loaded from preferences
+// RUNTIME CALIBRATION (mirrors SettingsManager - the single source of truth)
 // ============================================================================
 extern float runtime_battery_divider;
 extern float runtime_temp_scale;
 extern float runtime_pressure_scale;
 extern float runtime_hyd_pressure_scale;
-extern int runtime_fuel_empty;
-extern int runtime_fuel_full;
+extern int   runtime_fuel_empty;
+extern int   runtime_fuel_full;
 
 // ============================================================================
 // HARDWARE INITIALIZATION
 // ============================================================================
-void initializePins();
-void loadCalibrationConstants();  // Load calibration from preferences
+void initializePins();            // applies pin map + calibration from settings
+void loadCalibrationConstants();  // refresh runtime_* from settings
+void applyPinMap();               // refresh runtime pin table from settings
+
+// Runtime pin-map accessors
+int  pinFor(PinFunc f);           // current GPIO for a function
+bool outputOn(PinFunc f);         // digitalRead of an output pin (status only)
 
 // ============================================================================
-// RELAY CONTROL FUNCTIONS - Diesel Engine Control
+// RELAY / OUTPUT CONTROL
 // ============================================================================
 void controlMainPower(bool enable);
-void controlGlowPlugs(bool enable);      // Glow plug relay control
-void controlStarter(bool enable);        // Starter solenoid relay
-void controlLights(bool enable);         // Both front and back lights relay
+void controlGlowPlugs(bool enable);
+void controlStarter(bool enable);
+void controlLights(bool enable);
+void controlBuzzer(bool enable);
+void controlStatusLed(bool enable);
 
 // ============================================================================
-// VIRTUAL BUTTON FUNCTIONS - Web Interface Control
+// VIRTUAL BUTTONS (web interface)
 // ============================================================================
 void virtualPowerOnButton();
 void virtualPowerOffButton();
-void virtualStartButton();     // Virtual start button for web interface
-void virtualLightsButton();    // Combined front and back lights toggle
-// Note: No virtualStopButton - engine must be stopped manually with lever
+void virtualStartButton();
+void virtualLightsButton();
 
 // ============================================================================
-// ANALOG SENSOR READING FUNCTIONS
+// SENSOR READS (one formula per sensor, from unified calibration)
 // ============================================================================
-float readEngineTemp();        // Coolant temperature (°C)
-float readOilPressure();       // Oil pressure (kPa)
-float readBatteryVoltage();    // Battery voltage (V)
-float readFuelLevel();         // Fuel level (%)
-float readHydraulicPressure(); // Hydraulic pressure (kPa)
+float readEngineTemp();        // °C
+float readOilPressure();       // psi (real analog read)
+float readHydraulicPressure(); // psi (real analog read)
+float readBatteryVoltage();    // V
+float readFuelLevel();         // % (clamped 0-100)
 
 // ============================================================================
-// DIGITAL INPUT READING FUNCTIONS
+// SAFETY INTERLOCKS (MANDATORY before every starter engagement)
 // ============================================================================
-bool readAlternatorCharge();     // Alternator charging status
-bool readEngineRunFeedback();   // Engine running feedback
+bool readSeatBarSafety();          // true = operator seated
+bool readNeutralSafety();          // true = transmission in neutral
+bool safetyInterlocksPassed();     // seat + neutral
+bool batteryOkToStart();           // battery >= settings.minBatteryVoltage
 
 // ============================================================================
-// SAFETY INTERLOCK FUNCTIONS - MANDATORY FOR SAFE OPERATION
+// ENGINE STATE HELPERS
 // ============================================================================
-bool readSeatBarSafety();          // Read seat bar safety switch (true = operator seated)
-bool readNeutralSafety();          // Read neutral safety switch (true = transmission in neutral)
-bool safetyInterlocksPassed();     // Check all safety interlocks (true = safe to start)
+bool isEngineRunning();            // reflects the state machine (no dev override)
+void performSafetyShutdown();
 
 // ============================================================================
-// PRESSURE SWITCH FUNCTIONS - Digital switches, not analog senders
+// POWER MANAGEMENT
 // ============================================================================
-bool readOilPressureSwitch();      // Oil pressure switch (true = pressure OK)
-bool readHydraulicPressureSwitch(); // Hydraulic pressure switch (true = pressure OK)
-
-// ============================================================================
-// SAFETY CHECK FUNCTIONS
-// ============================================================================
-bool checkEngineSafetyConditions();  // Check all safety interlocks
-bool isEngineRunning();              // Detect if engine is actually running
-void performSafetyShutdown();        // Safe emergency shutdown sequence
-
-// ============================================================================
-// POWER MANAGEMENT FUNCTIONS
-// ============================================================================
-void initializeSleepMode();          // Initialize deep sleep configuration
-void enterDeepSleep();               // Enter deep sleep mode
-void prepareForSleep();              // Prepare system for sleep (save state, turn off relays)
-bool checkSleepConditions();         // Check if it's safe to enter sleep (automatic)
-bool checkSleepConditions(bool manualSleep); // Check sleep conditions with manual override
-void handleWakeUp();                 // Handle wake-up from deep sleep
-void updateActivityTimer();          // Update last activity timestamp
+void initializeSleepMode();
+void enterDeepSleep();
+void prepareForSleep();
+bool checkSleepConditions();
+bool checkSleepConditions(bool manualSleep);
+void handleWakeUp();
+void updateActivityTimer();
 
 #endif // HARDWARE_H
