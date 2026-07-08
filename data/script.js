@@ -82,20 +82,45 @@ function updateSequence(seq){
   }
 }
 
-function updateKeyseg(seq,glow){
-  var heating=glow&&glow.active;
-  var btns=document.querySelectorAll('#keyseg .kb');
-  var active=Math.min(seq,2);
-  for(var i=0;i<btns.length;i++){
-    var pos=parseInt(btns[i].getAttribute('data-pos'));
-    btns[i].classList.toggle('on',pos===active&&!(pos===2&&heating));
-    btns[i].classList.toggle('heating',pos===2&&heating);
-    if(pos===2)btns[i].textContent=(heating&&glow.countdown>0)?('Glow '+glow.countdown+'s'):'Glow';
+var KPOS=[{k:'OFF',a:-66,pos:0},{k:'ON',a:-22,pos:1},{k:'GLOW',a:22,pos:2},{k:'START',a:66,pos:3}];
+function crankRelease(e){if(e&&e.preventDefault)e.preventDefault();apiCtrl({action:'crank',held:false});}
+function buildKnob(){
+  var ign=byId('ign');
+  ign.innerHTML='<div class="ign-face"></div><div class="ign-arc"></div>'+
+    '<div class="ign-knob" id="ignKnob"></div>'+
+    '<div class="ign-read"><b id="ignState">OFF</b><small id="ignSub"></small></div>';
+  for(var i=0;i<KPOS.length;i++){
+    var p=KPOS[i],rad=p.a*Math.PI/180;
+    var x=105+86*Math.sin(rad), y=105-86*Math.cos(rad);
+    var b=document.createElement('button');
+    b.className='ign-det'+(p.k==='START'?' start':'');
+    b.style.left=(x/210*100).toFixed(2)+'%'; b.style.top=(y/210*100).toFixed(2)+'%';
+    b.setAttribute('data-pos',p.pos); b.setAttribute('data-k',p.k); b.textContent=p.k;
+    b.setAttribute('aria-label',p.k==='START'?'Hold to crank':('Key to '+p.k));
+    ign.appendChild(b);
+    if(p.k==='START'){
+      b.addEventListener('pointerdown',function(e){e.preventDefault();apiCtrl({action:'crank',held:true});});
+      b.addEventListener('pointerup',crankRelease);
+      b.addEventListener('pointerleave',crankRelease);
+      b.addEventListener('pointercancel',crankRelease);
+    }else{(function(pos){b.addEventListener('click',function(){apiCtrl({action:'key',position:pos});});})(p.pos);}
   }
-  var crank=byId('btnCrank');
-  if(seq===4){crank.textContent='Running';crank.className='btn crank on';}
-  else if(seq===3){crank.textContent='Cranking…';crank.className='btn crank cranking';}
-  else{crank.textContent='Hold to Start';crank.className='btn crank';}
+}
+function updateKnob(seq,glow){
+  var heating=glow&&glow.active;
+  var showPos=seq>=4?1:Math.min(seq,3);
+  var knob=byId('ignKnob'); if(knob)knob.style.transform='rotate('+KPOS[showPos].a+'deg)';
+  var dets=document.querySelectorAll('#ign .ign-det');
+  for(var i=0;i<dets.length;i++){
+    var d=dets[i],k=d.getAttribute('data-k'),dp=parseInt(d.getAttribute('data-pos'));
+    d.classList.toggle('active',dp===showPos&&seq<3&&!(k==='GLOW'&&heating));
+    d.classList.toggle('cranking',k==='START'&&seq===3);
+    d.classList.toggle('heating',k==='GLOW'&&heating);
+  }
+  if(knob){knob.classList.toggle('cranking',seq===3);knob.classList.toggle('running',seq===4);}
+  var names=['OFF','ON','GLOW','CRANK','RUN'];
+  byId('ignState').textContent=names[Math.min(seq,4)];
+  byId('ignSub').textContent=(heating&&glow.countdown>0)?('glow '+glow.countdown+'s'):(seq===3?'hold':'');
 }
 
 function initHero(hyd){
@@ -197,7 +222,7 @@ function renderStatus(data){
   byId('maintBanner').style.display=data.maintenance?'block':'none';
   updateStrip(data.net);
   updateSequence(data.seq);
-  updateKeyseg(data.seq,data.glow);
+  updateKnob(data.seq,data.glow);
   updateHero(data.hydraulic);
   updateVitals(data.engineTemp,data.oil,data.battery,data.fuel);
   updateOutputs(data.outputs);
@@ -233,16 +258,7 @@ function apiCtrl(body){
 document.addEventListener('DOMContentLoaded',function(){
   byId('btnLights').addEventListener('click',function(){apiCtrl({action:'lights'});});
   byId('btnStop').addEventListener('click',function(){apiCtrl({action:'stop'});});
-  var kbs=document.querySelectorAll('#keyseg .kb');
-  for(var i=0;i<kbs.length;i++){
-    kbs[i].addEventListener('click',function(){apiCtrl({action:'key',position:parseInt(this.getAttribute('data-pos'))});});
-  }
-  var crank=byId('btnCrank');
-  function crankSet(h){return function(e){e.preventDefault();apiCtrl({action:'crank',held:h});};}
-  crank.addEventListener('pointerdown',crankSet(true));
-  crank.addEventListener('pointerup',crankSet(false));
-  crank.addEventListener('pointerleave',crankSet(false));
-  crank.addEventListener('pointercancel',crankSet(false));
+  buildKnob();
   byId('maintBanner').addEventListener('click',function(){apiCtrl({action:'maintenance',enabled:false});});
   poll();
 });
