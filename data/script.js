@@ -84,11 +84,17 @@ function updateSequence(seq){
 
 var KPOS=[{k:'OFF',a:-66,pos:0},{k:'ON',a:-22,pos:1},{k:'GLOW',a:22,pos:2},{k:'START',a:66,pos:3}];
 function crankRelease(e){if(e&&e.preventDefault)e.preventDefault();apiCtrl({action:'crank',held:false});}
+function crankDown(e){e.preventDefault();try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}apiCtrl({action:'crank',held:true});}
 function buildKnob(){
   var ign=byId('ign');
   ign.innerHTML='<div class="ign-face"></div><div class="ign-arc"></div>'+
     '<div class="ign-knob" id="ignKnob"></div>'+
     '<div class="ign-read"><b id="ignState">OFF</b><small id="ignSub"></small></div>';
+  // The whole knob is a hold-to-crank target (pointer capture => finger drift never releases it).
+  var kn=byId('ignKnob');
+  kn.addEventListener('pointerdown',crankDown);
+  kn.addEventListener('pointerup',crankRelease);
+  kn.addEventListener('pointercancel',crankRelease);
   for(var i=0;i<KPOS.length;i++){
     var p=KPOS[i],rad=p.a*Math.PI/180;
     var x=105+86*Math.sin(rad), y=105-86*Math.cos(rad);
@@ -99,28 +105,34 @@ function buildKnob(){
     b.setAttribute('aria-label',p.k==='START'?'Hold to crank':('Key to '+p.k));
     ign.appendChild(b);
     if(p.k==='START'){
-      b.addEventListener('pointerdown',function(e){e.preventDefault();apiCtrl({action:'crank',held:true});});
+      b.addEventListener('pointerdown',crankDown);
       b.addEventListener('pointerup',crankRelease);
-      b.addEventListener('pointerleave',crankRelease);
       b.addEventListener('pointercancel',crankRelease);
     }else{(function(pos){b.addEventListener('click',function(){apiCtrl({action:'key',position:pos});});})(p.pos);}
   }
 }
-function updateKnob(seq,glow){
+function updateKnob(seq,glow,outputs){
   var heating=glow&&glow.active;
+  var cranking=!!(outputs&&outputs.starter);
   var showPos=seq>=4?1:Math.min(seq,3);
   var knob=byId('ignKnob'); if(knob)knob.style.transform='rotate('+KPOS[showPos].a+'deg)';
   var dets=document.querySelectorAll('#ign .ign-det');
   for(var i=0;i<dets.length;i++){
     var d=dets[i],k=d.getAttribute('data-k'),dp=parseInt(d.getAttribute('data-pos'));
     d.classList.toggle('active',dp===showPos&&seq<3&&!(k==='GLOW'&&heating));
-    d.classList.toggle('cranking',k==='START'&&seq===3);
-    d.classList.toggle('heating',k==='GLOW'&&heating);
+    d.classList.toggle('cranking',k==='START'&&seq===3&&cranking);
+    d.classList.toggle('heating',(k==='GLOW'&&heating&&seq<3)||(k==='START'&&seq===3&&!cranking));
   }
-  if(knob){knob.classList.toggle('cranking',seq===3);knob.classList.toggle('running',seq===4);}
-  var names=['OFF','ON','GLOW','CRANK','RUN'];
-  byId('ignState').textContent=names[Math.min(seq,4)];
-  byId('ignSub').textContent=(heating&&glow.countdown>0)?('glow '+glow.countdown+'s'):(seq===3?'hold':'');
+  if(knob){knob.classList.toggle('cranking',seq===3&&cranking);knob.classList.toggle('running',seq===4);}
+  var st=byId('ignState'),sub=byId('ignSub');
+  if(seq===3){
+    st.textContent=cranking?'CRANK':'GLOW';
+    sub.textContent=cranking?'cranking':((glow&&glow.countdown>0)?('warming '+glow.countdown+'s'):'warming');
+  }else{
+    var names=['OFF','ON','GLOW','CRANK','RUN'];
+    st.textContent=names[Math.min(seq,4)];
+    sub.textContent=(heating&&glow.countdown>0)?('glow '+glow.countdown+'s'):'';
+  }
 }
 
 function initHero(hyd){
@@ -222,7 +234,7 @@ function renderStatus(data){
   byId('maintBanner').style.display=data.maintenance?'block':'none';
   updateStrip(data.net);
   updateSequence(data.seq);
-  updateKnob(data.seq,data.glow);
+  updateKnob(data.seq,data.glow,data.outputs);
   updateHero(data.hydraulic);
   updateVitals(data.engineTemp,data.oil,data.battery,data.fuel);
   updateOutputs(data.outputs);

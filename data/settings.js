@@ -29,7 +29,6 @@ function getInpVal(id){
 function applySettings(s){
   if(!s)return;
   setInpVal('sGlow',s.engine?s.engine.glow:null);
-  setInpVal('sGlowAssist',s.engine?s.engine.glowAssist:null);
   setInpVal('sCrank',s.engine?s.engine.crank:null);
   setInpVal('sCooldown',s.engine?s.engine.cooldown:null);
   setInpVal('sTempScale',s.cal?s.cal.tempScale:null);
@@ -73,7 +72,7 @@ function initSettingsListeners(){
   for(var i=0;i<inputs.length;i++){
     inputs[i].addEventListener('change',function(e){
       var map={
-        sGlow:'glow',sGlowAssist:'glowAssist',sCrank:'crank',sCooldown:'cooldown',
+        sGlow:'glow',sCrank:'crank',sCooldown:'cooldown',
         sTempScale:'tempScale',sMinOil:'minOil',sMinHyd:'minHyd',sMinV:'minV',sFuelLow:'fuelLow',
         sMqttHost:'mqttHost',sMqttPort:'mqttPort',sMqttTopic:'mqttTopic',
         sUtcOffset:'utcOffset',sApSsid:'apSSID',sApPass:'apPassword'

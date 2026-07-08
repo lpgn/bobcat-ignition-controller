@@ -14,19 +14,24 @@
 
 SystemState_t g_systemState = {};
 
+// Engine temp at/above which a start skips the glow-preheat wait (warm start).
+static const float WARM_ENGINE_TEMP_C = 50.0f;
+
 // Enter the START state and energize glow. Glow is ALWAYS safe on a start attempt
 // (it only preheats). The STARTER itself is gated every loop inside the START case
 // (interlocks + battery), so holding START always glows even when the starter is
 // blocked, and the starter engages the instant the interlocks are satisfied.
 static void beginStart(unsigned long now) {
   controlMainPower(true);
-  controlGlowPlugs(true);                 // glow on for the whole start attempt
+  // Carry over an existing glow preheat (from the GLOW step) so you don't wait
+  // twice; only (re)start the glow timer if we weren't already glowing.
+  if (!outputOn(PIN_GLOW)) g_systemState.glowPlugStartTime = now;
+  controlGlowPlugs(true);
   g_systemState.currentState = START;
-  g_systemState.ignitionStartTime = now;
+  g_systemState.ignitionStartTime = 0;    // starter engages later, once glow has warmed the motor
   g_systemState.startHoldTime = now;
   g_systemState.oilOkSince = 0;
-  g_systemState.glowPlugStartTime = now;  // (re)start glow timer for the crank-assist window
-  Serial.println("START: glow on (starter gated by interlocks + battery)");
+  Serial.println("START: glow preheating (starter waits for glow unless engine is warm)");
 }
 
 void runIgnitionSequence() {
@@ -34,7 +39,6 @@ void runIgnitionSequence() {
   const BobcatSettings& s = g_settingsManager.getSettings();
   uint32_t glowDur = s.glowPlugDuration;
   uint32_t crankTimeout = s.crankingTimeout;
-  uint32_t glowAssist = s.glowAssistDuration;
   int16_t minOil = s.minOilPressure;
 
   // 1. Forced OFF (master power off) whenever key is OFF.
@@ -114,30 +118,47 @@ void runIgnitionSequence() {
 
     case START: {
       bool held = g_systemState.keyStartHeld && g_systemState.keyPosition >= 3;
-      bool within = (now - g_systemState.ignitionStartTime) < crankTimeout;
 
-      // Glow assist: glow stays on for glowAssist ms into the crank, then off.
-      if (g_systemState.glowPlugStartTime > 0 && now - g_systemState.glowPlugStartTime >= glowAssist) {
+      // Released -> stop everything, back to ON.
+      if (!held) {
+        controlStarter(false);
         controlGlowPlugs(false);
+        g_systemState.currentState = ON;
+        g_systemState.keyPosition = 1;
+        Serial.println("Start released - returning to ON");
+        break;
       }
 
-      // Starter is driven EVERY loop: only while held, within the crank-timeout
-      // window, AND interlocks + battery pass. Glow (above) runs regardless - so
-      // holding START always glows even when the starter is blocked, and the
-      // starter engages the instant the interlocks become satisfied, and cuts the
-      // instant they drop or the timeout is reached.
-      bool crankStarter = held && within &&
-                          (g_systemState.maintenanceMode ||
-                           (readSeatBarSafety() && readNeutralSafety() &&
-                            readBatteryVoltage() >= s.minBatteryVoltage));
-      controlStarter(crankStarter);
+      // Glow stays ON the whole hold: through the preheat wait AND the cranking.
+      controlGlowPlugs(true);
+
+      // Wait for glow to warm the motor before cranking - UNLESS the engine is
+      // already warm (warm restart cranks immediately). glowPlugStartTime carried
+      // over from an earlier GLOW-step preheat by beginStart().
+      unsigned long glowElapsed = now - g_systemState.glowPlugStartTime;
+      bool warm = readEngineTemp() >= WARM_ENGINE_TEMP_C;
+      bool preheatDone = warm || glowElapsed >= glowDur;
+      bool interlockOk = g_systemState.maintenanceMode ||
+                         (readSeatBarSafety() && readNeutralSafety() &&
+                          readBatteryVoltage() >= s.minBatteryVoltage);
+
+      bool cranking = false;
+      if (preheatDone && interlockOk) {
+        if (g_systemState.ignitionStartTime == 0) {
+          g_systemState.ignitionStartTime = now;   // starter engages now (crank-timeout starts here)
+          Serial.println(warm ? "Warm engine - cranking immediately"
+                              : "Glow preheat complete - cranking");
+        }
+        cranking = (now - g_systemState.ignitionStartTime) < crankTimeout;
+      }
+      controlStarter(cranking);
 
       // RUNNING detection: oil pressure OK sustained while actually cranking.
-      if (crankStarter && readOilPressure() >= minOil) {
+      if (cranking && readOilPressure() >= minOil) {
         if (g_systemState.oilOkSince == 0) {
           g_systemState.oilOkSince = now;
         } else if (now - g_systemState.oilOkSince >= RUNNING_OIL_CONFIRM_MS) {
-          Serial.println("Engine RUNNING (oil confirmed) - releasing starter");
+          Serial.println("Engine RUNNING (oil confirmed) - releasing");
           controlStarter(false);
           controlGlowPlugs(false);
           g_systemState.currentState = RUNNING;
@@ -149,15 +170,13 @@ void runIgnitionSequence() {
         g_systemState.oilOkSince = 0;
       }
 
-      // Released -> stop, glow off, back to ON. Timeout -> starter already cut above.
-      if (!held) {
+      // Crank window ended (starter engaged but timed out): cut starter + glow,
+      // wait for the key to be released.
+      if (g_systemState.ignitionStartTime != 0 &&
+          (now - g_systemState.ignitionStartTime) >= crankTimeout) {
         controlStarter(false);
         controlGlowPlugs(false);
-        g_systemState.currentState = ON;
-        g_systemState.keyPosition = 1;
-        Serial.println("Start released - returning to ON");
-      } else if (!within) {
-        Serial.println("Crank timeout - starter cut (release + re-hold to retry)");
+        Serial.println("Crank timeout - release + re-hold to retry");
       }
       break;
     }
