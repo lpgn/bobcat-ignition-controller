@@ -1,582 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bobcat 743 - Settings</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .settings-container {
-            max-width: 1200px;
-            margin: 10px auto;
-            background: var(--bg-gradient);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-        .settings-grid {
-            display: grid;
-            /* Always single column per request */
-            grid-template-columns: 1fr;
-            align-items: start;
-            gap: 20px;
-        }
-        .left-col { min-width: 0; }
-        .right-col { max-width: none; width: 100%; justify-self: stretch; align-self: start; }
-        .grid-col { display: flex; flex-direction: column; gap: 20px; }
-        
-        .settings-section {
-            margin-bottom: 25px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-    .settings-section h3 {
-            color: var(--text-color);
-            margin-bottom: 20px;
-            font-size: 1.3rem;
-            border-bottom: 2px solid var(--accent-color);
-            padding-bottom: 10px;
-            text-align: center;
-        }
-    /* Engine Parameters: align and make compact like Sensor table */
-    .engine-params .compact-table { font-size: 0.88rem; }
-    .engine-params .compact-table th { padding: 5px; }
-    .engine-params .compact-table td { padding: 6px; }
-    .engine-params .compact-table td:nth-child(2),
-    .engine-params .compact-table th:nth-child(2) { text-align: center; }
-    .engine-params .input-with-unit { display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
-    .engine-params .setting-input { width: 72px; padding: 4px; font-size: 0.85rem; text-align: center; height: auto; }
-    .engine-params .setting-unit { min-width: 24px; text-align: left; font-size: 0.85rem; color: #bbb; }
-        
-    /* WiFi table: match spreadsheet compact style */
-    .wifi-section .compact-table { font-size: 0.88rem; }
-    .wifi-section .compact-table th { padding: 5px; }
-    .wifi-section .compact-table td { padding: 6px; }
-    .wifi-section .setting-input { width: 150px; padding: 6px; font-size: 0.88rem; }
-    .wifi-section .password-input { width: 150px; }
-        
-        .setting-row {
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 18px;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .setting-row:last-child {
-            border-bottom: none;
-        }
-        
-        .setting-label {
-            color: var(--text-color);
-            font-weight: 500;
-            font-size: 1rem;
-        }
-        
-        .setting-input {
-            background: rgba(0, 0, 0, 0.4);
-            border: 2px solid #555;
-            border-radius: 8px;
-            color: var(--text-color);
-            padding: 10px 12px;
-            width: 100px;
-            text-align: center;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-        
-        .setting-input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
-            background: rgba(0, 0, 0, 0.6);
-        }
-        
-        .setting-input[readonly] {
-            background: rgba(0, 0, 0, 0.2);
-            border-color: #333;
-            color: #888;
-            cursor: not-allowed;
-        }
-        
-        .setting-input[readonly]:focus {
-            border-color: #333;
-            box-shadow: none;
-        }
-        
-        .setting-unit {
-            color: #aaa;
-            font-size: 0.95rem;
-            font-weight: 500;
-            min-width: 40px;
-        }
-        
-    .wifi-section .setting-input {
-            width: 150px;
-        }
-    .input-with-unit { display: inline-flex; align-items: center; gap: 8px; }
-    .chip { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.2); }
-    .chip.success { background: rgba(39,174,96,0.15); color: #2ecc71; border-color: rgba(46, 204, 113, 0.4); }
-    .chip.error { background: rgba(231,76,60,0.15); color: #e74c3c; border-color: rgba(231, 76, 60, 0.4); }
-    .chip.info { background: rgba(52,152,219,0.15); color: #3498db; border-color: rgba(52, 152, 219, 0.4); }
-
-        
-        .password-input {
-            width: 150px;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 30px;
-        }
-        
-        .settings-btn {
-            background: linear-gradient(145deg, #4a90e2, #357abd);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-        
-        .settings-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-        }
-        
-        .settings-btn.danger {
-            background: linear-gradient(145deg, #e74c3c, #c0392b);
-        }
-        
-        .settings-btn.success {
-            background: linear-gradient(145deg, #27ae60, #229954);
-        }
-        
-        .settings-btn.warning {
-            background: linear-gradient(145deg, #f39c12, #e67e22);
-        }
-        
-        .ota-section {
-            text-align: center;
-        }
-        
-        .ota-btn {
-            background: linear-gradient(145deg, #f39c12, #e67e22);
-            font-size: 1.1rem;
-            padding: 15px 30px;
-        }
-        
-        .back-link {
-            display: inline-block;
-            color: var(--accent-color);
-            text-decoration: none;
-            margin-bottom: 20px;
-            font-weight: 500;
-        }
-        
-        .back-link:hover {
-            text-decoration: underline;
-        }
-        
-        .status-message {
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
-            text-align: center;
-            display: none;
-        }
-        
-        .status-message.success {
-            background: rgba(39, 174, 96, 0.2);
-            border: 1px solid #27ae60;
-            color: #27ae60;
-        }
-        
-        .status-message.error {
-            background: rgba(231, 76, 60, 0.2);
-            border: 1px solid #e74c3c;
-            color: #e74c3c;
-        }
-        
-        
-        /* All widths remain single column */
-        @media (max-width: 980px) {
-            .settings-grid { grid-template-columns: 1fr; }
-            .right-col { max-width: none; justify-self: stretch; width: 100%; }
-        }
-    @media (max-width: 768px) {
-            .settings-container {
-                margin: 5px;
-                padding: 15px;
-                border-radius: 12px;
-            }
-            .settings-grid { grid-template-columns: 1fr; }
-            
-            .settings-section {
-                padding: 15px;
-                margin-bottom: 20px;
-            }
-            
-            .settings-section h3 {
-                font-size: 1.1rem;
-                margin-bottom: 15px;
-            }
-            
-            .setting-row {
-                grid-template-columns: 1fr;
-                gap: 10px;
-                text-align: center;
-                padding: 15px 0;
-            }
-            
-            .setting-label {
-                font-size: 0.95rem;
-                margin-bottom: 5px;
-            }
-            
-            .setting-input, .wifi-section .setting-input, .password-input { width: 100%; max-width: 220px; margin: 0 auto; font-size: 1rem; padding: 10px; }
-            
-            .setting-unit {
-                font-size: 1rem;
-                margin-top: 5px;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-                gap: 12px;
-            }
-            
-            .settings-btn {
-                width: 100%;
-                max-width: 280px;
-                padding: 15px;
-                font-size: 1.1rem;
-            }
-            
-            .back-link {
-                font-size: 1.1rem;
-                margin-bottom: 15px;
-            }
-            .sensor-table th, .sensor-table td { padding: 6px; }
-            .sensor-table { font-size: 0.82rem; }
-            .settings-section div[style*="overflow-x: auto"] { margin: 10px 0; }
-            .sensor-table td .setting-input { width: 70px; }
-        }
-        
-        @media (max-width: 480px) {
-            .header-content {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .bobcat-logo {
-                height: 60px;
-            }
-            
-            .header h1 {
-                font-size: 1.8rem;
-            }
-            
-            .settings-container {
-                margin: 2px;
-                padding: 12px;
-            }
-            
-            .settings-section {
-                padding: 12px;
-            }
-        }
-
-    /* Sensor table layout tweaks: allow columns to size naturally */
-    .sensor-table { table-layout: auto !important; }
-    .sensor-table th, .sensor-table td { white-space: nowrap; }
-    .sensor-table td .setting-input { width: 72px; }
-    .sensor-table th:nth-child(1), .sensor-table td:nth-child(1) { width: 40px; }
-    .sensor-table th:nth-child(2), .sensor-table td:nth-child(2) { width: 70px; text-align: center; }
-    .sensor-table th:nth-child(3), .sensor-table td:nth-child(3) { width: 80px; text-align: center; }
-    .sensor-table th:nth-child(4), .sensor-table td:nth-child(4) { min-width: 90px; }
-    .sensor-table th:nth-child(5), .sensor-table td:nth-child(5),
-    .sensor-table th:nth-child(6), .sensor-table td:nth-child(6) { min-width: 85px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Bobcat 743 · Config</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <div class="logo-title-section">
-                <img src="logo.png" alt="Bobcat" class="bobcat-logo">
-                <h1>743</h1>
-            </div>
-            <div class="status-indicator">
-                <div class="master-status">SETTINGS</div>
-            </div>
-        </header>
+<div class="phone">
+  <div class="cfg-top"><h2>Configuration</h2><a href="/">&larr; Back</a></div>
 
-        <div class="settings-container">
-            <a href="/" class="back-link">← Back to Main Control</a>
-            
-            <div id="statusMessage" class="status-message"></div>
-
-            <div class="settings-grid">
-                <div class="grid-col left-col">
-                    <!-- Engine Parameters -->
-                    <div class="settings-section engine-params">
-                        <h3>⚙️ Engine Parameters</h3>
-                        <table class="compact-table">
-                            <thead>
-                                <tr>
-                                    <th>Parameter</th>
-                                    <th>Value</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Glow Plug Duration</td>
-                                    <td>
-                                        <span class="input-with-unit">
-                                            <input type="number" id="glowPlugDuration" class="setting-input" min="5" max="60" value="20">
-                                            <span class="setting-unit">sec</span>
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Maximum Cranking Time</td>
-                                    <td>
-                                        <span class="input-with-unit">
-                                            <input type="number" id="crankingTimeout" class="setting-input" min="5" max="30" value="10">
-                                            <span class="setting-unit">sec</span>
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Post-Shutdown Cooldown</td>
-                                    <td>
-                                        <span class="input-with-unit">
-                                            <input type="number" id="cooldownDuration" class="setting-input" min="60" max="300" value="120">
-                                            <span class="setting-unit">sec</span>
-                                        </span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Unified Sensor Configuration -->
-                    <div class="settings-section">
-                        <h3>📊 Sensor Configuration</h3>
-                        <p style="color: #aaa; margin-bottom: 15px;">
-                            All sensor settings in one view - Raw ADC, Calculated Value, Calibration, and Thresholds
-                        </p>
-                        <div style="overflow-x: auto; margin: 15px 0;">
-                            <table class="sensor-table" style="width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.88rem;">
-                                <thead>
-                                    <tr style="background: rgba(0,0,0,0.4);">
-                                        <th style="padding: 5px; text-align: left; color: var(--text-color); border-bottom: 1px solid #555;">Sensor</th>
-                                        <th style="padding: 5px; text-align: center; color: var(--text-color); border-bottom: 1px solid #555;">Raw</th>
-                                        <th style="padding: 5px; text-align: center; color: var(--text-color); border-bottom: 1px solid #555;">Calc</th>
-                                        <th style="padding: 5px; text-align: center; color: var(--text-color); border-bottom: 1px solid #555;">Actual</th>
-                                        <th style="padding: 5px; text-align: center; color: var(--text-color); border-bottom: 1px solid #555;">Min</th>
-                                        <th style="padding: 5px; text-align: center; color: var(--text-color); border-bottom: 1px solid #555;">Max</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="sensorDataTable">
-                                    <!-- Battery Voltage Row -->
-                                    <tr>
-                                        <td style="padding: 6px; color: var(--text-color); font-weight: bold;">🔋 <span class="sensor-abbr">BAT</span></td>
-                                        <td class="sensor-value" id="batteryRaw">--</td>
-                                        <td class="sensor-value" id="batteryCalc">--</td>
-                                        <td>
-                                            <input type="number" id="actualVoltage" class="setting-input" step="0.01" placeholder="13.11" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                        <td>
-                                            <input type="number" id="minVoltage" class="setting-input" min="10" max="13" step="0.1" value="11.0" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                        <td>
-                                            <input type="number" id="maxVoltage" class="setting-input" min="14" max="16" step="0.1" value="15.0" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                    </tr>
-                                    
-                                    <!-- Engine Temperature Row -->
-                                    <tr>
-                                        <td style="padding: 6px; color: var(--text-color); font-weight: bold;">🌡️ <span class="sensor-abbr">TEMP</span></td>
-                                        <td class="sensor-value" id="tempRaw">--</td>
-                                        <td class="sensor-value" id="tempCalc">--</td>
-                                        <td>
-                                            <input type="number" id="actualTemp" class="setting-input" step="0.1" placeholder="85.0" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                        <td class="sensor-value">
-                                            <span style="color: #666;">N/A</span>
-                                        </td>
-                                        <td>
-                                            <input type="number" id="maxTemp" class="setting-input" min="80" max="120" value="104" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                    </tr>
-                                    
-                                    <!-- Oil Pressure Row -->
-                                    <tr>
-                                        <td style="padding: 6px; color: var(--text-color); font-weight: bold;">🛢️ <span class="sensor-abbr">OIL</span></td>
-                                        <td class="sensor-value" id="pressureRaw">--</td>
-                                        <td class="sensor-value" id="pressureCalc">--</td>
-                                        <td>
-                                            <input type="number" id="actualPressure" class="setting-input" step="1" placeholder="345" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                        <td>
-                                            <input type="number" id="minOilPressure" class="setting-input" min="30" max="150" value="69" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                        <td class="sensor-value">
-                                            <span style="color: #666;">N/A</span>
-                                        </td>
-                                    </tr>
-
-                                    <!-- Hydraulic Pressure Row -->
-                                    <tr>
-                                        <td style="padding: 6px; color: var(--text-color); font-weight: bold;">🛠️ <span class="sensor-abbr">HYD</span></td>
-                                        <td class="sensor-value" id="hydRaw">--</td>
-                                        <td class="sensor-value" id="hydCalc">--</td>
-                                        <td>
-                                            <input type="number" id="actualHydPressure" class="setting-input" step="1" placeholder="1000" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                        <td>
-                                            <input type="number" id="minHydPressure" class="setting-input" min="100" max="3000" value="300" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                        <td class="sensor-value">
-                                            <span style="color: #666;">N/A</span>
-                                        </td>
-                                    </tr>
-                                    
-                                    <!-- Fuel Level Row -->
-                                    <tr>
-                                        <td style="padding: 6px; color: var(--text-color); font-weight: bold;">⛽ <span class="sensor-abbr">FUEL</span></td>
-                                        <td class="sensor-value" id="fuelRaw">--</td>
-                                        <td class="sensor-value" id="fuelCalc">--</td>
-                                        <td>
-                                            <input type="number" id="actualFuelLevel" class="setting-input" step="1" min="0" max="100" placeholder="75" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                        <td>
-                                            <input type="number" id="fuelLowThreshold" class="setting-input" min="0" max="50" value="15" onchange="autoSave()" onkeypress="handleEnterKey(event)">
-                                        </td>
-                                        <td class="sensor-value">
-                                            <span style="color: #666;">N/A</span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
-                            <button class="settings-btn" onclick="resetCalibration()" style="background: linear-gradient(145deg, #f39c12, #e67e22); padding: 8px 16px; font-size: 0.9rem;">
-                                🔄 Reset Calibration
-                            </button>
-                        </div>
-                        <div id="autoSaveStatus" style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: #2ecc71; display: none;">
-                            ✓ Settings auto-saved
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid-col right-col">
-                    <!-- WiFi Configuration -->
-                    <div class="settings-section wifi-section">
-                        <h3>📶 WiFi Configuration</h3>
-                        <p style="color: #aaa; margin-bottom: 15px; font-size: 0.9rem;">
-                            The system operates in dual WiFi mode: creates its own access point AND can connect to your home network.
-                        </p>
-                        <table class="compact-table wifi-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>SSID</th>
-                                    <th>Password</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Home</td>
-                                    <td><input type="text" id="homeSSID" class="setting-input" placeholder="fabfarm" maxlength="32" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
-                                    <td><input type="password" id="homePassword" class="setting-input password-input" placeholder="Enter password" maxlength="64" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
-                                    <td><span id="homeNetworkStatus" class="chip info">Checking...</span></td>
-                                </tr>
-                                <tr>
-                                    <td>Access Point</td>
-                                    <td><input type="text" id="wifiSSID" class="setting-input" placeholder="Bobcat-743" maxlength="32" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
-                                    <td><input type="password" id="wifiPassword" class="setting-input password-input" placeholder="Enter password" maxlength="64" onchange="autoSave()" onkeypress="handleEnterKey(event)"></td>
-                                    <td><span id="apStatus" class="chip success">Active at 192.168.4.1</span></td>
-                                </tr>
-                                <tr>
-                                    <td>Show Passwords</td>
-                                    <td colspan="3" style="text-align: left; padding-left: 15px;"><input type="checkbox" id="showPassword" onchange="togglePasswordVisibility()"></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- OTA Firmware Update -->
-                    <div class="settings-section ota-section">
-                        <h3>🔄 Firmware Update</h3>
-                        <p style="color: #aaa; margin-bottom: 20px;">
-                            Update firmware or filesystem over-the-air. This opens the ElegantOTA updater.
-                        </p>
-                        <a class="settings-btn ota-btn" href="/update" style="display:inline-block; text-decoration:none;">
-                            🚀 Open OTA Updater
-                        </a>
-                    </div>
-
-                    <!-- Power Management -->
-                    <div class="settings-section power-section">
-                        <h3>🔋 Power Management</h3>
-                        <p style="color: #aaa; margin-bottom: 15px;">
-                            Deep sleep mode saves battery power when system is inactive.
-                        </p>
-                        <div style="margin-bottom: 15px;">
-                            <span id="sleepStatus" class="chip success">Sleep mode: Enabled</span>
-                        </div>
-                        <div style="margin-bottom: 15px;">
-                            <span id="activityTime" style="color: #aaa;">Time since activity: --</span>
-                        </div>
-                        <div class="power-buttons" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <button class="settings-btn" onclick="toggleSleepMode()">
-                                🔄 Toggle Sleep Mode
-                            </button>
-                            <button class="settings-btn warning" onclick="sleepNow()">
-                                😴 Sleep Now
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="action-buttons">
-                        <button class="settings-btn" onclick="window.settingsManager && window.settingsManager.resetToDefaults && window.settingsManager.resetToDefaults()">
-                            🔄 Load Defaults
-                        </button>
-                        <button class="settings-btn danger" onclick="factoryReset()">
-                            ⚠️ Factory Reset
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <footer class="footer">
-            <div class="model-info">
-                <span>Model: 743B</span>
-                <span>Engine: Kubota V1702-BA</span>
-            </div>
-            <div class="settings-info">
-                <span>Settings v1.0</span>
-            </div>
-        </footer>
+  <div class="card">
+    <h3>System</h3>
+    <div class="strip" style="margin:0">
+      <div class="s"><span class="sk"><i id="cfgWifiDot" class="ok"></i>WiFi</span><span class="sv ok" id="cfgWifiInfo">--</span></div>
+      <div class="s"><span class="sk"><i id="cfgApDot" class="info"></i>AP</span><span class="sv info" id="cfgApInfo">--</span></div>
+      <div class="s"><span class="sk"><i id="cfgMqttDot" class="ok"></i>MQTT</span><span class="sv ok" id="cfgMqttInfo">--</span></div>
+      <div class="s"><span class="sk"><i id="cfgClockDot" class="mut"></i>NTP</span><span class="sv" id="cfgClockInfo">--</span></div>
     </div>
+  </div>
 
-    <script src="settings.js"></script>
+  <div class="card">
+    <h3>Engine parameters</h3>
+    <div class="fld"><label>Glow preheat</label><span><input class="inp" id="sGlow" type="number" step="1"><span class="unit">s</span></span></div>
+    <div class="fld"><label>Crank timeout</label><span><input class="inp" id="sCrank" type="number" step="1"><span class="unit">s</span></span></div>
+    <div class="fld"><label>Cooldown</label><span><input class="inp" id="sCooldown" type="number" step="1"><span class="unit">s</span></span></div>
+  </div>
+
+  <div class="card">
+    <h3>Sensors &amp; calibration</h3>
+    <div class="fld"><label>Engine temp<small>scale factor</small></label><span><input class="inp" id="sTempScale" type="number" step=".001"><span class="unit">scale</span></span></div>
+    <div class="fld"><label>Oil pressure<small>min</small></label><span><input class="inp" id="sMinOil" type="number" step="1"><span class="unit">min psi</span></span></div>
+    <div class="fld"><label>Hydraulic<small>min</small></label><span><input class="inp" id="sMinHyd" type="number" step="1"><span class="unit">min psi</span></span></div>
+    <div class="fld"><label>Battery<small>min V</small></label><span><input class="inp" id="sMinV" type="number" step=".1"><span class="unit">min V</span></span></div>
+    <div class="fld"><label>Fuel low<small>threshold</small></label><span><input class="inp" id="sFuelLow" type="number" step="1"><span class="unit">% low</span></span></div>
+  </div>
+
+  <div class="card">
+    <h3>Pin mapping &middot; T-Relay 4CH</h3>
+    <div id="pinmap"></div>
+    <div class="hint">
+      <b class="a">ADC-only</b> pins (32&middot;33&middot;34&middot;35&middot;36&middot;39) offered for sensors &middot; relays fixed to board K1&ndash;K4 &middot;
+      <b class="w">amber</b> = strapping pin &middot; <b class="c">red</b> = pin already used. Saved to flash, applied on reboot.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>WiFi</h3>
+    <div class="fld"><label>Add network</label><input class="inp wide" id="wifiSsid" placeholder="SSID"></div>
+    <div class="fld"><label></label><input class="inp wide" id="wifiPass" type="password" placeholder="Password"></div>
+    <div id="wifiNetworks"></div>
+    <button class="btn-sm" id="btnAddNetwork">+ Save network</button>
+  </div>
+
+  <div class="card">
+    <h3>Access point</h3>
+    <div class="fld"><label>AP name</label><input class="inp wide" id="sApSsid"></div>
+    <div class="fld"><label>AP password<small>blank = open</small></label><input class="inp wide" id="sApPass" type="password"></div>
+  </div>
+
+  <div class="card">
+    <h3>MQTT &middot; Home Assistant</h3>
+    <div class="fld"><label>Enabled</label><span class="toggle" id="sMqttEnabled" tabindex="0"></span></div>
+    <div class="fld"><label>Broker</label><input class="inp wide" id="sMqttHost"></div>
+    <div class="fld"><label>Port</label><input class="inp" id="sMqttPort" type="number"></div>
+    <div class="fld"><label>Base topic</label><input class="inp wide" id="sMqttTopic"></div>
+  </div>
+
+  <div class="card">
+    <h3>Time</h3>
+    <div class="fld"><label>NTP sync</label><span class="toggle" id="sNtp" tabindex="0"></span></div>
+    <div class="fld"><label>UTC offset</label><span><input class="inp" id="sUtcOffset"><span class="unit">h</span></span></div>
+  </div>
+
+  <div class="card">
+    <h3>Firmware</h3>
+    <div class="fld"><label>OTA update<small>ElegantOTA &middot; /update</small></label><a href="/update" class="btn-sm" style="margin-top:0;text-decoration:none">Open</a></div>
+  </div>
+</div>
+<script src="settings.js"></script>
 </body>
 </html>
