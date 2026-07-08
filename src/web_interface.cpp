@@ -335,6 +335,8 @@ static void onSettingsBody(AsyncWebServerRequest* request, uint8_t* data, size_t
 
   g_systemState.configDirty = true;                 // loop() persists to NVS
   if (calChanged) g_systemState.reloadCalibration = true;
+  if (strcmp(key, "wifiSSID") == 0 || strcmp(key, "wifiPassword") == 0)
+    g_systemState.wifiReconnect = true;             // loop() re-begins STA, no reboot
   sendOk(request);
 }
 
@@ -459,6 +461,13 @@ static void handleRawSensors(AsyncWebServerRequest* request) {
   request->send(200, "application/json", out);
 }
 
+// Serve a LittleFS file with no-store so UI updates always take effect (no stale cache).
+static void sendStatic(AsyncWebServerRequest* r, const char* path, const char* type) {
+  AsyncWebServerResponse* resp = r->beginResponse(LittleFS, path, type);
+  resp->addHeader("Cache-Control", "no-store");
+  r->send(resp);
+}
+
 // ---------------------------------------------------------------------------
 // Server setup
 // ---------------------------------------------------------------------------
@@ -504,12 +513,12 @@ void setupWebServer() {
   server.on("/hotspot-detect.html", HTTP_GET, [](AsyncWebServerRequest* r){ r->redirect("http://192.168.4.1/"); });
 
   // ---- Static files ----
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS, "/index.html", "text/html"); });
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS, "/style.css", "text/css"); });
-  server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS, "/script.js", "text/javascript"); });
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest* r){ sendStatic(r, "/index.html", "text/html"); });
+  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest* r){ sendStatic(r, "/style.css", "text/css"); });
+  server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest* r){ sendStatic(r, "/script.js", "text/javascript"); });
   server.on("/logo.png", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS, "/logo.png", "image/png"); });
-  server.on("/settings.html", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS, "/settings.html", "text/html"); });
-  server.on("/settings.js", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS, "/settings.js", "text/javascript"); });
+  server.on("/settings.html", HTTP_GET, [](AsyncWebServerRequest* r){ sendStatic(r, "/settings.html", "text/html"); });
+  server.on("/settings.js", HTTP_GET, [](AsyncWebServerRequest* r){ sendStatic(r, "/settings.js", "text/javascript"); });
 
   // ---- New /api contract ----
   server.on("/api/status", HTTP_GET, handleApiStatus);

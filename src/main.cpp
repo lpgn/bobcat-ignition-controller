@@ -73,6 +73,16 @@ void loop() {
     loadCalibrationConstants();
     g_systemState.reloadCalibration = false;
   }
+  if (g_systemState.wifiReconnect) {
+    g_systemState.wifiReconnect = false;
+    const BobcatSettings& ws = g_settingsManager.getSettings();
+    if (strlen(ws.wifiSSID) > 0) {
+      Serial.printf("WiFi reconnect to '%s'...\n", ws.wifiSSID);
+      WiFi.disconnect();
+      WiFi.begin(ws.wifiSSID, ws.wifiPassword);  // non-blocking; AP stays up (AP_STA)
+      g_otaInitialized = false;                  // re-arm ArduinoOTA on new IP
+    }
+  }
   if (g_systemState.overrideRequested) {
     g_systemState.overrideRequested = false;
     overrideStart();   // enforces interlocks + battery internally

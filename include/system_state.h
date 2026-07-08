@@ -48,6 +48,7 @@ typedef struct {
     volatile bool sleepRequested;       // deep-sleep requested from handler
     volatile bool factoryResetRequested;
     volatile bool overrideRequested;    // deliberate override crank (POST only)
+    volatile bool wifiReconnect;        // station creds changed -> loop() re-begins STA
 
     // Engine-hours accumulator (ms of running time not yet folded into NVS)
     unsigned long engineHoursAccumMs;
