@@ -221,7 +221,11 @@ async function poll(){
 
 function apiCtrl(body){
   fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
-  .then(function(r){if(!r.ok)showToast('Command failed');})
+  .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};},function(){return{ok:r.ok,j:null};});})
+  .then(function(res){
+    if(!res.ok){showToast(res.j&&res.j.error?res.j.error:'Command failed');}
+    else if(res.j&&res.j.starter===false&&res.j.note){showToast('Glow on · starter blocked: '+res.j.note);}
+  })
   .catch(function(){showToast('Network error');});
 }
 

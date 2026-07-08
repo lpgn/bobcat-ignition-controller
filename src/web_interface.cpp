@@ -148,11 +148,7 @@ static void onControlBody(AsyncWebServerRequest* request, uint8_t* data, size_t 
     if (!doc.containsKey("position")) { sendErr(request, 400, "missing position"); return; }
     int pos = doc["position"] | -1;
     if (pos < 0 || pos > 3) { sendErr(request, 400, "position must be 0..3"); return; }
-    if (pos == 3) {                       // START position = crank request
-      String err;
-      if (!canCrank(err)) { sendErr(request, 400, err); return; }
-    }
-    g_systemState.keyPosition = pos;
+    g_systemState.keyPosition = pos;      // pos 3 (crank) glows always; starter gated in START
     if (pos < 3) g_systemState.keyStartHeld = false;
     sendOk(request);
     return;
@@ -161,16 +157,24 @@ static void onControlBody(AsyncWebServerRequest* request, uint8_t* data, size_t 
   if (strcmp(action, "crank") == 0) {
     bool held = doc["held"] | false;
     if (held) {
-      String err;
-      if (!canCrank(err)) { sendErr(request, 400, err); return; }
+      // Always accept: glow runs on hold. The STARTER is gated (interlocks + battery)
+      // in the START state; report whether it will actually crank right now.
       g_systemState.keyStartHeld = true;
       g_systemState.keyPosition = 3;
       g_systemState.startHoldTime = millis();
+      String err;
+      bool starter = canCrank(err);
+      StaticJsonDocument<128> r;
+      r["ok"] = true;
+      r["starter"] = starter;
+      if (!starter) r["note"] = err;
+      String out; serializeJson(r, out);
+      request->send(200, "application/json", out);
     } else {
       g_systemState.keyStartHeld = false;
       if (g_systemState.keyPosition >= 3) g_systemState.keyPosition = 1;
+      sendOk(request);
     }
-    sendOk(request);
     return;
   }
 
