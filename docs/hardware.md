@@ -1,123 +1,79 @@
 # Hardware
 
-**🚨 SAFETY CRITICAL - READ [SAFETY_CRITICAL.md](SAFETY_CRITICAL.md) FIRST 🚨**
+**🚨 SAFETY CRITICAL — READ [SAFETY_CRITICAL.md](SAFETY_CRITICAL.md) FIRST 🚨**
 
-**⚠️ CURRENT DESIGN HAS SAFETY VIOLATIONS - SEE SAFETY_CRITICAL.md**
+## Verified board facts
 
-Board: LILYGO T-Relay ESP32 (4 relays) - **HRS4H-S-DC5V relays rated 10A maximum DC**
+- **Board:** LilyGO T-Relay 4-Channel, ESP32-WROVER
+- **Relays:** HRS4H-S-DC5V, **ACTIVE-HIGH**, **10 A max DC contacts**
+- **Onboard relays:** K1 = GPIO21, K2 = GPIO19, K3 = GPIO18, K4 = GPIO5
+- **Onboard LED (LedLink):** GPIO25
+- **Header (spare) pins broken out:** 2, 4, 12, 13, 14, 15, 22, 23, 26, 27, 32, 33, 34, 35, 36, 39
+- **ADC1 pins usable while Wi-Fi is active:** 32, 33, 34, 35, 36, 39
+  - **Input-only (no internal pull-up):** 34, 35, 36, 39
+- **Strapping pins to avoid for I/O:** 2, 4, 12, 15 (12 = MTDI flash-voltage strap; must be LOW at boot)
 
-## ❌ CRITICAL SAFETY ISSUES IN CURRENT DESIGN
+## Load assignment for the Bobcat 743
 
-- **GLOW PLUGS (GPIO19)**: 40-80A load exceeds 10A relay rating by 8x - **FIRE/EXPLOSION HAZARD**
-- **LIGHTS (GPIO5)**: 9.2A load with insufficient safety margin - relay failure risk
-- **MISSING SAFETY INTERLOCKS**: No seat bar or neutral safety switches
+| Relay | GPIO | Function | Wiring requirement |
+|-------|------|----------|-------------------|
+| K1 | 21 | Main power relay | Safe within 10 A contact rating for electrical distribution |
+| K2 | 19 | Glow plugs | **PILOT ONLY** — drive the factory high-current glow relay coil. Glow plugs draw 40–80 A; the 10 A T-Relay contact would weld. |
+| K3 | 18 | Starter | **PILOT ONLY** — drive the starter solenoid coil (5–15 A inrush). **Mandatory 1N4007 flyback diode** across the coil. |
+| K4 | 5 | Lights | **PILOT ONLY** — drive an external 30/40 A automotive relay. 2×55 W ≈ 9.2 A leaves no margin on a 10 A contact. |
 
-**MANDATORY**: Use T-Relay to pilot external relays for glow plugs and lights ONLY
+### ⚠️ Relays are 10 A — always pilot external contactors/solenoids
 
-# Hardware
+The T-Relay board is a **logic / pilot controller**, not a high-current switch.
+Never pass the Bobcat's high-current loads (glow plugs, starter, lights) directly through the small relay contacts.
 
-**🚨 SAFETY CRITICAL - READ [SAFETY_CRITICAL.md](SAFETY_CRITICAL.md) FIRST 🚨**
+## Analog sensors (ADC1 only)
 
-**⚠️ CURRENT DESIGN HAS SAFETY VIOLATIONS - SEE SAFETY_CRITICAL.md**
+While Wi-Fi is active, only ADC1 pins may be used for analog input.
 
-Board: LILYGO T-Relay ESP32 (4 relays) - **HRS4H-S-DC5V relays rated 10A maximum DC**
+| Sensor | GPIO | ADC1 channel | Notes |
+|--------|------|--------------|-------|
+| Engine temperature | 34 | ADC1_CH6 | Input-only; no internal pull-up. Use an external divider or NTC circuit. |
+| Oil pressure | 35 | ADC1_CH7 | Input-only; no internal pull-up. |
+| Hydraulic | 32 | ADC1_CH4 | ADC1 pin. |
+| Battery sense | 33 | ADC1_CH5 | ADC1 pin. |
+| Fuel level | 36 | ADC1_CH0 | Input-only; no internal pull-up. |
+| Spare ADC | 39 | ADC1_CH3 | Input-only; no internal pull-up. |
 
-## ❌ CRITICAL SAFETY ISSUES IN CURRENT DESIGN
+## Digital I/O
 
-- **GLOW PLUGS (GPIO19)**: 40-80A load exceeds 10A relay rating by 8x - **FIRE/EXPLOSION HAZARD**
-- **LIGHTS (GPIO5)**: 9.2A load with insufficient safety margin - relay failure risk
-- **MISSING SAFETY INTERLOCKS**: No seat bar or neutral safety switches
+| Function | GPIO | Notes |
+|----------|------|-------|
+| Status LED | 25 | Onboard LED (LedLink). **Do not reuse GPIO25 for a seat-bar switch.** |
+| Buzzer | 26 | Spare header pin, digital output. |
+| Seat bar interlock (optional) | 27 | Spare header pin, `INPUT_PULLUP` switch to ground. |
+| Neutral safety interlock (optional) | 13 | Spare header pin, `INPUT_PULLUP` switch to ground. |
 
-**MANDATORY**: Use T-Relay to pilot external relays for glow plugs and lights ONLY
+> **GPIO conflict fixed:** The old firmware used `SEAT_BAR = GPIO25`, which collides with the onboard status LED. Use a spare header pin such as **GPIO27** for the seat bar instead.
 
-## Relay Outputs (Active HIGH) - CORRECTED DESIGN
+## Mandatory electrical protection
 
-- MAIN_POWER (Relay 1) → GPIO21 (✅ Safe - controls electrical distribution)
-- GLOW_PLUGS (Relay 2) → GPIO19 (⚠️ PILOT ONLY - must control external factory relay coil)
-- STARTER (Relay 3) → GPIO18 (✅ Safe with flyback diode - 5-15A starter solenoid)
-- LIGHTS (Relay 4) → GPIO5 (⚠️ PILOT ONLY - must control external 30A automotive relay)
+### Flyback diodes
 
-**MANDATORY Protection**:
-- 1N4007 flyback diode across starter solenoid coil (cathode to +, anode to ground)
-- 1N4007 flyback diode across each external relay coil
+- **1N4007 across the K3 starter solenoid coil** (cathode to coil +, anode to coil –/ground).
+- **1N4007 across every external relay coil** driven by K2 (glow) and K4 (lights).
+- Orient the cathode to the switched + side so the diode is reverse-biased in normal operation and clamps inductive kickback.
 
-## 🚨 MANDATORY SAFETY INTERLOCKS
+### Fusing
 
-### Safety Input Pins (INPUT_PULLUP configuration)
-- Seat Bar Safety → GPIO25 (normally open, closes to ground when operator seated)
-- Neutral Safety → GPIO27 (normally open, closes to ground when transmission in neutral)
+- **T-Relay Vcc:** 1–2 A fuse or PTC for the ESP32/relay board supply.
+- **Per-circuit fusing:** size each external relay/load circuit independently:
+  - Glow-plug power circuit: fuse to factory rating or wire gauge.
+  - Starter solenoid: fuse to solenoid coil rating.
+  - Lights: fuse per lamp load.
 
-**CRITICAL**: System MUST check both conditions before allowing starter engagement
+### Grounding
 
-## Analog Inputs (ESP32 ADC1, 12-bit 0–4095, 0–3.3V)
+- **Single-point ground:** Bring all ground returns (battery, external relays, solenoid, sensor dividers, ESP32 GND) to one common chassis/star point. Avoid ground loops that can inject voltage drops into analog readings.
 
-### Battery Voltage (GPIO36 / ADC1_CH0)
+## Strapping / pin-use rules
 
-**Research-validated configuration**:
-- Measured divider: R1 = 56kΩ (from battery to ADC), R2 = 10kΩ (ADC to GND)  
-- Measured calibration: 13.06V battery → 2.0V ADC → 2482 ADC reading
-- Calibration constant: 0.00526 V/ADC unit
-- Protection: Voltage divider limits input to safe 3.3V range
-
-### Engine Temp NTC (GPIO39 / ADC1_CH3)
-
-**Research findings P/N 6658818**:
-- 10kΩ NTC thermistor to GND, 10kΩ pull-up to 3.3V, midpoint to ADC39
-- **⚠️ REQUIRES MANUAL CHARACTERIZATION**: No public resistance-vs-temperature curve
-- Method: Measure resistance at 20°C, 40°C, 60°C, 80°C, 100°C in controlled water bath
-- Current formula: Temp = 150°C - (ADC × 0.040) - **PLACEHOLDER until characterized**
-
-### Fuel Level Sender (GPIO35 / ADC1_CH7)
-
-**Research findings - unknown resistance range**:
-- **⚠️ REQUIRES MANUAL MEASUREMENT**: Could be 240-33Ω, 73-10Ω, or 0-90Ω standard
-- Current configuration: 100Ω pull-up to 3.3V (optimal for unknown range)
-- **MANDATORY**: Measure actual sender resistance at full and empty tank
-- Calibration via web interface once measured range is known
-
-## Digital Inputs (INPUT_PULLUP configuration)
-
-### Status Inputs
-- Alternator Charge → GPIO22 (alternator "L" terminal via voltage divider)
-  - Circuit: 10kΩ + 3.3kΩ divider with 3.6V Zener protection
-  - 0V = not charging, ~14V = charging (scaled to 3.3V max)
-- Engine Run Feedback → GPIO26 (internal pull-up, active-low)
-
-### Pressure Switches (Digital, NOT Analog)
-**Research findings - these are switches, not variable senders**:
-- Oil Pressure Switch → GPIO34 (P/N 6969775, normally open, closes to ground when pressure OK)
-- Hydraulic Pressure Switch → GPIO33 (P/N 6671062, normally open, closes to ground when pressure OK)
-
-**Connection**: Direct to GPIO pins with INPUT_PULLUP (no external resistors needed)
-
-### Power Management
-- Wake Up Button → GPIO0 (BOOT button)
-- Sleep Enable → GPIO12
-
-## Signal Conditioning Summary
-
-| Pin | Sensor Type | Circuit | Pull-up/Divider | Notes |
-|-----|-------------|---------|-----------------|-------|
-| GPIO39 | NTC Thermistor | Voltage divider | 10kΩ to 3.3V | Requires characterization |
-| GPIO36 | Battery voltage | Voltage divider | 56kΩ + 10kΩ | Research-validated values |
-| GPIO35 | Fuel sender | Voltage divider | 100Ω to 3.3V | Requires measurement |
-| GPIO34 | Oil pressure switch | Direct | Internal pull-up | Digital switch, not analog |
-| GPIO33 | Hydraulic pressure switch | Direct | Internal pull-up | Digital switch, not analog |
-| GPIO25 | Seat bar switch | Direct | Internal pull-up | MANDATORY safety interlock |
-| GPIO27 | Neutral switch | Direct | Internal pull-up | MANDATORY safety interlock |
-| GPIO22 | Alternator signal | Voltage divider | 10kΩ + 3.3kΩ + Zener | 12V automotive to 3.3V logic |
-| GPIO26 | Engine run feedback | Direct | Internal pull-up | Status feedback |
-
-## Grounding & Protection
-
-- **Single-point grounding**: All system grounds to single chassis point
-- **Flyback diodes**: 1N4007 across all inductive loads (starter solenoid, external relay coils)
-- **Fusing**: 2A fuse for ESP32 board power, appropriately sized fuses for all circuits
-- **Enclosure**: Weather-resistant IP65 enclosure for T-Relay board
-
-## Notes
-
-- All relays default OFF at boot for safety
-- Emergency stop immediately drops all relays
-- Factory ignition switch MUST remain as backup/override
-- See schematics_corrected.mmd for complete safety-compliant wiring diagram
+- Avoid using pins 2, 4, 12, and 15 for user I/O. In particular, **GPIO12 is the MTDI flash-voltage strap** and must be held LOW at boot.
+- If you need a spare input, prefer pins 13, 14, 22, 23, 26, 27, 32, 33.
+- Analog sensors must be assigned to the ADC1 list: 32, 33, 34, 35, 36, 39.
+- See [PINMAP.md](PINMAP.md) for the authoritative, settings-driven pin map and remapping rules.
