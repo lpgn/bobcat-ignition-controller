@@ -13,6 +13,7 @@
 #include "system_state.h"
 #include "web_interface.h"
 #include "settings.h"
+#include "mqtt_handler.h"
 #include <ElegantOTA.h>
 #include <ArduinoOTA.h>
 #include <WiFi.h>
@@ -43,6 +44,9 @@ void setup() {
 
   setupWebServer();
 
+  // MQTT telemetry (read-only). Constructs the client only; loopTask connects.
+  mqttInit();
+
   ArduinoOTA.setHostname("bobcat-ignition");
   ArduinoOTA.onStart([]() { Serial.println("ArduinoOTA: Start"); });
   ArduinoOTA.onEnd([]() { Serial.println("ArduinoOTA: End"); });
@@ -61,6 +65,9 @@ void loop() {
     Serial.println(":3232");
   }
   ArduinoOTA.handle();
+
+  // MQTT telemetry: ALL PubSubClient work happens here in loopTask.
+  mqttLoop();
 
   unsigned long now = millis();
 

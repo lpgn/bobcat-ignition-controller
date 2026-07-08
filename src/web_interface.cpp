@@ -12,6 +12,7 @@
 #include "system_state.h"
 #include "safety.h"
 #include "settings.h"
+#include "mqtt_handler.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
@@ -123,7 +124,7 @@ static void buildStatus(JsonDocument& json) {
   net["ip"] = wifi ? WiFi.localIP().toString() : WiFi.softAPIP().toString();
   net["rssi"] = wifi ? WiFi.RSSI() : 0;
   net["apClients"] = (int)WiFi.softAPgetStationNum();
-  net["mqtt"] = false;          // MQTT lands later
+  net["mqtt"] = mqttConnected(); // live MQTT connection state (cached, thread-safe)
   net["clock"] = "--:--";       // NTP stub
 }
 
@@ -356,6 +357,8 @@ static void onSettingsBody(AsyncWebServerRequest* request, uint8_t* data, size_t
   if (calChanged) g_systemState.reloadCalibration = true;
   if (strcmp(key, "wifiSSID") == 0 || strcmp(key, "wifiPassword") == 0)
     g_systemState.wifiReconnect = true;             // loop() re-begins STA, no reboot
+  if (strncmp(key, "mqtt", 4) == 0)
+    mqttRequestReconnect();                          // loopTask re-applies MQTT config
   sendOk(request);
 }
 
