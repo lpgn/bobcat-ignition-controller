@@ -77,3 +77,6 @@ Thumbs.db
 # Build directories
 build/
 dist/
+
+# large vendor service manual (local reference, not backed to git)
+docs/*.pdf
