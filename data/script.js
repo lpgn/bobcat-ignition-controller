@@ -82,6 +82,18 @@ function updateSequence(seq){
   }
 }
 
+function updateKeyseg(seq){
+  var btns=document.querySelectorAll('#keyseg .kb');
+  var active=Math.min(seq,2);
+  for(var i=0;i<btns.length;i++){
+    btns[i].classList.toggle('on',parseInt(btns[i].getAttribute('data-pos'))===active);
+  }
+  var crank=byId('btnCrank');
+  if(seq===4){crank.textContent='Running';crank.className='btn crank on';}
+  else if(seq===3){crank.textContent='Cranking…';crank.className='btn crank cranking';}
+  else{crank.textContent='Hold to Start';crank.className='btn crank';}
+}
+
 function initHero(hyd){
   var hero=byId('hero');hero.innerHTML='';
   var z=zonesFor('hydraulic',hyd.min,hyd.max);
@@ -180,6 +192,7 @@ function renderStatus(data){
   updateStateLabel(data.state);
   updateStrip(data.net);
   updateSequence(data.seq);
+  updateKeyseg(data.seq);
   updateHero(data.hydraulic);
   updateVitals(data.engineTemp,data.oil,data.battery,data.fuel);
   updateOutputs(data.outputs);
@@ -211,5 +224,15 @@ function apiCtrl(body){
 document.addEventListener('DOMContentLoaded',function(){
   byId('btnLights').addEventListener('click',function(){apiCtrl({action:'lights'});});
   byId('btnStop').addEventListener('click',function(){apiCtrl({action:'stop'});});
+  var kbs=document.querySelectorAll('#keyseg .kb');
+  for(var i=0;i<kbs.length;i++){
+    kbs[i].addEventListener('click',function(){apiCtrl({action:'key',position:parseInt(this.getAttribute('data-pos'))});});
+  }
+  var crank=byId('btnCrank');
+  function crankSet(h){return function(e){e.preventDefault();apiCtrl({action:'crank',held:h});};}
+  crank.addEventListener('pointerdown',crankSet(true));
+  crank.addEventListener('pointerup',crankSet(false));
+  crank.addEventListener('pointerleave',crankSet(false));
+  crank.addEventListener('pointercancel',crankSet(false));
   poll();
 });

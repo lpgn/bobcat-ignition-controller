@@ -61,9 +61,8 @@ function renderWifiNetworks(nets){
     var label=n.ssid||n;var status=n.connected?' <span style="color:var(--accent)">· connected</span>':'';
     d.innerHTML='<span>'+label+status+'</span><span class="x" data-ssid="'+(n.ssid||n)+'">✕</span>';
     el.appendChild(d);
-    d.querySelector('.x').addEventListener('click',function(e){
-      var ssid=e.target.getAttribute('data-ssid');
-      saveSetting('removeNetwork',ssid).then(function(){showToast('Network removed',true);loadSettings();}).catch(function(){showToast('Failed to remove',false);});
+    d.querySelector('.x').addEventListener('click',function(){
+      showToast('Save a new SSID above to change home WiFi',false);
     });
   }
 }
@@ -94,10 +93,10 @@ function initSettingsListeners(){
     var ssid=byId('wifiSsid').value.trim();
     var pass=byId('wifiPass').value;
     if(!ssid){showToast('Enter an SSID',false);return;}
-    saveSetting('addNetwork',ssid).then(function(r){
-      if(r.ok){showToast('Network added',true);byId('wifiSsid').value='';byId('wifiPass').value='';loadSettings();}
-      else showToast('Failed to add',false);
-    }).catch(function(){showToast('Network error',false);});
+    saveSetting('wifiSSID',ssid)
+      .then(function(){return pass?saveSetting('wifiPassword',pass):{ok:true};})
+      .then(function(){showToast('Home WiFi saved — reboot board to join',true);byId('wifiSsid').value='';byId('wifiPass').value='';loadSettings();})
+      .catch(function(){showToast('Save failed',false);});
   });
 }
 
