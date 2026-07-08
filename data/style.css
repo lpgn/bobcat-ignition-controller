@@ -84,6 +84,7 @@ body{margin:0;background:radial-gradient(120% 70% at 50% -10%, #131a24 0%, var(-
 .ign-read{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:2;}
 .ign-read b{display:block;font-size:.82rem;font-weight:700;letter-spacing:.12em;color:var(--ink);}
 .ign-read small{display:block;font-family:var(--mono);font-size:.54rem;color:var(--warn);margin-top:2px;min-height:.72em;}
+.ign-read small.blk{color:var(--crit);}
 @media(prefers-reduced-motion:reduce){.ign-knob{transition:none}.ign-knob.cranking{animation:none}}
 
 .strip{display:flex;align-items:stretch;margin:12px 0 4px;font-family:var(--mono);}

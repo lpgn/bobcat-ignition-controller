@@ -55,6 +55,12 @@ static void buildStatus(JsonDocument& json) {
   json["state"] = apiStateName(st);
   json["seq"] = apiStateSeq(st);
   json["maintenance"] = g_systemState.maintenanceMode;
+  // Live reason the starter won't crank while at START (so the knob can show it).
+  if (st == START && !g_systemState.maintenanceMode &&
+      !(readSeatBarSafety() && readNeutralSafety() &&
+        readBatteryVoltage() >= s.minBatteryVoltage)) {
+    json["crankBlock"] = "starter blocked - enable Maintenance or wire seat+neutral";
+  }
   json["engineHours"] = g_settingsManager.getEngineHours() +
                         g_systemState.engineHoursAccumMs / 3600000.0;
 

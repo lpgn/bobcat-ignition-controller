@@ -111,7 +111,7 @@ function buildKnob(){
     }else{(function(pos){b.addEventListener('click',function(){apiCtrl({action:'key',position:pos});});})(p.pos);}
   }
 }
-function updateKnob(seq,glow,outputs){
+function updateKnob(seq,glow,outputs,block){
   var heating=glow&&glow.active;
   var cranking=!!(outputs&&outputs.starter);
   var showPos=seq>=4?1:Math.min(seq,3);
@@ -125,9 +125,11 @@ function updateKnob(seq,glow,outputs){
   }
   if(knob){knob.classList.toggle('cranking',seq===3&&cranking);knob.classList.toggle('running',seq===4);}
   var st=byId('ignState'),sub=byId('ignSub');
+  sub.classList.toggle('blk',!!block&&seq===3&&!cranking);
   if(seq===3){
-    st.textContent=cranking?'CRANK':'GLOW';
-    sub.textContent=cranking?'cranking':((glow&&glow.countdown>0)?('warming '+glow.countdown+'s'):'warming');
+    if(cranking){st.textContent='CRANK';sub.textContent='cranking';}
+    else if(block){st.textContent='BLOCKED';sub.textContent='enable Maintenance';}
+    else{st.textContent='GLOW';sub.textContent=(glow&&glow.countdown>0)?('warming '+glow.countdown+'s'):'warming';}
   }else{
     var names=['OFF','ON','GLOW','CRANK','RUN'];
     st.textContent=names[Math.min(seq,4)];
@@ -234,7 +236,7 @@ function renderStatus(data){
   byId('maintBanner').style.display=data.maintenance?'block':'none';
   updateStrip(data.net);
   updateSequence(data.seq);
-  updateKnob(data.seq,data.glow,data.outputs);
+  updateKnob(data.seq,data.glow,data.outputs,data.crankBlock);
   updateHero(data.hydraulic);
   updateVitals(data.engineTemp,data.oil,data.battery,data.fuel);
   updateOutputs(data.outputs);
