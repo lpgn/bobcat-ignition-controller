@@ -1,8 +1,10 @@
 /*
  * System State Management Implementation for Bobcat Ignition Controller
- * Implements the main state machine logic
+ *
+ * Ignition key sequence: OFF -> ON -> GLOW -> START (momentary) -> RUNNING.
+ * Safety interlocks + battery-OK are enforced at the single crank choke point
+ * (attemptCrank) so NO path can engage the starter without them.
  */
-
 
 #include "system_state.h"
 #include "config.h"
@@ -10,263 +12,244 @@
 #include "safety.h"
 #include "settings.h"
 
-// Global system state instance
 SystemState_t g_systemState = {};
 
-/*
- * System State Management Implementation for Bobcat Ignition Controller
- * Implements proper ignition key sequence: OFF -> ON -> GLOW_PLUG -> START (momentary)
- */
-
-#include "system_state.h"
-#include "config.h"
-#include "hardware.h"
-#include "safety.h"
+// Single choke point for engaging the starter. Enforces interlocks + battery.
+static bool attemptCrank(unsigned long now) {
+  if (!safetyInterlocksPassed()) {
+    Serial.println("CRANK BLOCKED: safety interlocks not satisfied");
+    return false;
+  }
+  if (!batteryOkToStart()) {
+    Serial.println("CRANK BLOCKED: battery voltage too low");
+    return false;
+  }
+  controlMainPower(true);
+  controlGlowPlugs(true);          // glow assist during crank
+  controlStarter(true);
+  g_systemState.currentState = START;
+  g_systemState.ignitionStartTime = now;
+  g_systemState.startHoldTime = now;
+  g_systemState.oilOkSince = 0;
+  if (g_systemState.glowPlugStartTime == 0) g_systemState.glowPlugStartTime = now;
+  Serial.println("Starter engaged (interlocks + battery OK)");
+  return true;
+}
 
 void runIgnitionSequence() {
-  static int lastState = -1; // Track state changes
-  static int lastKeyPosition = -1; // Track key position changes
-  
-  // Only execute state logic when state or key position changes
-  bool stateChanged = (g_systemState.currentState != lastState);
-  bool keyChanged = (g_systemState.keyPosition != lastKeyPosition);
-  
-  // Force immediate OFF transition when key is turned to OFF position
+  unsigned long now = millis();
+  const BobcatSettings& s = g_settingsManager.getSettings();
+  uint32_t glowDur = s.glowPlugDuration;
+  uint32_t crankTimeout = s.crankingTimeout;
+  int16_t minOil = s.minOilPressure;
+
+  // 1. Forced OFF (master power off) whenever key is OFF.
   if (g_systemState.keyPosition == 0 && g_systemState.currentState != OFF) {
-    Serial.println("FORCE OFF - Key turned to OFF position");
+    Serial.println("KEY OFF - system shutdown");
     g_systemState.currentState = OFF;
-    stateChanged = true;
     controlMainPower(false);
     controlGlowPlugs(false);
     controlStarter(false);
     controlLights(false);
+    controlBuzzer(false);
     g_systemState.workLightsOn = false;
+    g_systemState.keyStartHeld = false;
+    g_systemState.glowPlugStartTime = 0;
+    g_systemState.oilOkSince = 0;
   }
-  
-  // Handle emergency stop (always process immediately)
+
+  // 2. Emergency stop: cut engine processes, keep main power (lights still work).
+  //    NOTE: a diesel is stopped by the fuel lever - we never claim to stop it.
   if (g_systemState.emergencyStopPressed) {
-    Serial.println("EMERGENCY STOP activated - stopping engine processes only");
-    // Stop engine processes but keep main power for lights
-    controlGlowPlugs(false);
+    Serial.println("EMERGENCY STOP - cutting starter + glow, keeping power");
     controlStarter(false);
-    // Keep main power ON so lights can still work
-    // Keep work lights in their current state
-    g_systemState.keyPosition = 1;  // Force key to ON position (not OFF) to maintain main power
-    if (g_systemState.currentState != ON) {
-      g_systemState.currentState = ON;  // Return to ON state, not OFF
-      stateChanged = true;
-    }
+    controlGlowPlugs(false);
+    g_systemState.keyStartHeld = false;
+    g_systemState.keyPosition = 1;
+    g_systemState.currentState = ON;
+    g_systemState.glowPlugStartTime = 0;
+    g_systemState.oilOkSince = 0;
     g_systemState.emergencyStopPressed = false;
   }
 
-  // Handle lights toggle (independent of engine state - always process)
+  // 3. Lights toggle (independent of engine state).
   if (g_systemState.lightsTogglePressed) {
     g_systemState.workLightsOn = !g_systemState.workLightsOn;
     controlLights(g_systemState.workLightsOn);
     Serial.println(g_systemState.workLightsOn ? "Work lights ON" : "Work lights OFF");
     g_systemState.lightsTogglePressed = false;
   }
-  
-  if (!stateChanged && !keyChanged) {
-    // Handle time-based logic for glow plugs (works in any state)
-    if (g_systemState.currentState == GLOW_PLUG || g_systemState.currentState == START || g_systemState.currentState == RUNNING) {
-      if (millis() - g_systemState.glowPlugStartTime >= GLOW_PLUG_DURATION) {
-        // Glow plug heating complete - turn off glow plugs
-        controlGlowPlugs(false);
-        if (g_systemState.currentState == GLOW_PLUG) {
-          Serial.println("Glow plug heating complete - ready for start");
-        }
-      }
-    }
-    return; // No state change, no need to execute switch statement
-  }
-  
-  // Update tracking variables
-  lastState = g_systemState.currentState;
-  lastKeyPosition = g_systemState.keyPosition;
-  
-  // Handle key position changes and automatic state transitions
+
+  // 4. Per-state logic.
   switch (g_systemState.currentState) {
     case OFF:
-      // Key OFF - Turn off ALL power including lights (master power off)
-      if (stateChanged) {
-        controlMainPower(false);
-        controlGlowPlugs(false);
-        controlStarter(false);
-        controlLights(false);  // OFF turns off everything including lights
-        g_systemState.workLightsOn = false;  // Reset work lights state
-        Serial.println("KEY OFF - System shutdown");
-      }
-      
-      if (g_systemState.keyPosition >= 1) {  // Key turned to ON position or beyond
-        Serial.println("KEY ON - System energized");
+      if (g_systemState.keyPosition >= 1) {
         g_systemState.currentState = ON;
         controlMainPower(true);
+        Serial.println("KEY ON - system energized");
       }
       break;
-      
+
     case ON:
-      // Key ON - Basic electrical systems active
-      
-      // Check if glow plugs should be turned off (timer expired while in ON)
-      if (g_systemState.glowPlugStartTime > 0 && millis() - g_systemState.glowPlugStartTime >= GLOW_PLUG_DURATION) {
+      // Turn glow off if a previous glow cycle has expired.
+      if (g_systemState.glowPlugStartTime > 0 && now - g_systemState.glowPlugStartTime >= glowDur) {
         controlGlowPlugs(false);
-        Serial.println("Glow plug timer expired while in ON position");
       }
-      
-      if (g_systemState.keyPosition == 0) {  // Key turned back to OFF
-        Serial.println("KEY OFF - System shutdown");
-        g_systemState.currentState = OFF;
-      } else if (g_systemState.keyPosition == 2) {  // Key turned to GLOW position
-        Serial.println("GLOW PLUG position - Starting/resuming glow plug heating");
+      if (g_systemState.keyPosition == 2) {
         g_systemState.currentState = GLOW_PLUG;
-        // Only start timer if not already running (allow resuming)
-        if (g_systemState.glowPlugStartTime == 0 || millis() - g_systemState.glowPlugStartTime >= GLOW_PLUG_DURATION) {
-          g_systemState.glowPlugStartTime = millis();  // Start new cycle
-          Serial.println("Starting new glow plug cycle (20 seconds)");
-        } else {
-          Serial.println("Resuming existing glow plug cycle");
-        }
+        g_systemState.glowPlugStartTime = now;
         controlGlowPlugs(true);
-      } else if (g_systemState.keyPosition >= 3 || g_systemState.keyStartHeld) {  // Direct START from ON (auto-glow)
-        Serial.println("Direct START - Auto-activating glow plugs and cranking");
-        g_systemState.currentState = START;
-        g_systemState.glowPlugStartTime = millis();  // Start glow plug timer
-        g_systemState.ignitionStartTime = millis();
-        g_systemState.startHoldTime = millis();
-        controlGlowPlugs(true);  // Auto-activate glow plugs for direct start
-        controlStarter(true);    // Start cranking
-      }
-      break;
-      
-    case GLOW_PLUG:
-      // Glow plug heating phase
-      if (g_systemState.keyPosition == 0) {  // Key turned to OFF
-        Serial.println("KEY OFF during glow plug heating");
-        g_systemState.currentState = OFF;
-        controlGlowPlugs(false);
-      } else if (g_systemState.keyPosition == 1) {  // Key returned to ON
-        Serial.println("Key returned to ON - pausing glow plug heating");
-        g_systemState.currentState = ON;
-        // Note: Don't turn off glow plugs immediately - let them continue heating
-        // This allows user to return to GLOW position without losing progress
-      } else if (g_systemState.keyPosition >= 3 || g_systemState.keyStartHeld) {  // Key turned to START
-        Serial.println("START position - Engine cranking");
-        g_systemState.currentState = START;
-        g_systemState.ignitionStartTime = millis();
-        g_systemState.startHoldTime = millis();
-        // Keep glow plugs ON during start for full duration - some engines need this
-        controlStarter(true);     // Start cranking
-      }
-      
-      // Check if glow plug heating is complete
-      if (millis() - g_systemState.glowPlugStartTime >= GLOW_PLUG_DURATION) {
-        // Glow plug heating complete - turn off glow plugs and return key to ON
-        Serial.println("Glow plug heating complete - automatically returning to ON position");
-        controlGlowPlugs(false);
-        g_systemState.currentState = ON;
-        g_systemState.keyPosition = 1;  // Automatically return key to ON position
-      } else {
-        // Show countdown every 2 seconds during heating (only while heating)
-        static unsigned long lastCountdown = 0;
-        if (millis() - lastCountdown >= 2000) {
-          unsigned long elapsed = millis() - g_systemState.glowPlugStartTime;
-          unsigned long remaining = (GLOW_PLUG_DURATION - elapsed) / 1000;
-          if (remaining > 0) {
-            Serial.print("Glow plug heating... ");
-            Serial.print(remaining);
-            Serial.println(" seconds remaining");
-          }
-          lastCountdown = millis();
+        Serial.println("GLOW position - preheating");
+      } else if (g_systemState.keyPosition >= 3 || g_systemState.keyStartHeld) {
+        if (!attemptCrank(now)) {         // guarded
+          g_systemState.keyStartHeld = false;
+          g_systemState.keyPosition = 1;
         }
       }
       break;
-      
+
+    case GLOW_PLUG:
+      if (g_systemState.keyPosition == 1) {
+        g_systemState.currentState = ON;  // pause; keep glow running
+      } else if (g_systemState.keyPosition >= 3 || g_systemState.keyStartHeld) {
+        if (!attemptCrank(now)) {         // guarded
+          g_systemState.keyStartHeld = false;
+          g_systemState.keyPosition = 2;
+        }
+      } else if (now - g_systemState.glowPlugStartTime >= glowDur) {
+        controlGlowPlugs(false);
+        g_systemState.currentState = ON;
+        g_systemState.keyPosition = 1;
+        Serial.println("GLOW complete - returning to ON");
+      }
+      break;
+
     case START:
-      // Engine cranking phase
-      // Turn off glow plugs if duration has expired
-      if (millis() - g_systemState.glowPlugStartTime >= GLOW_PLUG_DURATION) {
+      // Glow off after its duration even while cranking.
+      if (g_systemState.glowPlugStartTime > 0 && now - g_systemState.glowPlugStartTime >= glowDur) {
         controlGlowPlugs(false);
       }
-      
-      if (g_systemState.keyPosition == 0) {  // Key turned to OFF
-        Serial.println("KEY OFF during start");
-        g_systemState.currentState = OFF;
+      // RUNNING detection: oil pressure OK sustained while cranking.
+      if (readOilPressure() >= minOil) {
+        if (g_systemState.oilOkSince == 0) {
+          g_systemState.oilOkSince = now;
+        } else if (now - g_systemState.oilOkSince >= RUNNING_OIL_CONFIRM_MS) {
+          Serial.println("Engine RUNNING (oil pressure confirmed) - releasing starter");
+          controlStarter(false);
+          g_systemState.currentState = RUNNING;
+          g_systemState.keyPosition = 1;
+          g_systemState.keyStartHeld = false;
+          break;
+        }
+      } else {
+        g_systemState.oilOkSince = 0;
+      }
+      // Key released -> stop cranking, return to ON.
+      if (!g_systemState.keyStartHeld || g_systemState.keyPosition < 3) {
+        Serial.println("Start released - returning to ON");
         controlStarter(false);
-        controlGlowPlugs(false);
-      } else if (!g_systemState.keyStartHeld || g_systemState.keyPosition < 3) {  // Key released from START position
-        Serial.println("Start key released - returning to ON position");
-        g_systemState.currentState = ON;  // Return to ON, not GLOW_PLUG
-        g_systemState.keyPosition = 1;    // Set key position to ON
+        g_systemState.currentState = ON;
+        g_systemState.keyPosition = 1;
+      } else if (now - g_systemState.ignitionStartTime >= crankTimeout) {
+        // Timeout: stop cranking but stay in START until the key is released.
+        Serial.println("Crank timeout - stopping starter (release key)");
         controlStarter(false);
-        // Turn off glow plugs when returning to ON after start attempt
-        controlGlowPlugs(false);
-      } else if (millis() - g_systemState.ignitionStartTime >= IGNITION_TIMEOUT) {
-        // Start timeout - stop cranking but stay in START until key is released
-        Serial.println("Engine start timeout - stopping cranking (release key)");
-        controlStarter(false);
-        // Don't change state until key is released
       }
       break;
-      
+
     case RUNNING:
-      // Engine running - key should be in ON position
-      if (g_systemState.keyPosition == 0) {  // Key turned to OFF
-        Serial.println("KEY OFF - Engine shutdown (should stop engine manually first)");
-        g_systemState.currentState = OFF;
-      } else if (g_systemState.keyPosition >= 3 || g_systemState.keyStartHeld) {  // Key turned to START again
-        Serial.println("HOT RESTART - Engine already running, brief cranking");
-        g_systemState.currentState = START;
-        g_systemState.ignitionStartTime = millis();
-        g_systemState.startHoldTime = millis();
-        controlStarter(true);
+      if (g_systemState.keyPosition >= 3 || g_systemState.keyStartHeld) {
+        Serial.println("HOT RESTART requested");
+        if (!attemptCrank(now)) {         // guarded
+          g_systemState.keyStartHeld = false;
+          g_systemState.keyPosition = 1;
+        }
       }
-      // Continue monitoring engine parameters
+      // Vitals monitored by checkEngineVitals() from loop().
       break;
-      
+
     case LOW_OIL_PRESSURE:
     case HIGH_TEMPERATURE:
-      // Alert states - handle key positions but show warnings
-      if (g_systemState.keyPosition == 0) {
-        g_systemState.currentState = OFF;
-      } else if (g_systemState.keyPosition >= 3 || g_systemState.keyStartHeld) {
-        Serial.println("FORCED START during alert condition");
-        g_systemState.currentState = START;
-        g_systemState.ignitionStartTime = millis();
-        g_systemState.startHoldTime = millis();
-        controlStarter(true);
+      // Alert sub-states of RUNNING. Recovery handled by checkEngineVitals().
+      // A plain key crank is refused here - deliberate override is required.
+      if (g_systemState.keyStartHeld || g_systemState.keyPosition >= 3) {
+        g_systemState.keyStartHeld = false;
+        g_systemState.keyPosition = 1;
+        Serial.println("Crank refused during alert - use override");
       }
       break;
-      
+
     case ERROR:
-      // Error state - only respond to key OFF or emergency override
-      if (g_systemState.keyPosition == 0) {
-        g_systemState.currentState = OFF;
-      } else if (g_systemState.keyPosition >= 3 || g_systemState.keyStartHeld) {
-        Serial.println("OVERRIDE START from error state");
-        g_systemState.currentState = START;
-        g_systemState.ignitionStartTime = millis();
-        g_systemState.startHoldTime = millis();
-        controlStarter(true);
+      if (g_systemState.keyStartHeld || g_systemState.keyPosition >= 3) {
+        g_systemState.keyStartHeld = false;
+        g_systemState.keyPosition = 1;
       }
       break;
   }
 
-  // Update tracking variables
-  lastState = g_systemState.currentState;
-  lastKeyPosition = g_systemState.keyPosition;
+  // Status LED reflects powered state; buzzer sounds during alert states.
+  controlStatusLed(g_systemState.currentState != OFF);
+  bool alert = (g_systemState.currentState == LOW_OIL_PRESSURE ||
+                g_systemState.currentState == HIGH_TEMPERATURE ||
+                g_systemState.currentState == ERROR);
+  controlBuzzer(alert);
+}
+
+void updateEngineHours(unsigned long now) {
+  static unsigned long lastTick = 0;
+  if (lastTick == 0) { lastTick = now; return; }
+  unsigned long dt = now - lastTick;
+  lastTick = now;
+
+  if (isEngineRunning()) {
+    g_systemState.engineHoursAccumMs += dt;
+  }
+  // Fold accumulated running time into NVS every 60 s of runtime.
+  if (g_systemState.engineHoursAccumMs >= 60000UL) {
+    g_settingsManager.addEngineHours(g_systemState.engineHoursAccumMs / 3600000.0f);
+    g_systemState.engineHoursAccumMs = 0;
+    g_systemState.configDirty = true;   // loop() persists
+  }
 }
 
 const char* systemStateToString(int state) {
-    switch (state) {
-        case 0: return "OFF";
-        case 1: return "ON";
-        case 2: return "GLOW_PLUG";
-        case 3: return "START";
-        case 4: return "RUNNING";
-        case 5: return "LOW_OIL_PRESSURE";
-        case 6: return "HIGH_TEMPERATURE";
-        case 7: return "ERROR";
-        default: return "UNKNOWN";
-    }
+  switch (state) {
+    case OFF: return "OFF";
+    case ON: return "ON";
+    case GLOW_PLUG: return "GLOW_PLUG";
+    case START: return "START";
+    case RUNNING: return "RUNNING";
+    case LOW_OIL_PRESSURE: return "LOW_OIL_PRESSURE";
+    case HIGH_TEMPERATURE: return "HIGH_TEMPERATURE";
+    case ERROR: return "ERROR";
+    default: return "UNKNOWN";
+  }
+}
+
+const char* apiStateName(int state) {
+  switch (state) {
+    case OFF: return "OFF";
+    case ON: return "ON";
+    case GLOW_PLUG: return "GLOW";
+    case START: return "START";
+    case RUNNING: return "RUNNING";
+    case LOW_OIL_PRESSURE: return "LOW_OIL";
+    case HIGH_TEMPERATURE: return "HIGH_TEMP";
+    case ERROR: return "ERROR";
+    default: return "OFF";
+  }
+}
+
+int apiStateSeq(int state) {
+  switch (state) {
+    case OFF: return 0;
+    case ON: return 1;
+    case GLOW_PLUG: return 2;
+    case START: return 3;
+    case RUNNING:
+    case LOW_OIL_PRESSURE:
+    case HIGH_TEMPERATURE: return 4;
+    case ERROR: return 1;
+    default: return 0;
+  }
 }

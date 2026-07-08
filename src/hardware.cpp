@@ -1,419 +1,313 @@
 /*
  * Hardware Control Implementation for Bobcat Ignition Controller
- * Implements all hardware control functions
  */
 
 #include "hardware.h"
 #include "config.h"
 #include "system_state.h"
-#include <Preferences.h>
+#include "settings.h"
 
-// Runtime calibration constants (loaded from preferences)
+// Runtime calibration (mirrors SettingsManager)
 float runtime_battery_divider = BATTERY_VOLTAGE_DIVIDER;
 float runtime_temp_scale = TEMP_SENSOR_SCALE;
 float runtime_pressure_scale = OIL_PRESSURE_SCALE;
 float runtime_hyd_pressure_scale = HYD_PRESSURE_SCALE;
-int runtime_fuel_empty = FUEL_LEVEL_EMPTY;
-int runtime_fuel_full = FUEL_LEVEL_FULL;
+int   runtime_fuel_empty = (int)FUEL_LEVEL_EMPTY;
+int   runtime_fuel_full = (int)FUEL_LEVEL_FULL;
 
-// Temperature sensor moving average filter
+// Runtime pin table (applied from settings at boot)
+static int g_runtimePins[PIN_FUNC_COUNT];
+static bool g_pinsApplied = false;
+
+// Temperature sensor moving-average filter
 #define TEMP_FILTER_SIZE 10
-float tempReadings[TEMP_FILTER_SIZE];
-int tempIndex = 0;
-bool tempFilterInitialized = false;
+static float tempReadings[TEMP_FILTER_SIZE];
+static int tempIndex = 0;
+static bool tempFilterInitialized = false;
 
-void initializePins() {
-  Serial.println("Initializing GPIO pins...");
-  
-  // Load calibration constants from preferences
-  loadCalibrationConstants();
-  
-  // Initialize output pins for relays
-  pinMode(MAIN_POWER_PIN, OUTPUT);
-  pinMode(GLOW_PLUGS_PIN, OUTPUT);
-  pinMode(STARTER_PIN, OUTPUT);
-  pinMode(LIGHTS_PIN, OUTPUT);
+int pinFor(PinFunc f) {
+  if (f < 0 || f >= PIN_FUNC_COUNT) return -1;
+  if (!g_pinsApplied) return PIN_TABLE[f].defaultGpio;
+  return g_runtimePins[f];
+}
 
-  Serial.print("Relay pins configured: ");
-  Serial.print("Main Power (GPIO"); Serial.print(MAIN_POWER_PIN); Serial.print("), ");
-  Serial.print("Glow Plugs (GPIO"); Serial.print(GLOW_PLUGS_PIN); Serial.print("), ");
-  Serial.print("Starter (GPIO"); Serial.print(STARTER_PIN); Serial.print("), ");
-  Serial.print("Lights (GPIO"); Serial.print(LIGHTS_PIN); Serial.println(")");
+bool outputOn(PinFunc f) {
+  int p = pinFor(f);
+  if (p < 0) return false;
+  return digitalRead(p) == HIGH;
+}
 
-  // Initialize digital input pins
-  pinMode(ENGINE_RUN_FEEDBACK_PIN, INPUT_PULLUP);
-  pinMode(ALTERNATOR_CHARGE_PIN, INPUT_PULLUP);
-  
-  // Initialize safety interlock pins (MANDATORY for safe operation)
-  pinMode(SEAT_BAR_PIN, INPUT_PULLUP);
-  pinMode(NEUTRAL_SAFETY_PIN, INPUT_PULLUP);
-  
-  // Initialize pressure switch pins as digital inputs (not analog)
-  pinMode(OIL_PRESSURE_PIN, INPUT_PULLUP);
-  pinMode(HYD_PRESSURE_PIN, INPUT_PULLUP);
-  
-  Serial.print("Safety interlocks configured: ");
-  Serial.print("Seat Bar (GPIO"); Serial.print(SEAT_BAR_PIN); Serial.print("), ");
-  Serial.print("Neutral Safety (GPIO"); Serial.print(NEUTRAL_SAFETY_PIN); Serial.println(")");
-  
-  Serial.print("Pressure switches configured: ");
-  Serial.print("Oil Pressure (GPIO"); Serial.print(OIL_PRESSURE_PIN); Serial.print("), ");
-  Serial.print("Hydraulic Pressure (GPIO"); Serial.print(HYD_PRESSURE_PIN); Serial.println(")");
-
-  // ADC pins for sensors (no pinMode needed for ADC)
-
-  // Initialize all outputs to safe state
-  digitalWrite(MAIN_POWER_PIN, LOW);
-  digitalWrite(GLOW_PLUGS_PIN, LOW);
-  digitalWrite(STARTER_PIN, LOW);
-  digitalWrite(LIGHTS_PIN, LOW);
-  
-  Serial.println("All relays initialized to OFF state");
-  Serial.println("GPIO initialization complete");
+void applyPinMap() {
+  const BobcatSettings& s = g_settingsManager.getSettings();
+  for (int i = 0; i < PIN_FUNC_COUNT; i++) {
+    g_runtimePins[i] = s.pinGpio[i];
+  }
+  g_pinsApplied = true;
 }
 
 void loadCalibrationConstants() {
-  Preferences prefs;
-  prefs.begin("calibration", true); // Open in read-only mode
-  
-  // Load constants with defaults from config
-  runtime_battery_divider = prefs.getFloat("battery_div", BATTERY_VOLTAGE_DIVIDER);
-  runtime_temp_scale = prefs.getFloat("temp_scale", TEMP_SENSOR_SCALE);
-  runtime_pressure_scale = prefs.getFloat("pressure_scale", OIL_PRESSURE_SCALE);
-  runtime_hyd_pressure_scale = prefs.getFloat("hyd_pressure_scale", HYD_PRESSURE_SCALE);
-  runtime_fuel_empty = prefs.getInt("fuel_empty", (int)FUEL_LEVEL_EMPTY);
-  runtime_fuel_full = prefs.getInt("fuel_full", (int)FUEL_LEVEL_FULL);
-  
-  prefs.end();
-  
-  Serial.println("Calibration constants loaded:");
-  Serial.print("  Battery divider: "); Serial.println(runtime_battery_divider, 6);
-  Serial.print("  Temperature scale: "); Serial.println(runtime_temp_scale, 6);
-  Serial.print("  Pressure scale: "); Serial.println(runtime_pressure_scale, 6);
-  Serial.print("  Hyd pressure scale: "); Serial.println(runtime_hyd_pressure_scale, 6);
-  Serial.print("  Fuel empty ADC: "); Serial.println(runtime_fuel_empty);
-  Serial.print("  Fuel full ADC: "); Serial.println(runtime_fuel_full);
+  const BobcatSettings& s = g_settingsManager.getSettings();
+  runtime_battery_divider   = s.batteryDivider;
+  runtime_temp_scale        = s.tempSensorScale;
+  runtime_pressure_scale    = s.oilPressureScale;
+  runtime_hyd_pressure_scale= s.hydPressureScale;
+  runtime_fuel_empty        = s.fuelLevelEmpty;
+  runtime_fuel_full         = s.fuelLevelFull;
+
+  Serial.println("Calibration constants loaded from settings:");
+  Serial.printf("  battDiv=%.5f tempScale=%.4f oilScale=%.4f hydScale=%.4f fuel=%d-%d\n",
+                runtime_battery_divider, runtime_temp_scale, runtime_pressure_scale,
+                runtime_hyd_pressure_scale, runtime_fuel_empty, runtime_fuel_full);
 }
 
+void initializePins() {
+  Serial.println("Initializing GPIO from runtime pin map...");
+
+  applyPinMap();
+  loadCalibrationConstants();
+
+  for (int i = 0; i < PIN_FUNC_COUNT; i++) {
+    int gpio = g_runtimePins[i];
+    switch (PIN_TABLE[i].type) {
+      case PT_RELAY:
+      case PT_DOUT:
+        pinMode(gpio, OUTPUT);
+        digitalWrite(gpio, LOW);   // safe state
+        break;
+      case PT_DIN:
+        pinMode(gpio, INPUT_PULLUP);
+        break;
+      case PT_ADC:
+        // Analog input - no pinMode. Never INPUT_PULLUP (some are input-only).
+        break;
+    }
+    Serial.printf("  %-12s -> GPIO%-2d (%s)\n", PIN_TABLE[i].func, gpio,
+                  pinTypeToString(PIN_TABLE[i].type));
+  }
+
+  Serial.println("GPIO initialization complete - all relays OFF");
+}
+
+// ============================================================================
+// OUTPUT CONTROL
+// ============================================================================
 void controlMainPower(bool enable) {
-    digitalWrite(MAIN_POWER_PIN, enable ? HIGH : LOW);
-    Serial.print("Main Power: ");
-    Serial.println(enable ? "ON" : "OFF");
+  digitalWrite(pinFor(PIN_MAIN_POWER), enable ? HIGH : LOW);
+  Serial.print("Main Power: "); Serial.println(enable ? "ON" : "OFF");
 }
 
 void controlGlowPlugs(bool enable) {
-  digitalWrite(GLOW_PLUGS_PIN, enable ? HIGH : LOW);
-  Serial.print("Glow Plugs: ");
-  Serial.println(enable ? "ON" : "OFF");
+  digitalWrite(pinFor(PIN_GLOW), enable ? HIGH : LOW);
+  Serial.print("Glow Plugs: "); Serial.println(enable ? "ON" : "OFF");
 }
 
-// controlIgnition function removed - not used in this Bobcat model
-
 void controlStarter(bool enable) {
-  digitalWrite(STARTER_PIN, enable ? HIGH : LOW);
-  Serial.print("Starter: ");
-  Serial.println(enable ? "ON" : "OFF");
+  digitalWrite(pinFor(PIN_STARTER), enable ? HIGH : LOW);
+  Serial.print("Starter: "); Serial.println(enable ? "ON" : "OFF");
 }
 
 void controlLights(bool enable) {
-    digitalWrite(LIGHTS_PIN, enable ? HIGH : LOW);
-    Serial.print("Lights: ");
-    Serial.println(enable ? "ON" : "OFF");
+  digitalWrite(pinFor(PIN_LIGHTS), enable ? HIGH : LOW);
+  Serial.print("Lights: "); Serial.println(enable ? "ON" : "OFF");
 }
 
-// Virtual button functions for web interface - Tesla-style fly-by-wire control
+void controlBuzzer(bool enable) {
+  digitalWrite(pinFor(PIN_BUZZER), enable ? HIGH : LOW);
+}
+
+void controlStatusLed(bool enable) {
+  digitalWrite(pinFor(PIN_STATUS_LED), enable ? HIGH : LOW);
+}
+
+// ============================================================================
+// VIRTUAL BUTTONS (flag/state only - actuation happens in loop())
+// ============================================================================
 void virtualPowerOnButton() {
-    // Set key position to ON
-    if (g_systemState.keyPosition == 0) {
-        g_systemState.keyPosition = 1;
-        Serial.println("Web Interface: POWER ON button pressed");
-    }
+  if (g_systemState.keyPosition == 0) {
+    g_systemState.keyPosition = 1;
+    Serial.println("Web: POWER ON");
+  }
 }
 
 void virtualPowerOffButton() {
-    // Set key position to OFF
-    g_systemState.keyPosition = 0;
-    Serial.println("Web Interface: POWER OFF button pressed");
+  g_systemState.keyPosition = 0;
+  Serial.println("Web: POWER OFF");
 }
 
 void virtualStartButton() {
-    // Legacy start button - simulate turning key to GLOW position then START
-    if (g_systemState.keyPosition < 2) {
-        g_systemState.keyPosition = 2; // Move to GLOW position first
-        Serial.println("Web Interface: START button pressed - moving to GLOW position");
-    } else {
-        g_systemState.keyStartHeld = true;
-        g_systemState.keyPosition = 3;
-        g_systemState.startHoldTime = millis();
-        Serial.println("Web Interface: START button pressed - cranking");
-    }
+  if (g_systemState.keyPosition < 2) {
+    g_systemState.keyPosition = 2; // GLOW first
+    Serial.println("Web: START -> GLOW");
+  } else {
+    g_systemState.keyStartHeld = true;
+    g_systemState.keyPosition = 3;
+    g_systemState.startHoldTime = millis();
+    Serial.println("Web: START -> crank request");
+  }
 }
 
 void virtualLightsButton() {
-    g_systemState.lightsTogglePressed = true;
-    Serial.println("Web Interface: Lights toggle pressed");
+  g_systemState.lightsTogglePressed = true;
+  Serial.println("Web: Lights toggle");
 }
 
-// Note: No virtualStopButton - engine must be stopped manually with lever
-
-// Sensor reading functions with proper calibration
+// ============================================================================
+// SENSOR READS - one formula per sensor, unified calibration
+// ============================================================================
 float readEngineTemp() {
-  int rawValue = analogRead(ENGINE_TEMP_PIN);
-  // For pull-up configuration with NTC thermistor:
-  // Lower ADC = Higher Temperature (sensor gets lower resistance when hot)
-  // Formula: Temp = Base_temp - (ADC * scale_factor)
-  // This makes lower ADC values produce higher temperatures
-  float instantTemp = 150.0 - (rawValue * runtime_temp_scale);
-  
-  // Initialize the filter array if not already done
+  int raw = analogRead(pinFor(PIN_ENGINE_TEMP));
+  // Inverted NTC: lower ADC = higher temperature.
+  float instant = 150.0f - (raw * runtime_temp_scale);
+
   if (!tempFilterInitialized) {
-    for (int i = 0; i < TEMP_FILTER_SIZE; i++) {
-      tempReadings[i] = instantTemp;
-    }
+    for (int i = 0; i < TEMP_FILTER_SIZE; i++) tempReadings[i] = instant;
     tempFilterInitialized = true;
   }
-  
-  // Add the new reading to the circular buffer
-  tempReadings[tempIndex] = instantTemp;
+  tempReadings[tempIndex] = instant;
   tempIndex = (tempIndex + 1) % TEMP_FILTER_SIZE;
-  
-  // Calculate the moving average
+
   float sum = 0;
-  for (int i = 0; i < TEMP_FILTER_SIZE; i++) {
-    sum += tempReadings[i];
-  }
-  
+  for (int i = 0; i < TEMP_FILTER_SIZE; i++) sum += tempReadings[i];
   return sum / TEMP_FILTER_SIZE;
 }
 
-// Legacy analog pressure functions - DEPRECATED
-// Oil and hydraulic pressure are actually DIGITAL SWITCHES, not analog senders
 float readOilPressure() {
-  // DEPRECATED: This function is kept for API compatibility but should not be used
-  // Oil pressure sender P/N 6969775 is a SWITCH, not an analog sender
-  // Use readOilPressureSwitch() instead for proper digital switch reading
-  
-  Serial.println("WARNING: readOilPressure() is deprecated - use readOilPressureSwitch()");
-  
-  // Return a safe pressure value based on switch state
-  return readOilPressureSwitch() ? 100.0 : 0.0; // 100 kPa if switch indicates OK pressure
-}
-
-float readBatteryVoltage() {
-  int rawValue = analogRead(BATTERY_VOLTAGE_PIN);
-  return rawValue * runtime_battery_divider;
-}
-
-float readFuelLevel() {
-  int rawValue = analogRead(FUEL_LEVEL_PIN);
-  // Convert to percentage (0-100%) using runtime calibration values
-  return map(rawValue, runtime_fuel_empty, runtime_fuel_full, 0, 100);
+  int raw = analogRead(pinFor(PIN_OIL_PRESSURE));
+  float psi = raw * runtime_pressure_scale;
+  if (psi < 0) psi = 0;
+  return psi;
 }
 
 float readHydraulicPressure() {
-  // DEPRECATED: This function is kept for API compatibility but should not be used
-  // Hydraulic pressure sender P/N 6671062 is a SWITCH, not an analog sender
-  // Use readHydraulicPressureSwitch() instead for proper digital switch reading
-  
-  Serial.println("WARNING: readHydraulicPressure() is deprecated - use readHydraulicPressureSwitch()");
-  
-  // Return a safe pressure value based on switch state
-  return readHydraulicPressureSwitch() ? 100.0 : 0.0; // 100 kPa if switch indicates OK pressure
+  int raw = analogRead(pinFor(PIN_HYDRAULIC));
+  float psi = raw * runtime_hyd_pressure_scale;
+  if (psi < 0) psi = 0;
+  return psi;
 }
 
-// Digital input reading functions
-bool readAlternatorCharge() {
-  // Active LOW: 0 = charging, 1 = not charging
-  return digitalRead(ALTERNATOR_CHARGE_PIN) == LOW;
+float readBatteryVoltage() {
+  int raw = analogRead(pinFor(PIN_BATTERY));
+  return raw * runtime_battery_divider;
 }
 
-bool readEngineRunFeedback() {
-  // When no sensor is connected, floating pin can read HIGH
-  // For development/testing with no sensors: assume engine is OFF
-  // TODO: Remove this override when sensors are connected
-  return false; // Override: assume engine OFF when no sensors connected
-  
-  // Original logic (uncomment when sensors are connected):
-  // return digitalRead(ENGINE_RUN_FEEDBACK_PIN) == HIGH;
+float readFuelLevel() {
+  int raw = analogRead(pinFor(PIN_FUEL));
+  long pct = map(raw, runtime_fuel_empty, runtime_fuel_full, 0, 100);
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;   // clamp 0-100
+  return (float)pct;
 }
 
-// SAFETY INTERLOCK FUNCTIONS - MANDATORY FOR SAFE OPERATION
+// ============================================================================
+// SAFETY INTERLOCKS
+// ============================================================================
 bool readSeatBarSafety() {
-  // INPUT_PULLUP: LOW when switch closed (operator seated), HIGH when open (no operator)
-  return digitalRead(SEAT_BAR_PIN) == LOW;
+  // INPUT_PULLUP: LOW = switch closed = operator seated.
+  return digitalRead(pinFor(PIN_SEAT_BAR)) == LOW;
 }
 
 bool readNeutralSafety() {
-  // INPUT_PULLUP: LOW when switch closed (transmission in neutral), HIGH when open (in gear)
-  return digitalRead(NEUTRAL_SAFETY_PIN) == LOW;
+  // INPUT_PULLUP: LOW = switch closed = transmission in neutral.
+  return digitalRead(pinFor(PIN_NEUTRAL)) == LOW;
 }
 
 bool safetyInterlocksPassed() {
-  // Both safety conditions must be satisfied for safe operation
-  bool seatBarEngaged = readSeatBarSafety();
-  bool transmissionInNeutral = readNeutralSafety();
-  
-  if (!seatBarEngaged) {
-    Serial.println("SAFETY VIOLATION: Operator not seated (seat bar not engaged)");
+  bool seated = readSeatBarSafety();
+  bool neutral = readNeutralSafety();
+  if (!seated)  Serial.println("SAFETY: operator not seated (seat bar open)");
+  if (!neutral) Serial.println("SAFETY: transmission not in neutral");
+  return seated && neutral;
+}
+
+bool batteryOkToStart() {
+  float v = readBatteryVoltage();
+  float minV = g_settingsManager.getMinBatteryVoltage();
+  if (v < minV) {
+    Serial.printf("SAFETY: battery too low to crank (%.1fV < %.1fV)\n", v, minV);
+    return false;
   }
-  if (!transmissionInNeutral) {
-    Serial.println("SAFETY VIOLATION: Transmission not in neutral");
-  }
-  
-  return seatBarEngaged && transmissionInNeutral;
-}
-
-// PRESSURE SWITCH FUNCTIONS (Digital, not analog)
-bool readOilPressureSwitch() {
-  // Oil pressure switch: INPUT_PULLUP, LOW when pressure OK, HIGH when low pressure
-  return digitalRead(OIL_PRESSURE_PIN) == LOW; // LOW = OK pressure, HIGH = low pressure
-}
-
-bool readHydraulicPressureSwitch() {
-  // Hydraulic pressure switch: INPUT_PULLUP, LOW when pressure OK, HIGH when low pressure  
-  return digitalRead(HYD_PRESSURE_PIN) == LOW; // LOW = OK pressure, HIGH = low pressure
-}
-
-// Safety check functions (basic stubs, expand as needed)
-bool checkEngineSafetyConditions() {
-  // Example: always safe for now
   return true;
 }
 
+// ============================================================================
+// ENGINE STATE HELPERS
+// ============================================================================
 bool isEngineRunning() {
-  // Use engine run feedback pin for now
-  return readEngineRunFeedback();
+  int st = g_systemState.currentState;
+  return (st == RUNNING || st == LOW_OIL_PRESSURE || st == HIGH_TEMPERATURE);
 }
 
 void performSafetyShutdown() {
-  // Only turn off glow plugs and starter - no ignition relay in this model
   controlGlowPlugs(false);
   controlStarter(false);
-  Serial.println("Safety shutdown performed!");
+  Serial.println("Safety shutdown performed (starter + glow off)");
 }
 
 // ============================================================================
-// POWER MANAGEMENT FUNCTIONS
+// POWER MANAGEMENT
 // ============================================================================
-
 void initializeSleepMode() {
   Serial.println("Initializing deep sleep mode...");
-  
-  // Configure wake-up button
   pinMode(WAKE_UP_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(SLEEP_ENABLE_PIN, INPUT_PULLUP);
-  
-  // Configure wake-up sources
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0); // Wake on button press (LOW)
-  
-  // Initialize sleep-related state
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0); // wake on BOOT button LOW
+
   g_systemState.lastActivityTime = millis();
   g_systemState.sleepModeEnabled = true;
   g_systemState.wakeUpPending = false;
   g_systemState.sleepTimer = millis();
-  
-  Serial.println("Deep sleep mode initialized - Wake up button: GPIO0");
+  Serial.println("Deep sleep initialized - wake on GPIO0");
 }
 
 void enterDeepSleep() {
   Serial.println("Preparing for deep sleep...");
-  
-  // Prepare system for sleep
   prepareForSleep();
-  
-  // Print wake-up information
-  Serial.println("Entering deep sleep mode...");
-  Serial.println("Wake up by pressing the BOOT button (GPIO0)");
-  Serial.flush(); // Ensure all serial output is sent
-  
-  // Enter deep sleep
+  Serial.println("Entering deep sleep (wake with BOOT button GPIO0)");
+  Serial.flush();
   esp_deep_sleep_start();
 }
 
 void prepareForSleep() {
-  Serial.println("Preparing system for sleep...");
-  
-  // Turn off all relays to save power
   controlMainPower(false);
   controlGlowPlugs(false);
   controlStarter(false);
   controlLights(false);
-  
-  // Save current state (could save to RTC memory if needed)
-  // For now, we'll just reset to OFF state on wake-up
-  g_systemState.keyPosition = 0; // OFF
+  controlBuzzer(false);
+  controlStatusLed(false);
+  g_systemState.keyPosition = 0;
   g_systemState.currentState = OFF;
-  
-  Serial.println("System prepared for sleep - all relays OFF");
+  Serial.println("System prepared for sleep - all outputs OFF");
 }
 
 bool checkSleepConditions() {
-  return checkSleepConditions(false); // Default to automatic sleep check
+  return checkSleepConditions(false);
 }
 
 bool checkSleepConditions(bool manualSleep) {
-  // Don't sleep if engine is running
-  if (isEngineRunning()) {
-    return false;
-  }
-  
-  // Don't sleep if system is in critical state
-  if (g_systemState.currentState == ERROR || 
+  if (isEngineRunning()) return false;
+  if (g_systemState.currentState == ERROR ||
       g_systemState.currentState == HIGH_TEMPERATURE ||
-      g_systemState.currentState == LOW_OIL_PRESSURE) {
-    return false;
-  }
-  
-  // Don't sleep if key is not in OFF position
-  if (g_systemState.keyPosition != 0) {
-    return false;
-  }
-  
-  // Don't sleep if sleep mode is disabled
-  if (!g_systemState.sleepModeEnabled) {
-    return false;
-  }
-  
-  // For manual sleep, skip the activity timeout check
-  if (manualSleep) {
-    return true;
-  }
-  
-  // For automatic sleep, check if enough time has passed since last activity
-  unsigned long currentTime = millis();
-  unsigned long timeSinceActivity = currentTime - g_systemState.lastActivityTime;
-  
+      g_systemState.currentState == LOW_OIL_PRESSURE) return false;
+  if (g_systemState.keyPosition != 0) return false;
+  if (!g_systemState.sleepModeEnabled) return false;
+  if (manualSleep) return true;
+
+  unsigned long timeSinceActivity = millis() - g_systemState.lastActivityTime;
   return (timeSinceActivity >= ACTIVITY_TIMEOUT);
 }
 
 void handleWakeUp() {
   Serial.println("=== WAKE UP FROM DEEP SLEEP ===");
-  
-  // Check wake-up reason
-  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-  
-  switch(wakeup_reason) {
-    case ESP_SLEEP_WAKEUP_EXT0:
-      Serial.println("Woke up by external signal (button press)");
-      break;
-    case ESP_SLEEP_WAKEUP_TIMER:
-      Serial.println("Woke up by timer");
-      break;
-    default:
-      Serial.println("Woke up for unknown reason");
-      break;
+  esp_sleep_wakeup_cause_t reason = esp_sleep_get_wakeup_cause();
+  switch (reason) {
+    case ESP_SLEEP_WAKEUP_EXT0:  Serial.println("Woke by button"); break;
+    case ESP_SLEEP_WAKEUP_TIMER: Serial.println("Woke by timer"); break;
+    default:                     Serial.println("Woke (unknown)"); break;
   }
-  
-  // Reset system state after wake-up
-  g_systemState.keyPosition = 0; // OFF
+  g_systemState.keyPosition = 0;
   g_systemState.currentState = OFF;
   g_systemState.wakeUpPending = false;
   g_systemState.lastActivityTime = millis();
-  
-  // Reinitialize hardware
-  initializePins();
-  
-  Serial.println("System ready after wake-up");
+  Serial.println("Ready after wake-up");
 }
 
 void updateActivityTimer() {

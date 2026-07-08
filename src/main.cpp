@@ -1,15 +1,9 @@
 /*
  * Bobcat Ignition Controller - Main File
- * ESP32-based system to control Bobcat ignition sequence
- * 
- * Features:
- * - Glow plug preheating (20 seconds)
- * - Main ignition control
- * - Safety interlocks
- * - Status monitoring
- * 
- * Author: Generated for Bobcat Controller Project
- * Date: June 2025
+ * ESP32 controller for a Bobcat 743 / Kubota V1702 diesel.
+ *
+ * loop() owns ALL relay actuation, flash writes, and sleep. Web handlers only
+ * mutate state / set flags (see system_state.h cross-task flags).
  */
 
 #include <Arduino.h>
@@ -20,7 +14,6 @@
 #include "web_interface.h"
 #include "settings.h"
 #include <ElegantOTA.h>
-// Optional CLI-friendly OTA (PlatformIO espota.py)
 #include <ArduinoOTA.h>
 #include <WiFi.h>
 
@@ -29,45 +22,37 @@ static bool g_otaInitialized = false;
 void setup() {
   Serial.begin(115200);
   Serial.println("Bobcat Ignition Controller Starting...");
-  
-  // Check if this is a wake-up from deep sleep
+
   esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
   if (wakeup_reason != ESP_SLEEP_WAKEUP_UNDEFINED) {
     handleWakeUp();
   } else {
     Serial.println("Cold boot - initializing normally...");
   }
-  
-  // Initialize settings manager first
+
+  // Settings first: the pin map + calibration are read from here.
   if (!g_settingsManager.begin()) {
     Serial.println("WARNING: Settings manager failed to initialize, using defaults");
   }
-  
-  initializePins();
-  initializeSleepMode(); // Initialize deep sleep functionality
-  
-  g_systemState.currentState = OFF;  // Start in OFF state like a real ignition
-  g_systemState.keyPosition = 0;     // Key starts in OFF position
-  
-  setupWebServer(); // Initialize the web server
 
-  // Configure ArduinoOTA (begin is deferred until WiFi connected)
+  initializePins();        // applies pin map + calibration from settings
+  initializeSleepMode();
+
+  g_systemState.currentState = OFF;
+  g_systemState.keyPosition = 0;
+
+  setupWebServer();
+
   ArduinoOTA.setHostname("bobcat-ignition");
-  // To require a password, uncomment and pass via PIO with --auth
-  // ArduinoOTA.setPassword("change_me");
   ArduinoOTA.onStart([]() { Serial.println("ArduinoOTA: Start"); });
   ArduinoOTA.onEnd([]() { Serial.println("ArduinoOTA: End"); });
   ArduinoOTA.onError([](ota_error_t error) { Serial.printf("ArduinoOTA Error[%u]\n", error); });
 
   Serial.println("System initialized - Key is in OFF position");
-  Serial.println("Turn key to ON, then GLOW PLUG, then hold START to crank engine");
-  Serial.println("System will auto-sleep after 30 minutes of inactivity");
 }
 
 void loop() {
-  // ElegantOTA loop function
   ElegantOTA.loop();
-  // Handle ArduinoOTA in the main loop (non-blocking)
   if (!g_otaInitialized && WiFi.status() == WL_CONNECTED) {
     ArduinoOTA.begin();
     g_otaInitialized = true;
@@ -76,41 +61,67 @@ void loop() {
     Serial.println(":3232");
   }
   ArduinoOTA.handle();
-  
-  // Don't allow automatic sleep for the first 2 minutes after boot
-  // This gives time to connect and configure the system
-  unsigned long currentTime = millis();
-  const unsigned long BOOT_GRACE_PERIOD = 120000; // 2 minutes
-  
-  if (currentTime < BOOT_GRACE_PERIOD) {
-    // During grace period, just update activity timer to keep system awake
-    g_systemState.lastActivityTime = currentTime;
+
+  unsigned long now = millis();
+
+  // ---- Deferred work requested by async web handlers (flash / sleep / crank) ----
+  if (g_systemState.configDirty) {
+    g_settingsManager.saveSettings();
+    g_systemState.configDirty = false;
+  }
+  if (g_systemState.reloadCalibration) {
+    loadCalibrationConstants();
+    g_systemState.reloadCalibration = false;
+  }
+  if (g_systemState.overrideRequested) {
+    g_systemState.overrideRequested = false;
+    overrideStart();   // enforces interlocks + battery internally
+  }
+  if (g_systemState.factoryResetRequested) {
+    g_systemState.factoryResetRequested = false;
+    Serial.println("Factory reset (from loop) - restarting device");
+    g_settingsManager.performFactoryReset();
+    delay(500);
+    ESP.restart();
+  }
+  if (g_systemState.sleepRequested) {
+    g_systemState.sleepRequested = false;
+    if (checkSleepConditions(true)) {
+      enterDeepSleep();  // does not return
+    } else {
+      Serial.println("Sleep request denied - unsafe conditions");
+    }
+  }
+
+  // ---- Auto-sleep ----
+  const unsigned long BOOT_GRACE_PERIOD = 120000;
+  if (now < BOOT_GRACE_PERIOD) {
+    g_systemState.lastActivityTime = now;
   } else {
-    // After grace period, check for sleep conditions and enter sleep if appropriate
     if (checkSleepConditions()) {
-      unsigned long timeSinceActivity = currentTime - g_systemState.lastActivityTime;
-      
+      unsigned long timeSinceActivity = now - g_systemState.lastActivityTime;
       if (timeSinceActivity >= SLEEP_TIMEOUT) {
-        Serial.println("Sleep timeout reached - entering deep sleep mode");
+        Serial.println("Sleep timeout reached - entering deep sleep");
         enterDeepSleep();
-        // Code will not reach here as ESP32 will sleep
       }
     }
   }
-  
-  // Main ignition key sequence control
+
+  // ---- State machine (all relay actuation happens here) ----
   runIgnitionSequence();
-  
-  // Only check engine vitals when running
-  if (g_systemState.currentState == RUNNING) { 
+
+  // ---- Engine vitals while running (over-temp / low-oil alerts) ----
+  if (isEngineRunning()) {
     checkEngineVitals();
-  } 
-  
-  // Always run safety checks except during start cranking
+  }
+
+  // ---- General safety checks (skip during active cranking) ----
   if (g_systemState.currentState != START) {
     checkSafetyInputs();
   }
-  
-  // Small delay to prevent overwhelming the system
+
+  // ---- Engine-hours accumulation ----
+  updateEngineHours(now);
+
   delay(10);
 }
