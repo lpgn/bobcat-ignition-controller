@@ -61,13 +61,15 @@ void handleError(const char* errorMessage) {
 void overrideStart() {
   Serial.println("OVERRIDE: deliberate crank requested (bypassing sensor faults)");
 
-  if (!safetyInterlocksPassed()) {
-    Serial.println("OVERRIDE BLOCKED: safety interlocks not satisfied");
-    return;
-  }
-  if (!batteryOkToStart()) {
-    Serial.println("OVERRIDE BLOCKED: battery voltage too low");
-    return;
+  if (!g_systemState.maintenanceMode) {
+    if (!safetyInterlocksPassed()) {
+      Serial.println("OVERRIDE BLOCKED: safety interlocks not satisfied");
+      return;
+    }
+    if (!batteryOkToStart()) {
+      Serial.println("OVERRIDE BLOCKED: battery voltage too low");
+      return;
+    }
   }
 
   unsigned long now = millis();

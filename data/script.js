@@ -194,6 +194,7 @@ function renderStatus(data){
   if(!data)return;
   lastStatus=data;
   updateStateLabel(data.state);
+  byId('maintBanner').style.display=data.maintenance?'block':'none';
   updateStrip(data.net);
   updateSequence(data.seq);
   updateKeyseg(data.seq,data.glow);
@@ -242,5 +243,6 @@ document.addEventListener('DOMContentLoaded',function(){
   crank.addEventListener('pointerup',crankSet(false));
   crank.addEventListener('pointerleave',crankSet(false));
   crank.addEventListener('pointercancel',crankSet(false));
+  byId('maintBanner').addEventListener('click',function(){apiCtrl({action:'maintenance',enabled:false});});
   poll();
 });

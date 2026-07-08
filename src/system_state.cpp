@@ -127,8 +127,9 @@ void runIgnitionSequence() {
       // starter engages the instant the interlocks become satisfied, and cuts the
       // instant they drop or the timeout is reached.
       bool crankStarter = held && within &&
-                          readSeatBarSafety() && readNeutralSafety() &&
-                          readBatteryVoltage() >= s.minBatteryVoltage;
+                          (g_systemState.maintenanceMode ||
+                           (readSeatBarSafety() && readNeutralSafety() &&
+                            readBatteryVoltage() >= s.minBatteryVoltage));
       controlStarter(crankStarter);
 
       // RUNNING detection: oil pressure OK sustained while actually cranking.

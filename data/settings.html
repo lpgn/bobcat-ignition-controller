@@ -9,6 +9,7 @@
 <body>
 <div class="phone">
   <div class="cfg-top"><h2>Configuration</h2><a href="/">&larr; Back</a></div>
+  <div class="hint" style="text-align:center;margin:2px 2px 12px">Changes save automatically as you edit — no Save button.</div>
 
   <div class="card">
     <h3>System</h3>
@@ -18,6 +19,12 @@
       <div class="s"><span class="sk"><i id="cfgMqttDot" class="ok"></i>MQTT</span><span class="sv ok" id="cfgMqttInfo">--</span></div>
       <div class="s"><span class="sk"><i id="cfgClockDot" class="mut"></i>NTP</span><span class="sv" id="cfgClockInfo">--</span></div>
     </div>
+  </div>
+
+  <div class="card">
+    <h3>Maintenance / test mode</h3>
+    <div class="fld"><label>Bypass interlocks<small>bench / no sensors &middot; clears on reboot</small></label><span class="toggle off" id="sMaint" tabindex="0"></span></div>
+    <div class="hint"><b class="c">Danger:</b> cranks with NO seat-bar / neutral / battery check. Bench &amp; maintenance only. Turn off here or tap the red banner on the main screen.</div>
   </div>
 
   <div class="card">

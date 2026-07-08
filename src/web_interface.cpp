@@ -38,6 +38,7 @@ static void sendErr(AsyncWebServerRequest* req, int code, const String& msg) {
 }
 
 static bool canCrank(String& err) {
+  if (g_systemState.maintenanceMode) return true;   // test/maintenance: gates bypassed
   if (!safetyInterlocksPassed()) { err = "interlocks not satisfied (seat bar + neutral)"; return false; }
   if (!batteryOkToStart())       { err = "battery voltage too low to crank"; return false; }
   return true;
@@ -52,6 +53,7 @@ static void buildStatus(JsonDocument& json) {
 
   json["state"] = apiStateName(st);
   json["seq"] = apiStateSeq(st);
+  json["maintenance"] = g_systemState.maintenanceMode;
   json["engineHours"] = g_settingsManager.getEngineHours() +
                         g_systemState.engineHoursAccumMs / 3600000.0;
 
@@ -197,6 +199,16 @@ static void onControlBody(AsyncWebServerRequest* request, uint8_t* data, size_t 
     String err;
     if (!canCrank(err)) { sendErr(request, 400, err); return; }
     g_systemState.overrideRequested = true;
+    sendOk(request);
+    return;
+  }
+
+  if (strcmp(action, "maintenance") == 0) {
+    bool en = doc["enabled"] | false;
+    g_systemState.maintenanceMode = en;
+    if (en) g_systemState.maintenanceStart = millis();
+    Serial.println(en ? "MAINTENANCE MODE ON - interlocks + battery bypassed"
+                      : "Maintenance mode OFF");
     sendOk(request);
     return;
   }

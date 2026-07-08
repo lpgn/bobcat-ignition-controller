@@ -44,6 +44,11 @@ body{margin:0;background:radial-gradient(120% 70% at 50% -10%, #131a24 0%, var(-
 .btn.crank.cranking{animation:crankpulse .4s ease-in-out infinite;}
 @keyframes crankpulse{0%,100%{transform:scale(1)}50%{transform:scale(.975)}}
 @media(prefers-reduced-motion:reduce){.kb.heating,.btn.crank.cranking{animation:none}}
+.maint-banner{background:#2a1206;border:1px solid var(--crit);color:#ffb3a3;border-radius:var(--r);
+  padding:9px 12px;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;text-align:center;
+  margin-bottom:12px;cursor:pointer;font-weight:600;animation:maintpulse 1.6s ease-in-out infinite;}
+@keyframes maintpulse{0%,100%{border-color:var(--crit)}50%{border-color:#7a2418}}
+@media(prefers-reduced-motion:reduce){.maint-banner{animation:none}}
 
 .strip{display:flex;align-items:stretch;margin:12px 0 4px;font-family:var(--mono);}
 .strip .s{flex:1;display:flex;flex-direction:column;gap:3px;padding:0 10px;position:relative;}

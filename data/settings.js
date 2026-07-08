@@ -86,8 +86,15 @@ function initSettingsListeners(){
   for(var i=0;i<toggles.length;i++){
     toggles[i].addEventListener('click',function(e){
       this.classList.toggle('on');
+      var on=this.classList.contains('on');
+      if(this.id==='sMaint'){
+        fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'maintenance',enabled:on})})
+        .then(function(r){if(r.ok)showToast(on?'MAINTENANCE ON — interlocks bypassed':'Maintenance OFF',true);else showToast('Failed',false);})
+        .catch(function(){showToast('Failed',false);});
+        return;
+      }
       var key=this.id==='sMqttEnabled'?'mqttEnabled':'ntp';
-      saveSetting(key,this.classList.contains('on')?'true':'false').then(function(r){if(!r.ok)showToast('Save failed',false);}).catch(function(){showToast('Save failed',false);});
+      saveSetting(key,on?'true':'false').then(function(r){if(!r.ok)showToast('Save failed',false);}).catch(function(){showToast('Save failed',false);});
     });
   }
   byId('btnAddNetwork').addEventListener('click',function(){
@@ -177,4 +184,5 @@ document.addEventListener('DOMContentLoaded',function(){
   initSettingsListeners();
   loadSettings();
   loadPins();
+  fetch('/api/status').then(function(r){return r.json();}).then(function(s){var m=byId('sMaint');if(m)m.classList.toggle('on',!!s.maintenance);}).catch(function(){});
 });

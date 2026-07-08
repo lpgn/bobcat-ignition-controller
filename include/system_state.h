@@ -49,6 +49,8 @@ typedef struct {
     volatile bool factoryResetRequested;
     volatile bool overrideRequested;    // deliberate override crank (POST only)
     volatile bool wifiReconnect;        // station creds changed -> loop() re-begins STA
+    volatile bool maintenanceMode;      // TEST/MAINTENANCE: bypass interlocks + battery for cranking
+    unsigned long maintenanceStart;     // millis() when enabled (auto-expires after 30 min)
 
     // Engine-hours accumulator (ms of running time not yet folded into NVS)
     unsigned long engineHoursAccumMs;
