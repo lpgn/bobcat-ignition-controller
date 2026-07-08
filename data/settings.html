@@ -23,7 +23,8 @@
   <div class="card">
     <h3>Engine parameters</h3>
     <div class="fld"><label>Glow preheat</label><span><input class="inp" id="sGlow" type="number" step="1"><span class="unit">s</span></span></div>
-    <div class="fld"><label>Crank timeout</label><span><input class="inp" id="sCrank" type="number" step="1"><span class="unit">s</span></span></div>
+    <div class="fld"><label>Glow assist<small>glow stays on during crank</small></label><span><input class="inp" id="sGlowAssist" type="number" step="1"><span class="unit">s</span></span></div>
+    <div class="fld"><label>Crank timeout<small>max starter time</small></label><span><input class="inp" id="sCrank" type="number" step="1"><span class="unit">s</span></span></div>
     <div class="fld"><label>Cooldown</label><span><input class="inp" id="sCooldown" type="number" step="1"><span class="unit">s</span></span></div>
   </div>
 
@@ -65,12 +66,19 @@
     <div class="fld"><label>Broker</label><input class="inp wide" id="sMqttHost"></div>
     <div class="fld"><label>Port</label><input class="inp" id="sMqttPort" type="number"></div>
     <div class="fld"><label>Base topic</label><input class="inp wide" id="sMqttTopic"></div>
+    <div class="hint">Read-only health &amp; diagnostics telemetry. Ignition and controls are never exposed to Home Assistant.</div>
   </div>
 
   <div class="card">
     <h3>Time</h3>
     <div class="fld"><label>NTP sync</label><span class="toggle" id="sNtp" tabindex="0"></span></div>
     <div class="fld"><label>UTC offset</label><span><input class="inp" id="sUtcOffset"><span class="unit">h</span></span></div>
+  </div>
+
+  <div class="card">
+    <h3>Config backup</h3>
+    <div class="fld"><label>Download config<small>save all settings as .json</small></label><a href="/api/backup" download class="btn-sm" style="margin-top:0;text-decoration:none">Download</a></div>
+    <div class="fld"><label>Restore config<small>from a .json file</small></label><label class="btn-sm" style="margin-top:0;cursor:pointer">Restore<input type="file" id="restoreFile" accept="application/json,.json" style="display:none"></label></div>
   </div>
 
   <div class="card">

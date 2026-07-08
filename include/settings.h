@@ -21,6 +21,7 @@ struct BobcatSettings {
     uint32_t glowPlugDuration;
     uint32_t crankingTimeout;
     uint32_t cooldownDuration;
+    uint32_t glowAssistDuration;    // glow-on time during crank (ms), independent of preheat
 
     // Alarm Thresholds
     int16_t maxCoolantTemp;         // °C
@@ -82,6 +83,7 @@ public:
     uint32_t getGlowPlugDuration() const { return currentSettings.glowPlugDuration; }
     uint32_t getCrankingTimeout() const { return currentSettings.crankingTimeout; }
     uint32_t getCooldownDuration() const { return currentSettings.cooldownDuration; }
+    uint32_t getGlowAssistDuration() const { return currentSettings.glowAssistDuration; }
     int16_t getMaxCoolantTemp() const { return currentSettings.maxCoolantTemp; }
     int16_t getMinOilPressure() const { return currentSettings.minOilPressure; }
     int16_t getMinHydPressure() const { return currentSettings.minHydPressure; }
@@ -103,6 +105,7 @@ public:
 
     // Mutators (RAM only - caller flags configDirty; loop() persists)
     bool updateEngineSettings(uint32_t glowDurationMs, uint32_t crankTimeoutMs, uint32_t cooldownMs);
+    bool setGlowAssist(uint32_t assistMs);
     bool updateAlarmThresholds(int16_t maxTemp, int16_t minOilPsi, float minVolt, float maxVolt);
     bool updateHydraulicThreshold(int16_t minHydPsi);
     bool updateWifiSettings(const char* ssid, const char* password);
@@ -151,6 +154,8 @@ namespace SettingsLimits {
     constexpr uint8_t MAX_CRANKING_TIMEOUT = 30;
     constexpr uint16_t MIN_COOLDOWN_DURATION = 60;
     constexpr uint16_t MAX_COOLDOWN_DURATION = 300;
+    constexpr uint8_t MIN_GLOW_ASSIST = 0;
+    constexpr uint8_t MAX_GLOW_ASSIST = 30;
 
     constexpr int16_t MIN_COOLANT_TEMP = 80;
     constexpr int16_t MAX_COOLANT_TEMP = 120;
@@ -177,6 +182,6 @@ namespace SettingsLimits {
 }
 
 // Bumped to 2: struct layout changed (pin map, unified calibration, stubs).
-constexpr uint32_t SETTINGS_VERSION = 2;
+constexpr uint32_t SETTINGS_VERSION = 3;
 
 #endif // SETTINGS_H

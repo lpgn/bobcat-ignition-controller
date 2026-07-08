@@ -82,11 +82,15 @@ function updateSequence(seq){
   }
 }
 
-function updateKeyseg(seq){
+function updateKeyseg(seq,glow){
+  var heating=glow&&glow.active;
   var btns=document.querySelectorAll('#keyseg .kb');
   var active=Math.min(seq,2);
   for(var i=0;i<btns.length;i++){
-    btns[i].classList.toggle('on',parseInt(btns[i].getAttribute('data-pos'))===active);
+    var pos=parseInt(btns[i].getAttribute('data-pos'));
+    btns[i].classList.toggle('on',pos===active&&!(pos===2&&heating));
+    btns[i].classList.toggle('heating',pos===2&&heating);
+    if(pos===2)btns[i].textContent=(heating&&glow.countdown>0)?('Glow '+glow.countdown+'s'):'Glow';
   }
   var crank=byId('btnCrank');
   if(seq===4){crank.textContent='Running';crank.className='btn crank on';}
@@ -192,7 +196,7 @@ function renderStatus(data){
   updateStateLabel(data.state);
   updateStrip(data.net);
   updateSequence(data.seq);
-  updateKeyseg(data.seq);
+  updateKeyseg(data.seq,data.glow);
   updateHero(data.hydraulic);
   updateVitals(data.engineTemp,data.oil,data.battery,data.fuel);
   updateOutputs(data.outputs);

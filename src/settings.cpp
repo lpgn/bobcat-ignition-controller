@@ -98,6 +98,7 @@ void SettingsManager::setDefaultSettings() {
     currentSettings.glowPlugDuration = GLOW_PLUG_DURATION;
     currentSettings.crankingTimeout = IGNITION_TIMEOUT;
     currentSettings.cooldownDuration = COOLDOWN_DURATION;
+    currentSettings.glowAssistDuration = 5000;   // 5 s glow assist during crank
 
     // Thresholds
     currentSettings.maxCoolantTemp = MAX_COOLANT_TEMP;
@@ -148,6 +149,15 @@ void SettingsManager::setDefaultSettings() {
 uint8_t SettingsManager::getPinGpio(int func) const {
     if (func < 0 || func >= PIN_FUNC_COUNT) return 0;
     return currentSettings.pinGpio[func];
+}
+
+bool SettingsManager::setGlowAssist(uint32_t assistMs) {
+    uint32_t sec = assistMs / 1000;
+    if (sec > SettingsLimits::MAX_GLOW_ASSIST) {
+        Serial.printf("Invalid glow assist: %u s\n", (unsigned)sec); return false;
+    }
+    currentSettings.glowAssistDuration = assistMs;
+    return true;
 }
 
 bool SettingsManager::updateEngineSettings(uint32_t glowMs, uint32_t crankMs, uint32_t cooldownMs) {
@@ -345,6 +355,7 @@ bool SettingsManager::validateSettings(const BobcatSettings& settings) {
         settings.crankingTimeout > SettingsLimits::MAX_CRANKING_TIMEOUT * 1000UL) return false;
     if (settings.cooldownDuration < SettingsLimits::MIN_COOLDOWN_DURATION * 1000UL ||
         settings.cooldownDuration > SettingsLimits::MAX_COOLDOWN_DURATION * 1000UL) return false;
+    if (settings.glowAssistDuration > SettingsLimits::MAX_GLOW_ASSIST * 1000UL) return false;
     if (settings.maxCoolantTemp < SettingsLimits::MIN_COOLANT_TEMP ||
         settings.maxCoolantTemp > SettingsLimits::MAX_COOLANT_TEMP) return false;
     if (settings.minOilPressure < SettingsLimits::MIN_OIL_PRESSURE_LIMIT ||

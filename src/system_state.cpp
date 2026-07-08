@@ -31,7 +31,7 @@ static bool attemptCrank(unsigned long now) {
   g_systemState.ignitionStartTime = now;
   g_systemState.startHoldTime = now;
   g_systemState.oilOkSince = 0;
-  if (g_systemState.glowPlugStartTime == 0) g_systemState.glowPlugStartTime = now;
+  g_systemState.glowPlugStartTime = now;   // (re)start glow timer for the crank-assist window
   Serial.println("Starter engaged (interlocks + battery OK)");
   return true;
 }
@@ -41,6 +41,7 @@ void runIgnitionSequence() {
   const BobcatSettings& s = g_settingsManager.getSettings();
   uint32_t glowDur = s.glowPlugDuration;
   uint32_t crankTimeout = s.crankingTimeout;
+  uint32_t glowAssist = s.glowAssistDuration;
   int16_t minOil = s.minOilPressure;
 
   // 1. Forced OFF (master power off) whenever key is OFF.
@@ -125,8 +126,8 @@ void runIgnitionSequence() {
       break;
 
     case START:
-      // Glow off after its duration even while cranking.
-      if (g_systemState.glowPlugStartTime > 0 && now - g_systemState.glowPlugStartTime >= glowDur) {
+      // Glow assist: keep glow on for glowAssist ms into the crank, then off.
+      if (g_systemState.glowPlugStartTime > 0 && now - g_systemState.glowPlugStartTime >= glowAssist) {
         controlGlowPlugs(false);
       }
       // RUNNING detection: oil pressure OK sustained while cranking.
@@ -136,6 +137,7 @@ void runIgnitionSequence() {
         } else if (now - g_systemState.oilOkSince >= RUNNING_OIL_CONFIRM_MS) {
           Serial.println("Engine RUNNING (oil pressure confirmed) - releasing starter");
           controlStarter(false);
+          controlGlowPlugs(false);
           g_systemState.currentState = RUNNING;
           g_systemState.keyPosition = 1;
           g_systemState.keyStartHeld = false;
@@ -148,6 +150,7 @@ void runIgnitionSequence() {
       if (!g_systemState.keyStartHeld || g_systemState.keyPosition < 3) {
         Serial.println("Start released - returning to ON");
         controlStarter(false);
+        controlGlowPlugs(false);
         g_systemState.currentState = ON;
         g_systemState.keyPosition = 1;
       } else if (now - g_systemState.ignitionStartTime >= crankTimeout) {

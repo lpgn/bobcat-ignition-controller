@@ -29,6 +29,7 @@ function getInpVal(id){
 function applySettings(s){
   if(!s)return;
   setInpVal('sGlow',s.engine?s.engine.glow:null);
+  setInpVal('sGlowAssist',s.engine?s.engine.glowAssist:null);
   setInpVal('sCrank',s.engine?s.engine.crank:null);
   setInpVal('sCooldown',s.engine?s.engine.cooldown:null);
   setInpVal('sTempScale',s.cal?s.cal.tempScale:null);
@@ -72,7 +73,7 @@ function initSettingsListeners(){
   for(var i=0;i<inputs.length;i++){
     inputs[i].addEventListener('change',function(e){
       var map={
-        sGlow:'glow',sCrank:'crank',sCooldown:'cooldown',
+        sGlow:'glow',sGlowAssist:'glowAssist',sCrank:'crank',sCooldown:'cooldown',
         sTempScale:'tempScale',sMinOil:'minOil',sMinHyd:'minHyd',sMinV:'minV',sFuelLow:'fuelLow',
         sMqttHost:'mqttHost',sMqttPort:'mqttPort',sMqttTopic:'mqttTopic',
         sUtcOffset:'utcOffset',sApSsid:'apSSID',sApPass:'apPassword'
@@ -95,9 +96,22 @@ function initSettingsListeners(){
     if(!ssid){showToast('Enter an SSID',false);return;}
     saveSetting('wifiSSID',ssid)
       .then(function(){return pass?saveSetting('wifiPassword',pass):{ok:true};})
-      .then(function(){showToast('Home WiFi saved — reboot board to join',true);byId('wifiSsid').value='';byId('wifiPass').value='';loadSettings();})
+      .then(function(){showToast('Home WiFi saved — joining…',true);byId('wifiSsid').value='';byId('wifiPass').value='';loadSettings();})
       .catch(function(){showToast('Save failed',false);});
   });
+
+  var rf=byId('restoreFile');
+  if(rf){rf.addEventListener('change',function(){
+    var f=this.files[0];if(!f)return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      fetch('/api/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:reader.result})
+      .then(function(r){return r.json();})
+      .then(function(r){if(r.ok){showToast('Config restored ('+r.applied+' sections) — reboot to apply pins/wifi',true);loadSettings();loadPins();}else showToast('Restore failed',false);})
+      .catch(function(){showToast('Restore failed',false);});
+    };
+    reader.readAsText(f);this.value='';
+  });}
 }
 
 function initPinmap(){

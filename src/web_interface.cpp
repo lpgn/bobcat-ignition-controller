@@ -211,6 +211,7 @@ static void handleGetSettings(AsyncWebServerRequest* request) {
   engine["glow"] = s.glowPlugDuration / 1000;
   engine["crank"] = s.crankingTimeout / 1000;
   engine["cooldown"] = s.cooldownDuration / 1000;
+  engine["glowAssist"] = s.glowAssistDuration / 1000;
 
   JsonObject th = doc.createNestedObject("thresholds");
   th["maxTemp"] = s.maxCoolantTemp;
@@ -278,6 +279,8 @@ static void onSettingsBody(AsyncWebServerRequest* request, uint8_t* data, size_t
   } else if (keyIs("cooldown", "cooldownDuration")) {
     ok = g_settingsManager.updateEngineSettings(c.glowPlugDuration, c.crankingTimeout,
                                                 (uint32_t)(v.as<uint32_t>() * 1000));
+  } else if (keyIs("glowAssist", nullptr)) {
+    ok = g_settingsManager.setGlowAssist((uint32_t)(v.as<uint32_t>() * 1000));
   } else if (keyIs("maxTemp", nullptr)) {
     ok = g_settingsManager.updateAlarmThresholds(v.as<int16_t>(), c.minOilPressure,
                                                  c.minBatteryVoltage, c.maxBatteryVoltage);
@@ -461,6 +464,122 @@ static void handleRawSensors(AsyncWebServerRequest* request) {
   request->send(200, "application/json", out);
 }
 
+// ---------------------------------------------------------------------------
+// GET /api/backup  and  POST /api/restore  (full config download / upload)
+// ---------------------------------------------------------------------------
+static void handleBackup(AsyncWebServerRequest* request) {
+  const BobcatSettings& s = g_settingsManager.getSettings();
+  DynamicJsonDocument doc(3072);
+  doc["version"] = SETTINGS_VERSION;
+  JsonObject eng = doc.createNestedObject("engine");
+  eng["glow"] = s.glowPlugDuration / 1000;
+  eng["crank"] = s.crankingTimeout / 1000;
+  eng["cooldown"] = s.cooldownDuration / 1000;
+  eng["glowAssist"] = s.glowAssistDuration / 1000;
+  JsonObject th = doc.createNestedObject("thresholds");
+  th["maxTemp"] = s.maxCoolantTemp;
+  th["minOil"] = s.minOilPressure;
+  th["minHyd"] = s.minHydPressure;
+  th["minV"] = s.minBatteryVoltage;
+  th["maxV"] = s.maxBatteryVoltage;
+  JsonObject cal = doc.createNestedObject("cal");
+  cal["tempScale"] = s.tempSensorScale;
+  cal["oilScale"] = s.oilPressureScale;
+  cal["hydScale"] = s.hydPressureScale;
+  cal["batteryDivider"] = s.batteryDivider;
+  cal["fuelEmpty"] = s.fuelLevelEmpty;
+  cal["fuelFull"] = s.fuelLevelFull;
+  cal["fuelLow"] = s.fuelLevelLowThreshold;
+  JsonObject mq = doc.createNestedObject("mqtt");
+  mq["enabled"] = (bool)s.mqttEnabled;
+  mq["host"] = s.mqttHost;
+  mq["port"] = s.mqttPort;
+  mq["topic"] = s.mqttTopic;
+  JsonObject tm = doc.createNestedObject("time");
+  tm["ntp"] = (bool)s.ntpEnabled;
+  tm["utcOffset"] = s.utcOffset;
+  JsonObject wf = doc.createNestedObject("wifi");
+  wf["ssid"] = s.wifiSSID;
+  wf["ap"] = s.apSSID;
+  JsonArray pins = doc.createNestedArray("pins");
+  for (int i = 0; i < PIN_FUNC_COUNT; i++) {
+    JsonObject p = pins.createNestedObject();
+    p["func"] = PIN_TABLE[i].func;
+    p["gpio"] = g_settingsManager.getPinGpio(i);
+  }
+  AsyncResponseStream* resp = request->beginResponseStream("application/json");
+  resp->addHeader("Content-Disposition", "attachment; filename=\"bobcat743-config.json\"");
+  serializeJson(doc, *resp);
+  request->send(resp);
+}
+
+static void onRestoreBody(AsyncWebServerRequest* request, uint8_t* data, size_t len,
+                          size_t index, size_t total) {
+  DynamicJsonDocument doc(3072);
+  if (deserializeJson(doc, data, len)) { sendErr(request, 400, "invalid JSON"); return; }
+  const BobcatSettings& c = g_settingsManager.getSettings();
+  int applied = 0;
+
+  JsonObject eng = doc["engine"];
+  if (!eng.isNull()) {
+    g_settingsManager.updateEngineSettings((uint32_t)eng["glow"] * 1000,
+                                           (uint32_t)eng["crank"] * 1000,
+                                           (uint32_t)eng["cooldown"] * 1000);
+    if (eng.containsKey("glowAssist"))
+      g_settingsManager.setGlowAssist((uint32_t)eng["glowAssist"] * 1000);
+    applied++;
+  }
+  JsonObject th = doc["thresholds"];
+  if (!th.isNull()) {
+    g_settingsManager.updateAlarmThresholds((int16_t)th["maxTemp"], (int16_t)th["minOil"],
+                                            (float)th["minV"], (float)th["maxV"]);
+    g_settingsManager.updateHydraulicThreshold((int16_t)th["minHyd"]);
+    applied++;
+  }
+  JsonObject cal = doc["cal"];
+  if (!cal.isNull()) {
+    g_settingsManager.updateCalibration((float)cal["tempScale"], (float)cal["oilScale"],
+                                        (float)cal["hydScale"], (float)cal["batteryDivider"],
+                                        (uint16_t)cal["fuelEmpty"], (uint16_t)cal["fuelFull"],
+                                        (uint8_t)cal["fuelLow"]);
+    applied++;
+  }
+  JsonObject mq = doc["mqtt"];
+  if (!mq.isNull()) {
+    g_settingsManager.updateMqtt(mq["enabled"] ? 1 : 0, mq["host"] | "",
+                                 (uint16_t)(mq["port"] | 1883), mq["topic"] | "");
+    applied++;
+  }
+  JsonObject tm = doc["time"];
+  if (!tm.isNull()) {
+    g_settingsManager.updateTime(tm["ntp"] ? 1 : 0, (int32_t)(tm["utcOffset"] | 0));
+    applied++;
+  }
+  JsonObject wf = doc["wifi"];
+  if (!wf.isNull()) {
+    if (wf.containsKey("ap"))   g_settingsManager.updateApSettings(wf["ap"].as<const char*>(), c.apPassword);
+    if (wf.containsKey("ssid")) g_settingsManager.updateWifiSettings(wf["ssid"].as<const char*>(), c.wifiPassword);
+    applied++;
+  }
+  JsonArray pins = doc["pins"];
+  if (!pins.isNull()) {
+    for (JsonObject p : pins) {
+      int idx = pinFuncIndex(p["func"] | "");
+      if (idx >= 0) { String e; g_settingsManager.updatePinMap(idx, (uint8_t)(int)p["gpio"], e); }
+    }
+    applied++;
+  }
+
+  g_systemState.configDirty = true;
+  g_systemState.reloadCalibration = true;
+  StaticJsonDocument<96> r;
+  r["ok"] = true;
+  r["applied"] = applied;
+  String out;
+  serializeJson(r, out);
+  request->send(200, "application/json", out);
+}
+
 // Serve a LittleFS file with no-store so UI updates always take effect (no stale cache).
 static void sendStatic(AsyncWebServerRequest* r, const char* path, const char* type) {
   AsyncWebServerResponse* resp = r->beginResponse(LittleFS, path, type);
@@ -525,6 +644,8 @@ void setupWebServer() {
   server.on("/api/control", HTTP_POST, [](AsyncWebServerRequest* r){}, NULL, onControlBody);
   server.on("/api/settings", HTTP_GET, handleGetSettings);
   server.on("/api/settings", HTTP_POST, [](AsyncWebServerRequest* r){}, NULL, onSettingsBody);
+  server.on("/api/backup", HTTP_GET, handleBackup);
+  server.on("/api/restore", HTTP_POST, [](AsyncWebServerRequest* r){}, NULL, onRestoreBody);
   server.on("/api/pins", HTTP_GET, handleGetPins);
   server.on("/api/pins", HTTP_POST, [](AsyncWebServerRequest* r){}, NULL, onPinsBody);
 
