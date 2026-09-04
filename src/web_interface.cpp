@@ -623,6 +623,10 @@ void setupWebServer() {
   const BobcatSettings& s = g_settingsManager.getSettings();
 
   WiFi.mode(WIFI_AP_STA);
+  // Modem sleep makes the async server stall for seconds when a browser opens several
+  // connections at once (page looked frozen on the phone). Stay awake, full power.
+  WiFi.setSleep(false);
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
   // Station: only if an SSID is configured (no hard-coded credentials).
   if (strlen(s.wifiSSID) > 0) {
