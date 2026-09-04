@@ -90,6 +90,19 @@ void loop() {
       g_otaInitialized = false;                  // re-arm ArduinoOTA on new IP
     }
   }
+  // Station keep-alive: if credentials exist and we are not associated, retry every 30 s.
+  // Boot only tries for 10 s; without this a reset with the AP momentarily out of reach
+  // left the board on its own AP forever.
+  {
+    static unsigned long lastStaTry = 0;
+    const BobcatSettings& ws = g_settingsManager.getSettings();
+    if (strlen(ws.wifiSSID) > 0 && WiFi.status() != WL_CONNECTED && now - lastStaTry > 30000UL) {
+      lastStaTry = now;
+      Serial.printf("WiFi station retry '%s'\n", ws.wifiSSID);
+      WiFi.begin(ws.wifiSSID, ws.wifiPassword);
+      g_otaInitialized = false;
+    }
+  }
   if (g_systemState.overrideRequested) {
     g_systemState.overrideRequested = false;
     overrideStart();   // enforces interlocks + battery internally

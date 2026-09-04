@@ -80,3 +80,6 @@ dist/
 
 # large vendor service manual (local reference, not backed to git)
 docs/*.pdf
+
+# generated from www/ by tools/build_www.py
+data/

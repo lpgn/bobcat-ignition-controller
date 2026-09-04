@@ -252,7 +252,10 @@ void initializeSleepMode() {
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0); // wake on BOOT button LOW
 
   g_systemState.lastActivityTime = millis();
-  g_systemState.sleepModeEnabled = true;
+  // Auto deep-sleep disabled: this board has no GPIO0 button, so the only wake path is the
+  // reset button or a power cycle, which is useless on the machine. Re-enable once a real
+  // wake input (seat bar / key switch via ext1) exists. See review finding C11.
+  g_systemState.sleepModeEnabled = false;
   g_systemState.wakeUpPending = false;
   g_systemState.sleepTimer = millis();
   Serial.println("Deep sleep initialized - wake on GPIO0");

@@ -8,6 +8,8 @@ platformio run
 
 ## Build filesystem
 
+Web sources live in `www/`. `tools/build_www.py` (PlatformIO extra script) regenerates `data/` on every build: text assets gzipped, binaries copied. Never edit `data/` by hand; it is git-ignored.
+
 ```powershell
 platformio run --target buildfs
 ```

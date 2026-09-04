@@ -131,7 +131,8 @@ function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add
 function vib(p) { if (navigator.vibrate) navigator.vibrate(p); }
 
 /* ---------- dial geometry ---------- */
-const CX = 136, CY = 136, R = 112;
+const CX = 136, CY = 136, R = 120, RG = 104, NSEG = 12;
+const ARCS = { temp: { a0: 102, a1: 206 }, oil: { a0: 216, a1: 318 } };   // free span between START (90°) and OFF (330°)
 const pol = (r, a) => { const t = a * Math.PI / 180; return [CX + r * Math.sin(t), CY - r * Math.cos(t)]; };
 function arcPath(r, a0, a1) { const [x0, y0] = pol(r, a0), [x1, y1] = pol(r, a1); return `M ${x0} ${y0} A ${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}`; }
 function buildDial() {
@@ -145,6 +146,17 @@ function buildDial() {
     const [lx, ly] = pol(anchor === 'middle' ? R + 22 : R + 14, a);
     const t = document.createElementNS(NS, 'text'); t.setAttribute('x', lx); t.setAttribute('y', ly); t.setAttribute('class', 'lbl'); t.setAttribute('text-anchor', anchor);
     t.textContent = k.toUpperCase(); t.dataset.k = k; labels.appendChild(t);
+  }
+  document.querySelector('#dial .ring').setAttribute('r', R);
+  // segmented gauge arcs (engine temperature along the bottom, oil pressure up the left side)
+  const segs = $('segs');
+  for (const k of Object.keys(ARCS)) {
+    const { a0, a1 } = ARCS[k], gap = 2, step = (a1 - a0 - gap * (NSEG - 1)) / NSEG;
+    for (let i = 0; i < NSEG; i++) {
+      const s0 = a0 + i * (step + gap), s1 = s0 + step;
+      const pth = document.createElementNS(NS, 'path'); pth.setAttribute('d', arcPath(RG, s0, s1)); pth.setAttribute('class', 'seg');
+      pth.dataset.k = k; pth.dataset.i = i; segs.appendChild(pth);
+    }
   }
   const glow = $('glowarc'); glow.setAttribute('d', arcPath(R, POS.glow.a, POS.start.a));
   const len = R * (POS.start.a - POS.glow.a) * Math.PI / 180;
@@ -164,11 +176,27 @@ function paintDial(st, uiState) {
   const frac = heating ? 1 - Math.min(st.glow.countdown, total) / total : 0;
   g.style.strokeDashoffset = len * (1 - frac);
   $('dial').classList.toggle('running', st.seq === 4);
+  paintArcs(st);
   const u = $('under'); u.className = 'under';
   if (st.seq === 4) { u.textContent = st.state === 'RUNNING' ? 'Running' : st.state === 'LOW_OIL' ? 'Running · low oil' : 'Running · hot'; u.classList.add('run'); }
   else if (cranking) { u.textContent = 'Cranking'; u.classList.add('crank'); }
   else if (heating) { u.textContent = st.glow.countdown > 0 ? (st.seq === 3 ? `Hold · preheating ${st.glow.countdown} s` : `Preheating ${st.glow.countdown} s`) : (st.seq === 3 ? 'Preheated · cranking next' : 'Preheated'); u.classList.add('heat'); }
   else u.textContent = '';
+}
+
+function paintArcs(st) {
+  const on = st.seq > 0, ok = plausible(st), running = st.seq === 4;
+  const t = st.engineTemp, o = st.oil;
+  const tf = on && ok.temp ? (t.v - t.min) / (t.max - t.min) : 0;
+  const of = on && running ? o.v / o.max : 0;                         // oil only means something with the engine turning
+  const lit = { temp: Math.round(Math.max(0, Math.min(1, tf)) * NSEG), oil: Math.round(Math.max(0, Math.min(1, of)) * NSEG) };
+  document.querySelectorAll('#segs .seg').forEach(p => {
+    const k = p.dataset.k, i = +p.dataset.i, mid = (i + 0.5) / NSEG;
+    let z;
+    if (k === 'temp') { const v = t.min + mid * (t.max - t.min); z = v >= t.crit ? 'clay' : v >= t.warn ? 'sun' : 'leaf'; }
+    else { const v = mid * o.max; z = v < o.min ? 'clay' : v < o.min + 10 ? 'sun' : 'leaf'; }
+    p.setAttribute('class', 'seg ' + (i < lit[k] ? z : (z === 'clay' ? 'dimred' : '')));
+  });
 }
 
 /* ---------- drag key ---------- */

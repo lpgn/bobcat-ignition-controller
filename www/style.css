@@ -42,18 +42,18 @@ button{font:inherit;color:inherit}
 .dial .tick.on{stroke:var(--ink)}
 .dial .lbl{font-size:13px;font-weight:700;letter-spacing:.12em;fill:var(--muted);dominant-baseline:middle}
 .dial .lbl.on{fill:var(--ink)} .dial .lbl.heat{fill:var(--sun)} .dial .lbl.crank{fill:var(--clay)}
-.dial .face{position:absolute;inset:26px;border-radius:50%;background:var(--cell);border:1px solid var(--line);
+.dial .face{position:absolute;inset:52px;border-radius:50%;background:var(--cell);border:1px solid var(--line);
   box-shadow:inset 0 2px 10px rgba(0,0,0,.45)}
 [data-theme="day"] .dial .face{box-shadow:inset 0 2px 8px rgba(0,0,0,.12)}
-.key{position:absolute;top:50%;left:50%;width:118px;height:118px;margin:-59px 0 0 -59px;border-radius:50%;cursor:grab;
+.key{position:absolute;top:50%;left:50%;width:96px;height:96px;margin:-48px 0 0 -48px;border-radius:50%;cursor:grab;
   background:radial-gradient(circle at 50% 42%,#3a433a 0%,#222a22 60%,#1a201a 100%);border:1px solid #3a443a;
   box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08);transform:rotate(-30deg);transition:none}
 [data-theme="day"] .key{background:radial-gradient(circle at 50% 42%,#d9dcd2 0%,#b9beb1 60%,#a5aa9c 100%);border-color:#9aa092}
 .key.transitioning{transition:transform .2s ease-out}
-.key::after{content:"";position:absolute;left:50%;top:10px;width:14px;height:98px;margin-left:-7px;border-radius:7px;
+.key::after{content:"";position:absolute;left:50%;top:8px;width:12px;height:80px;margin-left:-6px;border-radius:6px;
   background:linear-gradient(90deg,#5a635a,#8a948a 45%,#5a635a);box-shadow:0 1px 3px rgba(0,0,0,.6)}
 [data-theme="day"] .key::after{background:linear-gradient(90deg,#6b726b,#4a504a 45%,#6b726b)}
-.dial .under{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);font-size:.8rem;color:var(--muted);white-space:nowrap}
+.dial .under{position:absolute;left:50%;top:58px;transform:translateX(-50%);font-size:.76rem;color:var(--muted);white-space:nowrap}
 .dial .under.heat{color:var(--sun)} .dial .under.run{color:var(--leaf);font-weight:600} .dial .under.crank{color:var(--clay);font-weight:600}
 @media(prefers-reduced-motion:reduce){.dial .glowarc{transition:none}}
 
@@ -156,3 +156,13 @@ html,body,.actionbar,.bar-btn,.bar-btn *,.dial,.dial *{-webkit-user-select:none;
 .msg{height:34px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:.95rem;font-weight:600;color:var(--muted);margin:0 0 4px;padding:0 6px;white-space:nowrap;overflow:hidden}
 .msg span{overflow:hidden;text-overflow:ellipsis}
 .msg.red{color:var(--clay)} .msg.amber{color:var(--sun)} .msg.green{color:var(--leaf)} .msg.tap{cursor:pointer}
+
+/* segmented gauge arcs around the key (engine temperature bottom, oil pressure left) */
+.dial .seg{fill:none;stroke:var(--line);stroke-width:9;stroke-linecap:butt;transition:stroke .5s}
+.dial .seg.leaf{stroke:var(--leaf)} .dial .seg.sun{stroke:var(--sun)} .dial .seg.clay{stroke:var(--clay)}
+.dial .seg.dimred{stroke:rgba(224,120,86,.28)}
+[data-theme="day"] .dial .seg.dimred{stroke:rgba(178,63,26,.25)}
+.dial .cap{font-size:9.5px;letter-spacing:.08em;fill:var(--muted);dominant-baseline:middle}
+@media(prefers-reduced-motion:reduce){.dial .seg{transition:none}}
+.dial .capx{position:absolute;font-size:.62rem;letter-spacing:.08em;color:var(--muted);transform:translate(-50%,-50%);pointer-events:none}
+.dial .capx.oil{left:78px;top:178px} .dial .capx.temp{left:194px;top:178px}
