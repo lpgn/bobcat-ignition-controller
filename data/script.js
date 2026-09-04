@@ -160,7 +160,7 @@ function paintDial(st, uiState) {
   const u = $('under'); u.className = 'under';
   if (st.seq === 4) { u.textContent = st.state === 'RUNNING' ? 'Running' : st.state === 'LOW_OIL' ? 'Running · low oil' : 'Running · hot'; u.classList.add('run'); }
   else if (cranking) { u.textContent = 'Cranking'; u.classList.add('crank'); }
-  else if (heating) { u.textContent = st.glow.countdown > 0 ? `Preheating ${st.glow.countdown} s` : 'Preheated'; u.classList.add('heat'); }
+  else if (heating) { u.textContent = st.glow.countdown > 0 ? (st.seq === 3 ? `Hold · preheating ${st.glow.countdown} s` : `Preheating ${st.glow.countdown} s`) : (st.seq === 3 ? 'Preheated · cranking next' : 'Preheated'); u.classList.add('heat'); }
   else u.textContent = '';
 }
 
@@ -206,13 +206,14 @@ class Key {
     this.angle = POS[best].a; this.state = best;
     this.el.classList.add('transitioning'); this.paint();
     if (changed) this.send(best);
-    if (best === 'start') setTimeout(() => this.spring(), 300);
+    if (best === 'start') setTimeout(() => this.spring(), 250);
     else setTimeout(() => { this.el.classList.remove('transitioning'); this.busy = false; }, 200);
   }
   spring() {
-    this.angle = POS.on.a; this.state = 'on'; this.paint();
+    this.el.classList.remove('transitioning'); this.el.classList.add('spring');
+    this.angle = POS.on.a; this.state = 'on'; this.paint(); vib(20);
     this.stopHb(); Backend.control({ action: 'crank', held: false });
-    setTimeout(() => { this.el.classList.remove('transitioning'); this.busy = false; }, 200);
+    setTimeout(() => { this.el.classList.remove('spring'); this.busy = false; }, 420);
   }
   paint() { this.el.style.transform = `rotate(${this.angle}deg)`; this.el.setAttribute('aria-valuenow', POS[this.state].n); }
   send(s) {
@@ -255,15 +256,21 @@ function cell(id, val, unit, frac, z, tick, muted) {
   const i = c.querySelector('.bar i'); i.style.width = `${Math.max(0, Math.min(1, frac)) * 100}%`; i.className = z || (muted ? 'sage' : '');
   const em = c.querySelector('.bar em'); if (tick == null) em.style.display = 'none'; else { em.style.display = ''; em.style.left = `${tick * 100}%`; }
 }
+function plausible(st) {                       // floating ADC pins read nonsense; say so instead of alarming
+  return { temp: st.engineTemp.v > -20 && st.engineTemp.v < 130, batt: st.battery.v > 6 };
+}
 function renderPrime(st) {
-  const b = st.battery, o = st.oil, t = st.engineTemp, f = st.fuel, running = st.seq === 4;
-  cell('cBat', b.v.toFixed(1), 'V', (b.v - 9) / (15.5 - 9), b.v > b.max ? 'warn' : zone(b.v, b.min + 0.5, b.min, 'low'), (b.min - 9) / (15.5 - 9), false);
+  const b = st.battery, o = st.oil, t = st.engineTemp, f = st.fuel, running = st.seq === 4, ok = plausible(st);
+  if (ok.batt) cell('cBat', b.v.toFixed(1), 'V', (b.v - 9) / (15.5 - 9), b.v > b.max ? 'warn' : zone(b.v, b.min + 0.5, b.min, 'low'), (b.min - 9) / (15.5 - 9), false);
+  else cell('cBat', '--', ' no sensor', 0, '', null, true);
   cell('cOil', Math.round(o.v), 'psi', o.v / o.max, running ? zone(o.v, o.min + 5, o.min, 'low') : '', o.min / o.max, !running);
-  cell('cTemp', Math.round(t.v), '°C', (t.v - t.min) / (t.max - t.min), zone(t.v, t.warn, t.crit, 'high'), (t.warn - t.min) / (t.max - t.min), false);
+  if (ok.temp) cell('cTemp', Math.round(t.v), '°C', (t.v - t.min) / (t.max - t.min), zone(t.v, t.warn, t.crit, 'high'), (t.warn - t.min) / (t.max - t.min), false);
+  else cell('cTemp', '--', ' no sensor', 0, '', null, true);
   cell('cFuel', Math.round(f.v), '%', f.v / 100, zone(f.v, f.low * 2, f.low, 'low'), f.low / 100, false);
 }
 function renderLamps(st) {
-  const on = { oil: st.faults.oil, temp: st.faults.temp, battery: st.faults.battery, fuel: st.faults.fuel, charging: st.battery && st.battery.v > 13.0, running: st.seq === 4 };
+  const ok = plausible(st);
+  const on = { oil: st.faults.oil, temp: ok.temp && st.faults.temp, battery: ok.batt && st.faults.battery, fuel: st.faults.fuel, charging: ok.batt && st.battery.v > 13.0, running: st.seq === 4 };
   document.querySelectorAll('.lamp').forEach(l => l.classList.toggle('on', !!on[l.dataset.k]));
 }
 function renderStatus(st) {
@@ -287,9 +294,10 @@ function renderAlert(st) {
   else if (st.maintenance) { txt = `Override armed · interlocks bypassed${ovLeft ? ' · ' + ovLeft + ' s' : ''} · tap to disarm`; cls = ''; }
   else if (st.seq === 3 && st.crankBlock) { txt = 'Starter blocked · seat bar or neutral · hold Override'; cls = 'clay'; }
   else if (st.seq === 0) { txt = ''; }                                   // key off: sensor badges are noise, lamps still show
-  else if (st.faults.temp) { txt = `Engine too hot · ${Math.round(st.engineTemp.v)} °C`; cls = 'clay'; }
+  else if (st.seq === 3 && !(st.outputs && st.outputs.starter) && st.glow && st.glow.countdown > 0) { txt = `Keep holding · preheating ${st.glow.countdown} s, then it cranks`; cls = ''; }
+  else if (plausible(st).temp && st.faults.temp) { txt = `Engine too hot · ${Math.round(st.engineTemp.v)} °C`; cls = 'clay'; }
   else if (st.faults.oil) { txt = `Oil pressure low · ${Math.round(st.oil.v)} psi`; cls = 'clay'; }
-  else if (st.faults.battery && !(st.outputs && st.outputs.starter)) { txt = `Battery low · ${st.battery.v.toFixed(1)} V`; cls = ''; }
+  else if (plausible(st).batt && st.faults.battery && !(st.outputs && st.outputs.starter)) { txt = `Battery low · ${st.battery.v.toFixed(1)} V · starter needs Override`; cls = ''; }
   else if (st.faults.fuel) { txt = `Fuel low · ${Math.round(st.fuel.v)} %`; cls = ''; }
   a.textContent = txt; a.className = 'alert' + (txt ? ' show' : '') + (cls ? ' ' + cls : '');
 }
@@ -388,7 +396,7 @@ function render(st) {
 
 /* ---------- override ---------- */
 let ovStart = 0, ovRaf = null;
-function ovDown(e) { e.preventDefault(); if (ovArmed) { disarm(); return; } ovStart = performance.now(); ovRaf = requestAnimationFrame(ovStep); }
+function ovDown(e) { e.preventDefault(); try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {} if (ovArmed) { disarm(); return; } ovStart = performance.now(); ovRaf = requestAnimationFrame(ovStep); }
 function ovStep() { const p = Math.min((performance.now() - ovStart) / OV_HOLD_MS, 1); $('btnOv').style.setProperty('--p', p); if (p >= 1) { arm(); return; } ovRaf = requestAnimationFrame(ovStep); }
 function ovUp() { if (ovRaf) cancelAnimationFrame(ovRaf); ovRaf = null; $('btnOv').style.setProperty('--p', 0); }
 function arm() { ovUp(); Backend.control({ action: 'maintenance', enabled: true }); armUi(); vib([30, 40, 30]); }
@@ -423,7 +431,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   key = new Key($('key'));
   $('btnStop').addEventListener('click', () => { key.stopHb(); Backend.control({ action: 'stop' }); vib(50); });
   $('btnLights').addEventListener('click', () => Backend.control({ action: 'lights' }));
-  const ov = $('btnOv'); ov.addEventListener('pointerdown', ovDown); ov.addEventListener('pointerup', ovUp); ov.addEventListener('pointercancel', ovUp); ov.addEventListener('pointerleave', ovUp);
+  const ov = $('btnOv'); ov.addEventListener('pointerdown', ovDown); ov.addEventListener('pointerup', ovUp); ov.addEventListener('pointercancel', ovUp); ov.addEventListener('contextmenu', e => e.preventDefault());
+  $('dial').addEventListener('contextmenu', e => e.preventDefault());
   $('alert').addEventListener('click', () => { if (lastStatus && lastStatus.maintenance) disarm(); });
   $('modeSimple').addEventListener('click', () => setMode(false)); $('modeAdv').addEventListener('click', () => setMode(true));
   $('btnTheme').addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'day' ? 'night' : 'day'));

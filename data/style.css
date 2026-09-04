@@ -55,7 +55,7 @@ button{font:inherit;color:inherit}
 [data-theme="day"] .key::after{background:linear-gradient(90deg,#6b726b,#4a504a 45%,#6b726b)}
 .dial .under{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);font-size:.8rem;color:var(--muted);white-space:nowrap}
 .dial .under.heat{color:var(--sun)} .dial .under.run{color:var(--leaf);font-weight:600} .dial .under.crank{color:var(--clay);font-weight:600}
-@media(prefers-reduced-motion:reduce){.key.transitioning{transition:none}.dial .glowarc{transition:none}}
+@media(prefers-reduced-motion:reduce){.dial .glowarc{transition:none}}
 
 /* cells */
 .cells{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
@@ -136,3 +136,8 @@ button{font:inherit;color:inherit}
 .toast.show{opacity:1}
 
 .bar-btn.stop small{color:rgba(0,0,0,.55)}
+/* spring-back from START: a visible, physical return. Kept short under reduced motion, never removed. */
+.key.spring{transition:transform .38s cubic-bezier(.3,1.65,.5,1)}
+.dial,.bar-btn{-webkit-touch-callout:none}
+@media(prefers-reduced-motion:reduce){.key.transitioning{transition:transform .12s linear}.key.spring{transition:transform .16s ease-out}}
+.cell.stale .v small{color:var(--stale)}
