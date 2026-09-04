@@ -1,63 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101410">
 <title>Bobcat 743</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="phone">
-  <div class="maint-banner" id="maintBanner" style="display:none">⚠ MAINTENANCE — interlocks bypassed · tap to exit</div>
-  <div class="top">
-    <div class="brand"><b>Bobcat&nbsp;743</b><small>Kubota V1702</small></div>
-    <div class="state" id="state"><span class="dot"></span><span id="stateLabel">Off</span></div>
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><img src="logo.png" alt="Bobcat"><b>743</b></div>
+    <div class="status" id="status">Off</div>
+    <div class="mode" role="group" aria-label="Detail level">
+      <button id="modeSimple" class="on">Simple</button><button id="modeAdv">Advanced</button>
+    </div>
+  </header>
+
+  <div class="alert" id="alert"></div>
+
+  <div class="dial" id="dial">
+    <svg viewBox="0 0 272 272" aria-hidden="true">
+      <circle class="ring" cx="136" cy="136" r="124"></circle>
+      <path class="runarc" id="runarc"></path>
+      <path class="glowarc" id="glowarc"></path>
+      <g id="ticks"></g>
+      <g id="labels"></g>
+    </svg>
+    <div class="face"></div>
+    <div class="key" id="key" role="slider" aria-label="Ignition key" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" tabindex="0"></div>
+    <div class="under" id="under"></div>
   </div>
 
-  <div class="strip" id="strip">
-    <div class="s"><span class="sk"><i id="wifiDot"></i>WiFi</span><span class="sv" id="wifiInfo">--</span></div>
-    <div class="s"><span class="sk"><i id="apDot"></i>AP</span><span class="sv" id="apInfo">--</span></div>
-    <div class="s"><span class="sk"><i id="mqttDot"></i>MQTT</span><span class="sv" id="mqttInfo">--</span></div>
-    <div class="s"><span class="sk"><i id="clockDot"></i>Clock</span><span class="sv" id="clockInfo">--</span></div>
+  <div class="cells" id="prime">
+    <div class="cell" id="cBat"><div class="k">Battery</div><div class="v">--<small>V</small></div><div class="bar"><i></i><em></em></div></div>
+    <div class="cell" id="cOil"><div class="k">Oil</div><div class="v">--<small>psi</small></div><div class="bar"><i></i><em></em></div></div>
+    <div class="cell" id="cTemp"><div class="k">Engine</div><div class="v">--<small>°C</small></div><div class="bar"><i></i><em></em></div></div>
+    <div class="cell" id="cFuel"><div class="k">Fuel</div><div class="v">--<small>%</small></div><div class="bar"><i></i><em></em></div></div>
   </div>
 
-  <div class="seq" id="seq">
-    <span class="step" data-idx="0">Off</span><span class="sep"></span>
-    <span class="step" data-idx="1">On</span><span class="sep"></span>
-    <span class="step" data-idx="2">Glow</span><span class="sep"></span>
-    <span class="step" data-idx="3">Start</span><span class="sep"></span>
-    <span class="step" data-idx="4">Run</span>
+  <div class="lamps" id="lamps">
+    <div class="lamp clay" data-k="oil"><i></i>Low oil</div>
+    <div class="lamp clay" data-k="temp"><i></i>Hot</div>
+    <div class="lamp sun" data-k="battery"><i></i>Battery</div>
+    <div class="lamp leaf" data-k="charging"><i></i>Charging</div>
+    <div class="lamp leaf" data-k="running"><i></i>Running</div>
+    <div class="lamp sun" data-k="fuel"><i></i>Low fuel</div>
   </div>
 
-  <div class="hero" id="hero"></div>
-  <div class="vitals" id="vitals"></div>
+  <div class="adv">
+    <div class="section">Hydraulics</div>
+    <div class="wide" id="hyd">
+      <div class="row"><span class="k">Hydraulic pressure</span><span class="k" id="hydRange">min 800 · max 3000 psi</span></div>
+      <div class="big" id="hydV">--<small>psi</small></div>
+      <div class="sweep" id="hydSweep"></div>
+      <div class="sweep-scale"><span>0</span><span id="hydMin">800</span><span id="hydMax">3000</span></div>
+    </div>
 
-  <div class="row-h">Outputs</div>
-  <div class="cells" id="outputs">
-    <div class="cell" data-key="power"><div class="ch"><span class="cl">Power</span><span class="cd"></span></div><div class="cs">OFF</div></div>
-    <div class="cell" data-key="glow"><div class="ch"><span class="cl">Glow</span><span class="cd"></span></div><div class="cs">OFF</div></div>
-    <div class="cell" data-key="starter"><div class="ch"><span class="cl">Starter</span><span class="cd"></span></div><div class="cs">OFF</div></div>
-    <div class="cell" data-key="lights"><div class="ch"><span class="cl">Lights</span><span class="cd"></span></div><div class="cs">OFF</div></div>
+    <div class="section">Engine</div>
+    <div class="gauges" id="gauges"></div>
+
+    <div class="section">Outputs</div>
+    <div class="outs" id="outs">
+      <div class="out" data-k="power"><div class="k">Main power</div><div class="s"><i></i>Off</div></div>
+      <div class="out sun" data-k="glow"><div class="k">Glow plugs</div><div class="s"><i></i>Off</div></div>
+      <div class="out clay" data-k="starter"><div class="k">Starter</div><div class="s"><i></i>Off</div></div>
+      <div class="out" data-k="lights"><div class="k">Work lights</div><div class="s"><i></i>Off</div></div>
+    </div>
+
+    <div class="section">Connection</div>
+    <div class="wide"><div class="kv" id="netKv"></div></div>
+
+    <div class="section">Session</div>
+    <div class="wide"><div class="kv" id="sesKv"></div>
+      <div class="actions">
+        <button class="ghost" id="btnTheme">Day theme</button>
+        <a class="ghost" href="settings.html">Settings</a>
+        <a class="ghost" href="/update">Firmware update</a>
+      </div>
+    </div>
+
+    <div class="section">Raw sensors, for calibration</div>
+    <div class="wide"><div class="kv" id="rawKv"></div></div>
   </div>
 
-  <div class="row-h">Fault lamps</div>
-  <div class="cells" id="faults">
-    <div class="cell" data-key="oil"><div class="ch"><span class="cl">Oil</span><span class="cd"></span></div><div class="cs">OK</div></div>
-    <div class="cell" data-key="temp"><div class="ch"><span class="cl">Temp</span><span class="cd"></span></div><div class="cs">OK</div></div>
-    <div class="cell" data-key="battery"><div class="ch"><span class="cl">Battery</span><span class="cd"></span></div><div class="cs">OK</div></div>
-    <div class="cell" data-key="fuel"><div class="ch"><span class="cl">Fuel</span><span class="cd"></span></div><div class="cs">OK</div></div>
-  </div>
-
-  <div class="row-h">Ignition</div>
-  <div class="ign" id="ign"></div>
-
-  <div class="controls">
-    <button class="btn light" id="btnLights">Lights</button>
-    <a href="settings.html" class="btn ghost">Config</a>
-    <button class="btn stop" id="btnStop"><span class="rr"></span>Emergency Stop</button>
-  </div>
-  <div class="cap" id="cap">Engine hours --</div>
+  <div class="foot" id="foot">--</div>
 </div>
+
+<div class="actionbar"><div class="in">
+  <button class="bar-btn stop" id="btnStop">STOP<small>starter and glow off</small></button>
+  <button class="bar-btn lights" id="btnLights">Lights<small>off</small></button>
+  <button class="bar-btn ov" id="btnOv">Override<small>hold 2 s</small></button>
+</div></div>
 <div class="toast" id="toast"></div>
 <script src="script.js"></script>
 </body>
