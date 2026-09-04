@@ -8,6 +8,18 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-oil" viewBox="0 0 24 24"><path d="M4 11h11v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M15 12l4-3h2.5"/><path d="M7 11V9a2 2 0 0 1 2-2h2.5"/><path d="M20.5 12.3c-.9 1.2-1.4 2-1.4 2.6a1.4 1.4 0 0 0 2.8 0c0-.6-.5-1.4-1.4-2.6z"/></symbol>
+  <symbol id="i-temp" viewBox="0 0 24 24"><path d="M12 3.5a2 2 0 0 1 2 2v7.6a3.6 3.6 0 1 1-4 0V5.5a2 2 0 0 1 2-2z"/><path d="M12 8v7"/><path d="M3 20.5c1.5-1.2 3-1.2 4.5 0s3 1.2 4.5 0 3-1.2 4.5 0 3 1.2 4.5 0"/></symbol>
+  <symbol id="i-batt" viewBox="0 0 24 24"><path d="M3.5 8.5h17v10h-17z"/><path d="M7.5 8.5V6h3.5v2.5M13 8.5V6h3.5v2.5"/><path d="M6.5 13.5h4M8.5 11.5v4M13.5 13.5h4"/></symbol>
+  <symbol id="i-fuel" viewBox="0 0 24 24"><path d="M4.5 20V5.5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1V20"/><path d="M3.5 20h11"/><path d="M6.5 7.5h6v4h-6z"/><path d="M13.5 10h2.5a2 2 0 0 1 2 2v4.5a1.5 1.5 0 0 0 3 0V9.5l-2.5-2.5"/></symbol>
+  <symbol id="i-glow" viewBox="0 0 24 24"><path d="M2 15q2.5-5.5 5 0t5 0t5 0t5 0"/><path d="M2 15h20" opacity=".35"/></symbol>
+  <symbol id="i-seat" viewBox="0 0 24 24"><circle cx="9" cy="5.5" r="2.2"/><path d="M9 8.5v5.5h6.5l1.5 6"/><path d="M5 21V10.5"/><path d="M5 14h4"/></symbol>
+  <symbol id="i-service" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17a1.6 1.6 0 0 0 2.3 2.3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-2.3-2.3z"/></symbol>
+  <symbol id="i-lights" viewBox="0 0 24 24"><path d="M9.5 6a6 6 0 0 0 0 12h1.5V6z"/><path d="M14.5 8.5h6M14.5 12h6M14.5 15.5h6"/></symbol>
+  <symbol id="i-hyd" viewBox="0 0 24 24"><path d="M3 8.5h10v7H3z"/><path d="M13 12h5.5M18.5 9.5v5"/><path d="M8 18.5c-.9 1.2-1.4 2-1.4 2.6a1.4 1.4 0 0 0 2.8 0c0-.6-.5-1.4-1.4-2.6z"/></symbol>
+  <symbol id="i-engine" viewBox="0 0 24 24"><path d="M7.5 7h6l1.2 2.5H18v3h2.5v6H18v1.5H9.5l-3-3v-3.5H4V9.5h3.5z"/><path d="M11 5v2M15 5v2"/></symbol>
+</svg>
 <div class="app" id="app">
   <header class="top">
     <div class="brand"><img src="logo.png" alt="Bobcat"><b>743</b></div>
@@ -17,7 +29,19 @@
     </div>
   </header>
 
-  <div class="alert" id="alert"></div>
+  <div class="tell" id="tell" aria-label="Warning lights">
+    <button class="tt" data-k="oil" aria-label="Oil pressure"><svg><use href="#i-oil"/></svg></button>
+    <button class="tt" data-k="temp" aria-label="Engine temperature"><svg><use href="#i-temp"/></svg></button>
+    <button class="tt" data-k="hyd" aria-label="Hydraulic pressure"><svg><use href="#i-hyd"/></svg></button>
+    <button class="tt" data-k="battery" aria-label="Battery"><svg><use href="#i-batt"/></svg></button>
+    <button class="tt" data-k="fuel" aria-label="Fuel"><svg><use href="#i-fuel"/></svg></button>
+    <button class="tt" data-k="glow" aria-label="Glow plugs"><svg><use href="#i-glow"/></svg></button>
+    <button class="tt" data-k="seat" aria-label="Starter interlock"><svg><use href="#i-seat"/></svg></button>
+    <button class="tt" data-k="service" aria-label="Override"><svg><use href="#i-service"/></svg></button>
+    <button class="tt" data-k="lights" aria-label="Work lights"><svg><use href="#i-lights"/></svg></button>
+    <button class="tt" data-k="engine" aria-label="Engine"><svg><use href="#i-engine"/></svg></button>
+  </div>
+  <div class="msg" id="msg"><span id="msgText"></span></div>
 
   <div class="dial" id="dial">
     <svg viewBox="0 0 272 272" aria-hidden="true">
@@ -39,14 +63,6 @@
     <div class="cell" id="cFuel"><div class="k">Fuel</div><div class="v">--<small>%</small></div><div class="bar"><i></i><em></em></div></div>
   </div>
 
-  <div class="lamps" id="lamps">
-    <div class="lamp clay" data-k="oil"><i></i>Low oil</div>
-    <div class="lamp clay" data-k="temp"><i></i>Hot</div>
-    <div class="lamp sun" data-k="battery"><i></i>Battery</div>
-    <div class="lamp leaf" data-k="charging"><i></i>Charging</div>
-    <div class="lamp leaf" data-k="running"><i></i>Running</div>
-    <div class="lamp sun" data-k="fuel"><i></i>Low fuel</div>
-  </div>
 
   <div class="adv">
     <div class="section">Hydraulics</div>
@@ -93,6 +109,6 @@
   <button class="bar-btn ov" id="btnOv">Override<small>hold 2 s</small></button>
 </div></div>
 <div class="toast" id="toast"></div>
-<script src="script.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

@@ -14,6 +14,13 @@ class Sim {
   constructor() {
     this.s = { kp: 0, held: false, hb: 0, running: false, maint: false, glow0: null, crank0: null, lights: false, runSince: null };
     this.temp = 24; this.hours = 12.3; this.t0 = Date.now();
+    const sc = (location.search.match(/scene=(\w+)/) || [])[1];          // demo scenes for screenshots
+    const now = Date.now() / 1000, s = this.s;
+    if (sc === 'run') { s.kp = 1; s.running = true; this.temp = 86; s.lights = true; }
+    else if (sc === 'preheat') { s.kp = 2; s.glow0 = now - 6; }
+    else if (sc === 'blocked') { s.kp = 3; s.held = true; s.hb = now + 1e9; s.glow0 = now - 25; }
+    else if (sc === 'fault') { s.kp = 1; s.running = true; this.temp = 109; this.lowBatt = true; }
+    else if (sc === 'override') { s.kp = 1; s.maint = true; }
   }
   now() { return Date.now() / 1000; }
   tick() {
@@ -40,7 +47,7 @@ class Sim {
     const cd = glowActive && s.glow0 ? Math.max(0, Math.round(20 - (now - s.glow0))) : 0;
     const cranking = s.kp === 3 && s.held && s.maint && s.crank0 != null && now - s.crank0 < 10;
     const wob = Math.sin(now * 1.3) * 0.05;
-    const batt = cranking ? 10.6 + wob : s.running ? 13.9 + wob : 12.55 + wob;
+    const batt = this.lowBatt ? 11.1 + wob : cranking ? 10.6 + wob : s.running ? 13.9 + wob : 12.55 + wob;
     const oil = s.running ? 34 + Math.sin(now) * 2 : 0;
     const hyd = s.running ? 1420 + Math.sin(now * 0.7) * 60 : 0;
     if (s.running) this.hours += POLL_MS / 3600000;
@@ -244,7 +251,7 @@ class Key {
 
 /* ---------- rendering ---------- */
 let lastStatus = null, blockReason = '', glowSeconds = 20, key = null, ovArmed = false, ovLeft = 0, ovTimer = null, linkLost = false;
-function emptyStatus() { return { seq: 0, state: 'OFF', glow: { active: false, countdown: 0 }, outputs: {}, faults: {}, net: {} }; }
+function emptyStatus() { return { seq: 0, state: 'OFF', glow: { active: false, countdown: 0 }, outputs: {}, faults: {}, net: {}, engineTemp: { v: 0 }, battery: { v: 12 }, hydraulic: { v: 0, min: 0 } }; }
 
 function zone(v, warn, crit, dir) {                  // dir: 'high' = bad when high, 'low' = bad when low
   if (dir === 'high') return v >= crit ? 'crit' : v >= warn ? 'warn' : '';
@@ -268,10 +275,22 @@ function renderPrime(st) {
   else cell('cTemp', '--', ' no sensor', 0, '', null, true);
   cell('cFuel', Math.round(f.v), '%', f.v / 100, zone(f.v, f.low * 2, f.low, 'low'), f.low / 100, false);
 }
-function renderLamps(st) {
-  const ok = plausible(st);
-  const on = { oil: st.faults.oil, temp: ok.temp && st.faults.temp, battery: ok.batt && st.faults.battery, fuel: st.faults.fuel, charging: ok.batt && st.battery.v > 13.0, running: st.seq === 4 };
-  document.querySelectorAll('.lamp').forEach(l => l.classList.toggle('on', !!on[l.dataset.k]));
+function renderTelltales(st) {
+  const ok = plausible(st), running = st.seq === 4, cranking = !!(st.outputs && st.outputs.starter);
+  const blocked = st.seq === 3 && !cranking && !!st.crankBlock;
+  const tt = {
+    oil:     st.faults.oil ? 'red blink' : '',
+    temp:    ok.temp && st.faults.temp ? 'red' : '',
+    hyd:     running && st.hydraulic && st.hydraulic.v < st.hydraulic.min ? 'red' : '',
+    battery: ok.batt && st.faults.battery && !cranking ? 'amber' : '',
+    fuel:    st.faults.fuel ? 'amber' : '',
+    glow:    st.glow && st.glow.active ? 'amber' : '',
+    seat:    blocked ? 'red' : '',
+    service: st.maintenance ? 'amber' : '',
+    lights:  st.outputs && st.outputs.lights ? 'green' : '',
+    engine:  running ? 'green' : (st.state === 'ERROR' ? 'amber' : '')
+  };
+  document.querySelectorAll('.tt').forEach(b => { b.className = 'tt' + (tt[b.dataset.k] ? ' ' + tt[b.dataset.k] : ''); });
 }
 function renderStatus(st) {
   const el = $('status'); let txt, cls = '';
@@ -288,20 +307,23 @@ function renderStatus(st) {
   }
   el.textContent = txt; el.className = 'status ' + cls;
 }
-function renderAlert(st) {
-  const a = $('alert'); let txt = '', cls = '';
-  if (linkLost) { txt = 'No link to the controller · retrying'; cls = 'clay'; }
-  else if (st.maintenance) { txt = `Override armed · interlocks bypassed${ovLeft ? ' · ' + ovLeft + ' s' : ''} · tap to disarm`; cls = ''; }
-  else if (st.seq === 3 && st.crankBlock) { txt = 'Starter blocked · seat bar or neutral · hold Override'; cls = 'clay'; }
-  else if (st.seq === 0) { txt = ''; }                                   // key off: sensor badges are noise, lamps still show
-  else if (st.seq === 3 && !(st.outputs && st.outputs.starter) && st.glow && st.glow.countdown > 0) { txt = `Keep holding · preheating ${st.glow.countdown} s, then it cranks`; cls = ''; }
-  else if (plausible(st).temp && st.faults.temp) { txt = `Engine too hot · ${Math.round(st.engineTemp.v)} °C`; cls = 'clay'; }
-  else if (st.faults.oil) { txt = `Oil pressure low · ${Math.round(st.oil.v)} psi`; cls = 'clay'; }
-  else if (plausible(st).batt && st.faults.battery && !(st.outputs && st.outputs.starter)) { txt = `Battery low · ${st.battery.v.toFixed(1)} V · starter needs Override`; cls = ''; }
-  else if (st.faults.fuel) { txt = `Fuel low · ${Math.round(st.fuel.v)} %`; cls = ''; }
-  a.textContent = txt; a.className = 'alert' + (txt ? ' show' : '') + (cls ? ' ' + cls : '');
+function renderMsg(st) {
+  const m = $('msg'), ok = plausible(st), cranking = !!(st.outputs && st.outputs.starter), running = st.seq === 4;
+  let txt = '', cls = '';
+  if (linkLost) { txt = 'No link · retrying'; cls = 'red'; }
+  else if (st.maintenance) { txt = `Override armed${ovLeft ? ' · ' + ovLeft + ' s' : ''} · tap to disarm`; cls = 'amber tap'; }
+  else if (st.seq === 3 && !cranking && st.crankBlock) { txt = 'Starter blocked · hold Override'; cls = 'red'; }
+  else if (st.seq === 3 && !cranking && st.glow && st.glow.countdown > 0) { txt = `Keep holding · preheating ${st.glow.countdown} s`; cls = 'amber'; }
+  else if (st.seq === 0) { txt = ''; }
+  else if (ok.temp && st.faults.temp) { txt = `Engine too hot · ${Math.round(st.engineTemp.v)} °C`; cls = 'red'; }
+  else if (st.faults.oil) { txt = `Oil pressure low · ${Math.round(st.oil.v)} psi`; cls = 'red'; }
+  else if (running && st.hydraulic && st.hydraulic.v < st.hydraulic.min) { txt = `Hydraulic low · ${Math.round(st.hydraulic.v)} psi`; cls = 'red'; }
+  else if (ok.batt && st.faults.battery) { txt = `Battery low · ${st.battery.v.toFixed(1)} V · needs Override`; cls = 'amber'; }
+  else if (st.faults.fuel) { txt = `Fuel low · ${Math.round(st.fuel.v)} %`; cls = 'amber'; }
+  else if (st.seq === 2 && st.glow && st.glow.countdown > 0) { txt = `Preheating ${st.glow.countdown} s`; cls = 'amber'; }
+  else if (!ok.temp || !ok.batt) { txt = (!ok.temp && !ok.batt) ? 'Temp + battery sensors not connected' : !ok.temp ? 'Temperature sensor not connected' : 'Battery sensor not connected'; cls = ''; }
+  $('msgText').textContent = txt; m.className = 'msg' + (cls ? ' ' + cls : '');
 }
-
 /* advanced */
 const NS = 'http://www.w3.org/2000/svg';
 function svgEl(n, a) { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; }
@@ -390,7 +412,7 @@ function render(st) {
   lastStatus = st;
   key.sync(st.seq);
   paintDial(st, key.state);
-  renderStatus(st); renderAlert(st); renderPrime(st); renderLamps(st); renderAdvanced(st); renderFoot(st);
+  renderStatus(st); renderMsg(st); renderPrime(st); renderTelltales(st); renderAdvanced(st); renderFoot(st);
   if (st.maintenance && !ovArmed) armUi(); if (!st.maintenance && ovArmed) disarmUi();
 }
 
@@ -418,7 +440,7 @@ function setTheme(t) { document.documentElement.dataset.theme = t; $('btnTheme')
 /* ---------- loops ---------- */
 async function poll() {
   try { const st = await Backend.status(); if (linkLost) { linkLost = false; } render(st); }
-  catch (e) { if (!linkLost) { linkLost = true; renderAlert(lastStatus || emptyStatus()); $('status').textContent = 'No link'; $('status').className = 'status alert'; } }
+  catch (e) { if (!linkLost) { linkLost = true; renderMsg(lastStatus || emptyStatus()); $('status').textContent = 'No link'; $('status').className = 'status alert'; } }
   setTimeout(poll, POLL_MS);
 }
 async function pollRaw() {
@@ -435,7 +457,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   ov.addEventListener('touchstart', e => e.preventDefault(), { passive: false });   // iOS: no selection, no magnifier
   ov.addEventListener('selectstart', e => e.preventDefault());
   $('dial').addEventListener('contextmenu', e => e.preventDefault());
-  $('alert').addEventListener('click', () => { if (lastStatus && lastStatus.maintenance) disarm(); });
+  $('msg').addEventListener('click', () => { if (lastStatus && lastStatus.maintenance) disarm(); });
+  document.querySelector('.tt[data-k=service]').addEventListener('click', () => { if (lastStatus && lastStatus.maintenance) disarm(); });
   $('modeSimple').addEventListener('click', () => setMode(false)); $('modeAdv').addEventListener('click', () => setMode(true));
   $('btnTheme').addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'day' ? 'night' : 'day'));
   let mode = 'simple', theme = 'night';
