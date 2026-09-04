@@ -432,6 +432,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('btnStop').addEventListener('click', () => { key.stopHb(); Backend.control({ action: 'stop' }); vib(50); });
   $('btnLights').addEventListener('click', () => Backend.control({ action: 'lights' }));
   const ov = $('btnOv'); ov.addEventListener('pointerdown', ovDown); ov.addEventListener('pointerup', ovUp); ov.addEventListener('pointercancel', ovUp); ov.addEventListener('contextmenu', e => e.preventDefault());
+  ov.addEventListener('touchstart', e => e.preventDefault(), { passive: false });   // iOS: no selection, no magnifier
+  ov.addEventListener('selectstart', e => e.preventDefault());
   $('dial').addEventListener('contextmenu', e => e.preventDefault());
   $('alert').addEventListener('click', () => { if (lastStatus && lastStatus.maintenance) disarm(); });
   $('modeSimple').addEventListener('click', () => setMode(false)); $('modeAdv').addEventListener('click', () => setMode(true));
