@@ -1,187 +1,113 @@
-var settingsData={},pinsData=null;
+/* Bobcat 743 · settings page. Same /api contract as the dashboard. Values are sent with their
+ * real JSON types (the firmware reads any string as true, so booleans must be booleans). */
+'use strict';
+const $ = id => document.getElementById(id);
+let toastT = null;
+function toast(msg, bad) { const t = $('toast'); t.textContent = msg; t.className = 'toast show' + (bad ? ' bad' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200); }
+function fetchT(url, opts, ms) { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms || 5000); return fetch(url, Object.assign({ cache: 'no-store', signal: c.signal }, opts || {})).finally(() => clearTimeout(t)); }
+function post(url, body) { return fetchT(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(async r => { const j = await r.json().catch(() => null); if (!r.ok) throw new Error(j && j.error ? j.error : 'failed'); return j; }); }
 
-function byId(id){return document.getElementById(id);}
+// field id -> api key, and how to type the value
+const NUM = { sGlow: 'glow', sCrank: 'crank', sCooldown: 'cooldown', sMaxTemp: 'maxTemp', sMinOil: 'minOil', sMinHyd: 'minHyd', sMinV: 'minV', sMaxV: 'maxV', sFuelLow: 'fuelLow',
+  sBattDiv: 'batteryDivider', sTempScale: 'tempScale', sOilScale: 'oilScale', sHydScale: 'hydScale', sFuelEmpty: 'fuelEmpty', sFuelFull: 'fuelFull', sMqttPort: 'mqttPort' };
+const STR = { sMqttHost: 'mqttHost', sMqttTopic: 'mqttTopic', sApSsid: 'apSSID', sApPass: 'apPassword' };
+const BOOL = { sMqttEnabled: 'mqttEnabled' };
 
-function showToast(msg,ok){
-  var t=byId('toast');
-  if(!t){t=document.createElement('div');t.className='toast';t.id='toast';document.body.appendChild(t);}
-  t.textContent=msg;t.style.background=ok?'var(--accent)':'var(--crit)';t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show');},3000);
+function save(key, value) {
+  return post('/api/settings', { key, value }).then(() => toast('Saved')).catch(e => toast(e.message === 'failed' ? 'Not saved' : 'Not saved · ' + e.message, true));
+}
+function set(id, v) { const el = $(id); if (!el) return; if (el.classList.contains('toggle')) el.classList.toggle('on', !!v); else if (v != null && v !== '') el.value = v; }
+
+function applySettings(s) {
+  if (!s) return;
+  const e = s.engine || {}, t = s.thresholds || {}, c = s.cal || {}, m = s.mqtt || {}, w = s.wifi || {};
+  set('sGlow', e.glow); set('sCrank', e.crank); set('sCooldown', e.cooldown);
+  set('sMaxTemp', t.maxTemp); set('sMinOil', t.minOil); set('sMinHyd', t.minHyd); set('sMinV', t.minV); set('sMaxV', t.maxV); set('sFuelLow', c.fuelLow);
+  set('sTempScale', c.tempScale); set('sOilScale', c.oilScale); set('sHydScale', c.hydScale); set('sFuelEmpty', c.fuelEmpty); set('sFuelFull', c.fuelFull);
+  set('sMqttEnabled', m.enabled); set('sMqttHost', m.host); set('sMqttPort', m.port); set('sMqttTopic', m.topic);
+  set('sApSsid', w.ap && w.ap.ssid);
+  const nets = $('wifiNetworks'); nets.innerHTML = '';
+  (w.networks || []).forEach(n => { const d = document.createElement('div'); d.className = 'netitem'; d.innerHTML = `<span>${n.ssid || n}</span><span class="ok" id="netState">saved</span>`; nets.appendChild(d); });
+}
+function applyRaw(r) {
+  if (!r) return;
+  $('rawBatt').textContent = `${r.battery_raw} counts → ${(+r.battery_calculated).toFixed(2)} V`;
+  $('rawTemp').textContent = `${r.temperature_raw} counts → ${Math.round(r.temperature_calculated)} °C`;
+  $('rawOil').textContent = `${r.oil_raw} counts → ${Math.round(r.oil_calculated)} psi`;
+  $('rawHyd').textContent = `${r.hydraulic_raw} counts → ${Math.round(r.hydraulic_calculated)} psi`;
+  $('rawFuel').textContent = `${r.fuel_raw} counts → ${Math.round(r.fuel_calculated)} %`;
+  if (!$('sBattDiv').value && r.battery_divider) $('sBattDiv').value = r.battery_divider;
+}
+function applyStatus(st) {
+  if (!st) return;
+  const n = st.net || {};
+  $('live').textContent = `${st.state === 'OFF' ? 'Off' : st.state === 'ON' ? 'Standby' : st.state.toLowerCase()} · ${n.wifi ? n.ip + ' · ' + n.rssi + ' dBm' : 'AP only'}`;
+  $('sMaint').classList.toggle('on', !!st.maintenance);
+  const ns = $('netState'); if (ns) { ns.textContent = n.wifi ? 'connected · ' + n.ip : 'not connected'; ns.style.color = n.wifi ? '' : 'var(--sun)'; }
+  $('fwKv').innerHTML = [['Firmware', st.version || 'no version string'], ['Engine hours', `${(st.engineHours || 0).toFixed(1)} h`], ['Access point clients', n.apClients || 0], ['Home Assistant', n.mqtt ? 'publishing' : 'off']]
+    .map(([k, v]) => `<div><span>${k}</span><span>${v}</span></div>`).join('');
 }
 
-function saveSetting(key,value){
-  return fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key,value:String(value)})})
-  .then(function(r){if(!r.ok)throw new Error('save failed');return r.json();});
-}
-
-function setInpVal(id,val){
-  var el=byId(id);
-  if(el){if(el.classList.contains('toggle')){el.classList.toggle('on',!!val);}else{el.value=val!=null?val:'';}}
-}
-
-function getInpVal(id){
-  var el=byId(id);
-  if(!el)return null;
-  if(el.classList.contains('toggle'))return el.classList.contains('on');
-  return el.value;
-}
-
-function applySettings(s){
-  if(!s)return;
-  setInpVal('sGlow',s.engine?s.engine.glow:null);
-  setInpVal('sCrank',s.engine?s.engine.crank:null);
-  setInpVal('sCooldown',s.engine?s.engine.cooldown:null);
-  setInpVal('sTempScale',s.cal?s.cal.tempScale:null);
-  setInpVal('sMinOil',s.thresholds?s.thresholds.minOil:null);
-  setInpVal('sMinHyd',s.thresholds?s.thresholds.minHyd:null);
-  setInpVal('sMinV',s.thresholds?s.thresholds.minV:null);
-  setInpVal('sFuelLow',s.cal?s.cal.fuelLow:null);
-  setInpVal('sMqttEnabled',s.mqtt?s.mqtt.enabled:null);
-  setInpVal('sMqttHost',s.mqtt?s.mqtt.host:null);
-  setInpVal('sMqttPort',s.mqtt?s.mqtt.port:null);
-  setInpVal('sMqttTopic',s.mqtt?s.mqtt.topic:null);
-  setInpVal('sNtp',s.time?s.time.ntp:null);
-  setInpVal('sUtcOffset',s.time?s.time.utcOffset:null);
-  setInpVal('sApSsid',s.wifi&&s.wifi.ap?s.wifi.ap.ssid:null);
-  renderWifiNetworks(s.wifi?s.wifi.networks:null);
-  updateSysStrip(s);
-}
-
-function updateSysStrip(s){
-  if(!s||!s.wifi){byId('cfgWifiInfo').textContent='--';byId('cfgApInfo').textContent='--';byId('cfgMqttInfo').textContent='--';byId('cfgClockInfo').textContent='--';return;}
-  byId('cfgWifiInfo').textContent=s.wifi.ip||'connected';byId('cfgApInfo').textContent=s.wifi.apClients>0?s.wifi.apClients+' client':'on';
-  byId('cfgMqttInfo').textContent=s.mqtt&&s.mqtt.enabled?'up':'off';byId('cfgClockInfo').textContent=s.time&&s.time.ntp?'ok':'--';
-}
-
-function renderWifiNetworks(nets){
-  var el=byId('wifiNetworks');el.innerHTML='';
-  if(!nets||!nets.length)return;
-  for(var i=0;i<nets.length;i++){
-    var n=nets[i];var d=document.createElement('div');d.className='netitem';
-    var label=n.ssid||n;var status=n.connected?' <span style="color:var(--accent)">· connected</span>':'';
-    d.innerHTML='<span>'+label+status+'</span><span class="x" data-ssid="'+(n.ssid||n)+'">✕</span>';
-    el.appendChild(d);
-    d.querySelector('.x').addEventListener('click',function(){
-      showToast('Save a new SSID above to change home WiFi',false);
+function renderPinmap(p) {
+  if (!p || !p.map) return;
+  const pm = $('pinmap'); pm.innerHTML = '';
+  const used = {}; p.map.forEach(m => { if (m.type !== 'relay') used[m.gpio] = (used[m.gpio] || 0) + 1; });
+  p.map.forEach(m => {
+    const fixed = m.type === 'relay';
+    let pool = m.type === 'relay' ? p.relays.slice() : m.type === 'adc' ? p.adc1.slice() : p.header.slice();
+    if (pool.indexOf(m.gpio) === -1) pool.push(m.gpio); pool.sort((a, b) => a - b);
+    const dup = !fixed && used[m.gpio] > 1;
+    const opts = pool.map(g => `<option value="${g}"${g === m.gpio ? ' selected' : ''}>GPIO ${g}</option>`).join('');
+    const cls = 'pinsel' + (p.strap.indexOf(m.gpio) !== -1 ? ' warn' : '') + (dup ? ' dup' : '');
+    let note = m.type === 'adc' ? 'sensor · ADC1' : m.type === 'relay' ? 'onboard relay · fixed' : m.type === 'digital-in' ? 'switch input' : 'output';
+    if (p.strap.indexOf(m.gpio) !== -1) note += ' · strapping pin'; if (dup) note += ' · used twice';
+    const row = document.createElement('div'); row.className = 'pinrow';
+    row.innerHTML = `<div class="fn"><b>${m.label}</b><small>${note}</small></div><select class="${cls}" data-func="${m.func}"${fixed ? ' disabled' : ''}>${opts}</select>`;
+    pm.appendChild(row);
+    if (!fixed) row.querySelector('select').addEventListener('change', function () {
+      post('/api/pins', { func: this.dataset.func, gpio: parseInt(this.value, 10) }).then(() => { toast('Pin saved · applies after power cycle'); loadPins(); }).catch(e => { toast(e.message, true); loadPins(); });
     });
-  }
+  });
 }
 
-function initSettingsListeners(){
-  var inputs=document.querySelectorAll('.card .inp');
-  for(var i=0;i<inputs.length;i++){
-    inputs[i].addEventListener('change',function(e){
-      var map={
-        sGlow:'glow',sCrank:'crank',sCooldown:'cooldown',
-        sTempScale:'tempScale',sMinOil:'minOil',sMinHyd:'minHyd',sMinV:'minV',sFuelLow:'fuelLow',
-        sMqttHost:'mqttHost',sMqttPort:'mqttPort',sMqttTopic:'mqttTopic',
-        sUtcOffset:'utcOffset',sApSsid:'apSSID',sApPass:'apPassword'
-      };
-      var key=map[e.target.id];if(!key)return;
-      saveSetting(key,e.target.value).then(function(r){if(r.ok)showToast('Saved',true);else showToast('Save failed',false);}).catch(function(){showToast('Save failed',false);});
-    });
-  }
-  var toggles=document.querySelectorAll('.card .toggle');
-  for(var i=0;i<toggles.length;i++){
-    toggles[i].addEventListener('click',function(e){
-      this.classList.toggle('on');
-      var on=this.classList.contains('on');
-      if(this.id==='sMaint'){
-        fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'maintenance',enabled:on})})
-        .then(function(r){if(r.ok)showToast(on?'MAINTENANCE ON — interlocks bypassed':'Maintenance OFF',true);else showToast('Failed',false);})
-        .catch(function(){showToast('Failed',false);});
-        return;
-      }
-      var key=this.id==='sMqttEnabled'?'mqttEnabled':'ntp';
-      saveSetting(key,on?'true':'false').then(function(r){if(!r.ok)showToast('Save failed',false);}).catch(function(){showToast('Save failed',false);});
-    });
-  }
-  byId('btnAddNetwork').addEventListener('click',function(){
-    var ssid=byId('wifiSsid').value.trim();
-    var pass=byId('wifiPass').value;
-    if(!ssid){showToast('Enter an SSID',false);return;}
-    saveSetting('wifiSSID',ssid)
-      .then(function(){return pass?saveSetting('wifiPassword',pass):{ok:true};})
-      .then(function(){showToast('Home WiFi saved — joining…',true);byId('wifiSsid').value='';byId('wifiPass').value='';loadSettings();})
-      .catch(function(){showToast('Save failed',false);});
+function loadSettings() { fetchT('/api/settings').then(r => r.json()).then(applySettings).catch(() => toast('Could not load settings', true)); }
+function loadPins() { fetchT('/api/pins').then(r => r.json()).then(renderPinmap).catch(() => { $('pinmap').innerHTML = '<div class="hint">Could not load the pin map</div>'; }); }
+function loadRaw() { fetchT('/api/raw-sensors', null, 3000).then(r => r.json()).then(applyRaw).catch(() => {}); setTimeout(loadRaw, 2000); }
+function loadStatus() { fetchT('/api/status', null, 3000).then(r => r.json()).then(applyStatus).catch(() => { $('live').textContent = 'No link'; }); setTimeout(loadStatus, 2000); }
+
+function setTheme(t) { document.documentElement.dataset.theme = t; $('btnTheme').textContent = t === 'day' ? 'Night theme' : 'Day theme'; try { localStorage.setItem('bobcat.theme', t); } catch (_) {} }
+
+document.addEventListener('DOMContentLoaded', () => {
+  let theme = 'night'; try { theme = localStorage.getItem('bobcat.theme') || theme; } catch (_) {}
+  setTheme(theme);
+  $('btnTheme').addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'day' ? 'night' : 'day'));
+
+  Object.keys(NUM).forEach(id => { const el = $(id); if (el) el.addEventListener('change', () => { const v = parseFloat(el.value); if (isNaN(v)) return; save(NUM[id], v); }); });
+  Object.keys(STR).forEach(id => { const el = $(id); if (el) el.addEventListener('change', () => save(STR[id], el.value)); });
+  Object.keys(BOOL).forEach(id => { const el = $(id); if (el) el.addEventListener('click', () => { el.classList.toggle('on'); save(BOOL[id], el.classList.contains('on')); }); });
+
+  $('sMaint').addEventListener('click', function () {
+    const on = !this.classList.contains('on'); this.classList.toggle('on', on);
+    post('/api/control', { action: 'maintenance', enabled: on }).then(() => toast(on ? 'Interlocks bypassed' : 'Interlocks active')).catch(e => toast(e.message, true));
+  });
+  $('btnAddNetwork').addEventListener('click', () => {
+    const ssid = $('wifiSsid').value.trim(), pass = $('wifiPass').value;
+    if (!ssid) { toast('Enter the network name', true); return; }
+    post('/api/settings', { key: 'wifiSSID', value: ssid }).then(() => pass ? post('/api/settings', { key: 'wifiPassword', value: pass }) : null)
+      .then(() => { toast('Saved · joining ' + ssid); $('wifiSsid').value = ''; $('wifiPass').value = ''; setTimeout(loadSettings, 800); }).catch(e => toast(e.message, true));
+  });
+  $('restoreFile').addEventListener('change', function () {
+    const f = this.files[0]; if (!f) return; const rd = new FileReader();
+    rd.onload = () => fetchT('/api/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: rd.result }).then(r => r.json())
+      .then(j => { if (j.ok) { toast(`Restored ${j.applied} sections · power cycle for pins and WiFi`); loadSettings(); loadPins(); } else toast('Restore failed', true); }).catch(() => toast('Restore failed', true));
+    rd.readAsText(f); this.value = '';
+  });
+  $('btnResetCal').addEventListener('click', () => { if (!confirm('Reset all sensor calibration to factory defaults?')) return; post('/api/reset-calibration', {}).then(() => { toast('Calibration reset'); loadSettings(); }).catch(e => toast(e.message, true)); });
+  $('btnFactory').addEventListener('click', () => {
+    if (!confirm('Factory reset: calibration, pin map and farm WiFi are erased and the controller reboots on its own access point. Continue?')) return;
+    if (!confirm('Really erase everything?')) return;
+    post('/api/factory-reset', {}).then(() => toast('Rebooting…')).catch(() => toast('Rebooting…'));
   });
 
-  var rf=byId('restoreFile');
-  if(rf){rf.addEventListener('change',function(){
-    var f=this.files[0];if(!f)return;
-    var reader=new FileReader();
-    reader.onload=function(){
-      fetch('/api/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:reader.result})
-      .then(function(r){return r.json();})
-      .then(function(r){if(r.ok){showToast('Config restored ('+r.applied+' sections) — reboot to apply pins/wifi',true);loadSettings();loadPins();}else showToast('Restore failed',false);})
-      .catch(function(){showToast('Restore failed',false);});
-    };
-    reader.readAsText(f);this.value='';
-  });}
-}
-
-function initPinmap(){
-  var pm=byId('pinmap');pm.innerHTML='<div class="hint" style="text-align:center;color:var(--dim)">Loading pin map...</div>';
-}
-
-function renderPinmap(p){
-  if(!p||!p.map)return;
-  var pm=byId('pinmap');pm.innerHTML='';
-  var used={};
-  for(var i=0;i<p.map.length;i++){var m=p.map[i];if(!m.fixed)used[m.gpio]=(used[m.gpio]||0)+1;}
-  for(var i=0;i<p.map.length;i++){
-    var m=p.map[i];
-    var row=document.createElement('div');row.className='pinrow';
-    var pool,sensorType='';
-    if(m.type==='relay')pool=p.relays.slice();
-    else if(m.type==='adc'){pool=p.adc1.slice();sensorType='adc';}
-    else pool=p.header.slice();
-    if(pool.indexOf(m.gpio)===-1)pool.push(m.gpio);
-    pool.sort(function(a,b){return a-b;});
-    var opts='';var dup=!m.fixed&&used[m.gpio]&&used[m.gpio]>1;
-    for(var j=0;j<pool.length;j++){
-      var g=pool[j];var sel=g===m.gpio?' selected':'';
-      var du=!m.fixed&&used[g]&&used[g]>1;
-      opts+='<option value="'+g+'"'+sel+(du?' class="dup"':'')+'>GPIO '+g+'</option>';
-    }
-    var cls='pinsel'+(p.strap.indexOf(m.gpio)!==-1?' warn':'')+(dup?' dup':'');
-    var sel='<select class="'+cls+'" data-func="'+m.func+'"'+(m.fixed?' disabled':'')+'>'+opts+'</select>';
-    var note=m.type==='adc'?'ADC1':(m.type==='relay'?'onboard':'digital');
-    if(p.strap.indexOf(m.gpio)!==-1)note+=' · strapping';
-    if(dup)note+=' · <b class="c">dup</b>';
-    row.innerHTML='<div class="fn"><b>'+m.label+'</b><small>'+note+'</small></div>'+sel;
-    pm.appendChild(row);
-    if(!m.fixed){
-      row.querySelector('select').addEventListener('change',function(e){
-        var func=this.getAttribute('data-func'),gpio=parseInt(this.value);
-        savePin(func,gpio);
-      });
-    }
-  }
-}
-
-function savePin(func,gpio){
-  fetch('/api/pins',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({func:func,gpio:gpio})})
-  .then(function(r){if(r.ok){showToast('Pin mapped',true);loadPins();}else showToast('Pin save failed',false);})
-  .catch(function(){showToast('Network error',false);});
-}
-
-function loadSettings(){
-  fetch('/api/settings').then(function(r){if(!r.ok)throw new Error('fetch');return r.json();})
-  .then(function(s){settingsData=s;applySettings(s);})
-  .catch(function(){showToast('Could not load settings',false);});
-}
-
-function loadPins(){
-  fetch('/api/pins').then(function(r){if(!r.ok)throw new Error('fetch');return r.json();})
-  .then(function(p){pinsData=p;renderPinmap(p);})
-  .catch(function(){byId('pinmap').innerHTML='<div class="hint" style="text-align:center;color:var(--crit)">Could not load pin map</div>';});
-}
-
-document.addEventListener('DOMContentLoaded',function(){
-  initPinmap();
-  initSettingsListeners();
-  loadSettings();
-  loadPins();
-  fetch('/api/status').then(function(r){return r.json();}).then(function(s){var m=byId('sMaint');if(m)m.classList.toggle('on',!!s.maintenance);}).catch(function(){});
+  loadSettings(); loadPins(); loadRaw(); loadStatus();
 });

@@ -14,16 +14,17 @@ def read(name, mode="r"):
     with open(os.path.join(src, name), mode, **({} if "b" in mode else {"encoding": "utf-8"})) as f:
         return f.read()
 
-def inline_index(html):
-    css = read("style.css"); js = read("script.js")
+def inline(html, js_name):
+    """Inline style.css, the page's script and the logo so the page is one request."""
+    css = read("style.css"); js = read(js_name)
     logo = "data:image/png;base64," + base64.b64encode(read("logo.png", "rb")).decode()
-    html = html.replace('<link rel="stylesheet" href="style.css">', "<style>\n" + css + "\n</style>", 1)
-    tag = '<script src="script.js"></script>'
-    if tag not in html:
-        raise SystemExit("build_www: index.html must reference script.js (found: %s)" % re.findall(r'<script[^>]*>', html))
+    link = '<link rel="stylesheet" href="style.css">'; tag = '<script src="%s"></script>' % js_name
+    for needle in (link, tag):
+        if needle not in html:
+            raise SystemExit("build_www: expected %s in page (found: %s)" % (needle, re.findall(r'<(?:script|link)[^>]*>', html)))
+    html = html.replace(link, "<style>\n" + css + "\n</style>", 1)
     html = html.replace(tag, "<script>\n" + js.replace("</script", "<\\/script") + "\n</script>", 1)
-    html = html.replace('src="logo.png"', 'src="' + logo + '"', 1)
-    return html
+    return html.replace('src="logo.png"', 'src="' + logo + '"', 1)
 
 def gz(data, out):
     with gzip.open(out, "wb", compresslevel=9) as o:
@@ -37,7 +38,9 @@ for name in sorted(os.listdir(src)):
     if not os.path.isfile(p):
         continue
     if name == "index.html":
-        gz(inline_index(read(name)), os.path.join(dst, "index.html.gz"))
+        gz(inline(read(name), "script.js"), os.path.join(dst, "index.html.gz"))
+    elif name == "settings.html":
+        gz(inline(read(name), "settings.js"), os.path.join(dst, "settings.html.gz"))
     elif name.endswith(TEXT):
         gz(read(name, "rb"), os.path.join(dst, name + ".gz"))
     else:
