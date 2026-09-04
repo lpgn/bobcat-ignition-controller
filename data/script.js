@@ -286,9 +286,10 @@ function renderAlert(st) {
   if (linkLost) { txt = 'No link to the controller · retrying'; cls = 'clay'; }
   else if (st.maintenance) { txt = `Override armed · interlocks bypassed${ovLeft ? ' · ' + ovLeft + ' s' : ''} · tap to disarm`; cls = ''; }
   else if (st.seq === 3 && st.crankBlock) { txt = 'Starter blocked · seat bar or neutral · hold Override'; cls = 'clay'; }
+  else if (st.seq === 0) { txt = ''; }                                   // key off: sensor badges are noise, lamps still show
   else if (st.faults.temp) { txt = `Engine too hot · ${Math.round(st.engineTemp.v)} °C`; cls = 'clay'; }
   else if (st.faults.oil) { txt = `Oil pressure low · ${Math.round(st.oil.v)} psi`; cls = 'clay'; }
-  else if (st.faults.battery && st.seq > 0 && !(st.outputs && st.outputs.starter)) { txt = `Battery low · ${st.battery.v.toFixed(1)} V`; cls = ''; }
+  else if (st.faults.battery && !(st.outputs && st.outputs.starter)) { txt = `Battery low · ${st.battery.v.toFixed(1)} V`; cls = ''; }
   else if (st.faults.fuel) { txt = `Fuel low · ${Math.round(st.fuel.v)} %`; cls = ''; }
   a.textContent = txt; a.className = 'alert' + (txt ? ' show' : '') + (cls ? ' ' + cls : '');
 }
